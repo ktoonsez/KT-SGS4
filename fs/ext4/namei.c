@@ -1112,6 +1112,8 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, stru
 			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EIO);
 		}
+
+		brelse(bh);
 		if (unlikely(ino == dir->i_ino)) {
 			EXT4_ERROR_INODE(dir, "'%.*s' linked to parent dir",
 					 dentry->d_name.len,
