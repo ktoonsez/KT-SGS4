@@ -152,7 +152,7 @@ static void _set_vibetonz_work(struct work_struct *unused)
 
 static ssize_t show_vibe_strength(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "( 5 - 126 ) current vibe_strength is [%d]\n", vibe_strength);
+	return sprintf(buf, "%d\n", vibe_strength);
 }
 
 static ssize_t store_vibe_strength(struct device *dev, struct device_attribute *attr,const char *buf, size_t size)
