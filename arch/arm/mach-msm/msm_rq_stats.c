@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -435,10 +435,6 @@ static int __init msm_rq_stats_init(void)
 		mutex_init(&pcpu->cpu_load_mutex);
 		cpufreq_get_policy(&cpu_policy, i);
 		pcpu->policy_max = cpu_policy.cpuinfo.max_freq;
-#ifdef CONFIG_MACH_JF
-		/* This is initial frequency */
-		pcpu->cur_freq = 1566000;
-#endif
 		if (cpu_online(i))
 			pcpu->cur_freq = acpuclk_get_rate(i);
 		cpumask_copy(pcpu->related_cpus, cpu_policy.cpus);
