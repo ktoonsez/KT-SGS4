@@ -267,9 +267,7 @@ enum {
 #define MXT_REVISION_I	1	/* Support hovering */
 
 /************** Feature + **************/
-#ifdef CONFIG_SEC_DVFS_BOOSTER
 #define TSP_BOOSTER				1
-#endif
 #define TSP_SEC_FACTORY			1
 #define TSP_INFORM_CHARGER		1
 #define TSP_USE_SHAPETOUCH		1
@@ -346,7 +344,7 @@ enum {
 };
 #endif
 
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 #include <linux/cpufreq.h>
 #define TOUCH_BOOSTER_OFF_TIME	100
 #define TOUCH_BOOSTER_CHG_TIME	200
@@ -432,7 +430,7 @@ struct mxt_reportid {
 	u8 index;
 };
 
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 struct touch_booster {
 	bool touch_cpu_lock_status;
 	int cpu_lv;
@@ -494,7 +492,7 @@ struct mxt_data {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
-#ifdef TSP_BOOSTER
+#if TSP_BOOSTER
 	struct delayed_work work_dvfs_off;
 	bool	dvfs_lock_status;
 	struct mutex dvfs_lock;
