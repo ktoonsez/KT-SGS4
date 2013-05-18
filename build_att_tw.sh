@@ -41,7 +41,7 @@ rm $PACKAGEDIR/zImage
 rm arch/arm/boot/zImage
 
 echo "Make the kernel"
-make VARIANT_DEFCONFIG=KT_jf_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig jf_att_defconfig
+make VARIANT_DEFCONFIG=jf_att_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig KT_jf_defconfig
 
 HOST_CHECK=`uname -n`
 if [ $HOST_CHECK = 'ktoonsez-VirtualBox' ] || [ $HOST_CHECK = 'task650-Underwear' ]; then
