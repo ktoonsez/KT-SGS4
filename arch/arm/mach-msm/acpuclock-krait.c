@@ -54,6 +54,11 @@ int speed_bin;
 int pvs_bin;
 #endif
 
+extern void reset_num_cpu_freqs(void);
+
+#define MAX_VDD_SC    1400000 /* uV */
+#define MIN_VDD_SC     700000 /* uV */
+
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
@@ -937,7 +942,7 @@ static void __init bus_init(const struct l2_level *l2_level)
 }
 
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
@@ -985,7 +990,8 @@ static void __init cpufreq_table_init(void) {}
 static void __init dcvs_freq_init(void)
 {
 	int i;
-
+	reset_num_cpu_freqs();
+	
 	for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0; i++)
 		if (drv.acpu_freq_tbl[i].use_for_scaling)
 			msm_dcvs_register_cpu_freq(
@@ -1050,8 +1056,8 @@ static const int krait_needs_vmin(void)
 static void krait_apply_vmin(struct acpu_level *tbl)
 {
 	for (; tbl->speed.khz != 0; tbl++) {
-		if (tbl->vdd_core < 1150000)
-			tbl->vdd_core = 1150000;
+		if (tbl->vdd_core < MIN_VDD_SC)
+			tbl->vdd_core = MIN_VDD_SC;
 		tbl->avsdscr_setting = 0;
 	}
 }
