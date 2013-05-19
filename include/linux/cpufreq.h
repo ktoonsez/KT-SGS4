@@ -23,6 +23,9 @@
 
 #define CPUFREQ_NAME_LEN 16
 
+extern int GLOBALKT_MIN_FREQ_LIMIT;
+extern int GLOBALKT_MAX_FREQ_LIMIT;
+#define FREQ_TABLE_SIZE    38
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *
