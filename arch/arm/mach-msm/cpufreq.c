@@ -154,7 +154,7 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 			return 0;
 	}
 #endif
-	if (new_freq > 0 && new_freq > kthermal_limit)
+	if (kthermal_limit > 0 && new_freq > kthermal_limit)
 		new_freq = kthermal_limit;
 	//pr_alert("KT SET CPU FREQ %u-%u-%u\n", new_freq, policy->cur, policy->cpu);
 
