@@ -14,6 +14,7 @@
 #include <linux/regulator/pm8xxx-regulator.h>
 
 #include "board-8064.h"
+#include <linux/cpufreq.h>
 
 #ifdef CONFIG_REGULATOR_MAX77693
 #include <linux/mfd/max77693.h>
@@ -721,15 +722,15 @@ mpq8064_gpio_regulator_pdata[] __devinitdata = {
 /* SAW regulator constraints */
 struct regulator_init_data msm8064_saw_regulator_pdata_8921_s5 =
 	/*	      ID  vreg_name	       min_uV   max_uV */
-	SAW_VREG_INIT(S5, "8921_s5",	       850000, 1300000);
+	SAW_VREG_INIT(S5, "8921_s5",	       MIN_VDD_SC, MAX_VDD_SC);
 struct regulator_init_data msm8064_saw_regulator_pdata_8921_s6 =
-	SAW_VREG_INIT(S6, "8921_s6",	       850000, 1300000);
+	SAW_VREG_INIT(S6, "8921_s6",	       MIN_VDD_SC, MAX_VDD_SC);
 
 struct regulator_init_data msm8064_saw_regulator_pdata_8821_s0 =
 	/*	      ID       vreg_name	min_uV  max_uV */
-	SAW_VREG_INIT(8821_S0, "8821_s0",       850000, 1300000);
+	SAW_VREG_INIT(8821_S0, "8821_s0",       MIN_VDD_SC, MAX_VDD_SC);
 struct regulator_init_data msm8064_saw_regulator_pdata_8821_s1 =
-	SAW_VREG_INIT(8821_S1, "8821_s1",       850000, 1300000);
+	SAW_VREG_INIT(8821_S1, "8821_s1",       MIN_VDD_SC, MAX_VDD_SC);
 
 /* PM8921 regulator constraints */
 struct pm8xxx_regulator_platform_data

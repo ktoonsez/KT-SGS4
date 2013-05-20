@@ -56,9 +56,6 @@ int pvs_bin;
 
 extern void reset_num_cpu_freqs(void);
 
-#define MAX_VDD_SC    1400000 /* uV */
-#define MIN_VDD_SC     700000 /* uV */
-
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
