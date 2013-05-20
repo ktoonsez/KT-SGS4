@@ -247,7 +247,7 @@ static void notification_available_cb(struct urb *urb)
 	case 0:
 	/*if non zero lenght of data received while unlink*/
 	case -ENOENT:
-		DBG_NOTI("[NACB:%d]<", iface_num);
+		//pr_info("[NACB:%d]<", iface_num);
 		/*success*/
 		break;
 
@@ -736,7 +736,13 @@ ctrl_read:
 	kfree(list_elem);
 	DBG("%s: Returning %d bytes to %s\n", __func__, bytes_to_read,
 			dev->name);
+<<<<<<< HEAD
 	DUMP_BUFFER("Read: ", bytes_to_read, buf);
+=======
+
+	//snprintf(temp, sizeof(temp), "[%lluns]READ :", rd_poll_delta_time);
+	//DUMP_BUFFER(temp, bytes_to_read, buf);
+>>>>>>> a763da3... Remove a WHOLE ASS LOAD of dmesg spamming
 
 	return bytes_to_read;
 }
@@ -794,7 +800,7 @@ static ssize_t rmnet_ctl_write(struct file *file, const char __user * buf,
 		kfree(cpkt);
 		return status;
 	}
-	DUMP_BUFFER("Write: ", size, buf);
+	//DUMP_BUFFER("Write: ", size, buf);
 
 	status = rmnet_usb_ctrl_write(dev, cpkt, size);
 	if (status == size)
