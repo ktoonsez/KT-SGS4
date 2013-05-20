@@ -23,6 +23,10 @@
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
 
+//KT Specifics
+// enable_oc
+static unsigned int isenable_oc = 0;
+
 static struct hfpll_data hfpll_data __initdata = {
 	.mode_offset = 0x00,
 	.l_offset = 0x08,
@@ -703,6 +707,43 @@ static struct acpuclk_krait_params acpuclk_8064_params __initdata = {
 	.stby_khz = 378000,
 };
 
+unsigned int get_enable_oc(void)
+{
+	return isenable_oc;
+}
+
+static ssize_t show_enable_oc(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", isenable_oc);
+}
+
+static ssize_t store_enable_oc(struct kobject *kobj,
+			struct attribute *attr, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	isenable_oc = value;
+	return count;
+}
+
+static struct global_attr enable_oc_attr = __ATTR(enable_oc, 0666, show_enable_oc, store_enable_oc);
+
+static struct attribute *acpuclock8064_attributes[] = {
+	&enable_oc_attr.attr,
+	NULL,
+};
+
+static struct attribute_group acpuclock8064_attr_group = {
+	.attrs = acpuclock8064_attributes,
+	.name = "ktoonsez",
+};
+
 static int __init acpuclk_8064_probe(struct platform_device *pdev)
 {
 	if (cpu_is_apq8064ab() ||
@@ -723,6 +764,10 @@ static struct platform_driver acpuclk_8064_driver = {
 
 static int __init acpuclk_8064_init(void)
 {
+	int rc;
+	rc = sysfs_create_group(cpufreq_global_kobject,
+				&acpuclock8064_attr_group);
+
 	return platform_driver_probe(&acpuclk_8064_driver,
 				     acpuclk_8064_probe);
 }
