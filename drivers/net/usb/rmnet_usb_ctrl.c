@@ -614,7 +614,7 @@ static ssize_t rmnet_ctl_read(struct file *file, char __user *buf, size_t count,
 	struct rmnet_ctrl_dev		*dev;
 	struct ctrl_pkt_list_elem	*list_elem = NULL;
 	unsigned long			flags;
-	char temp[100];
+	//char temp[100];
 
 	dev = file->private_data;
 	if (!dev)
