@@ -40,10 +40,15 @@ static unsigned int vfreq_lock = 0;
 static bool vfreq_lock_tempOFF = false;
 static unsigned int isBooted = 0;
 
+extern ssize_t acpuclk_get_vdd_levels_str(char *buf, int isApp);
+extern ssize_t acpuclk_get_vdd_levels_str_stock(char *buf, int isApp);
+extern void acpuclk_UV_mV_table(int cnt, int vdd_uv[]);
+extern unsigned int get_enable_oc(void);
+
 //Global placeholder for CPU policies
 static struct cpufreq_policy trmlpolicy[10];
 //Kthermal limit holder to stop govs from setting CPU speed higher than the thermal limit
-unsigned int kthermal_limit;
+unsigned int kthermal_limit = 0;
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -545,6 +550,42 @@ static ssize_t show_scaling_booted(struct cpufreq_policy *policy, char *buf)
 	return sprintf(buf, "%u\n", isBooted);
 }
 
+ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf)
+{
+	int modu = 0;
+	if (get_enable_oc() == 0)
+		modu = FREQ_TABLE_SIZE_OFFSET;
+	return acpuclk_get_vdd_levels_str(buf, FREQ_STEPS-modu);
+}
+
+ssize_t show_UV_mV_table_stock(struct cpufreq_policy *policy, char *buf)
+{
+	int modu = 0;
+	if (get_enable_oc() == 0)
+		modu = FREQ_TABLE_SIZE_OFFSET;
+	return acpuclk_get_vdd_levels_str_stock(buf, FREQ_STEPS-modu);
+}
+
+ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
+                                      const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	int modu = 0;
+	unsigned int is_en_oc = get_enable_oc();
+	int u[FREQ_STEPS];
+	if (is_en_oc == 0)
+		modu = FREQ_TABLE_SIZE_OFFSET;
+
+	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15], &u[16], &u[17], &u[18], &u[19], &u[20], &u[21]);
+
+	pr_alert("store_UV_mV_table: %d\n", ret);
+	if(ret != (FREQ_STEPS-modu)) {
+		return -EINVAL;
+	}
+
+	acpuclk_UV_mV_table(FREQ_STEPS-modu, u);
+	return count;
+}
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
  */
@@ -757,6 +798,8 @@ cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
 cpufreq_freq_attr_rw(scaling_booted);
 cpufreq_freq_attr_rw(freq_lock);
+cpufreq_freq_attr_rw(UV_mV_table);
+cpufreq_freq_attr_ro(UV_mV_table_stock);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -773,6 +816,8 @@ static struct attribute *default_attrs[] = {
 	&scaling_setspeed.attr,
 	&scaling_booted.attr,
 	&freq_lock.attr,
+	&UV_mV_table.attr,
+	&UV_mV_table_stock.attr,
 	NULL
 };
 
