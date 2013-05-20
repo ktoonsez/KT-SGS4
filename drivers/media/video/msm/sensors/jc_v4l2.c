@@ -57,9 +57,9 @@
 #define jc_readw(g, b, v) jc_read(__LINE__, 2, g, b, v, true)
 #define jc_readl(g, b, v) jc_read(__LINE__, 4, g, b, v, true)
 
-#define jc_writeb(g, b, v) jc_write(__LINE__, 1, g, b, v, true)
-#define jc_writew(g, b, v) jc_write(__LINE__, 2, g, b, v, true)
-#define jc_writel(g, b, v) jc_write(__LINE__, 4, g, b, v, true)
+#define jc_writeb(g, b, v) jc_write(__LINE__, 1, g, b, v, false)
+#define jc_writew(g, b, v) jc_write(__LINE__, 2, g, b, v, false)
+#define jc_writel(g, b, v) jc_write(__LINE__, 4, g, b, v, false)
 
 #define jc_readb2(g, b, v) jc_read(__LINE__, 1, g, b, v, false)
 #define jc_readw2(g, b, v) jc_read(__LINE__, 2, g, b, v, false)

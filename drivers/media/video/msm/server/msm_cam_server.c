@@ -1410,8 +1410,8 @@ static long msm_ioctl_server(struct file *file, void *fh,
 		break;
 
 	case MSM_CAM_IOCTL_V4L2_EVT_NATIVE_CMD:
-		pr_err("%s: MSM_CAM_IOCTL_V4L2_EVT_NATIVE_CMD : %d\n",
-			__func__, _IOC_NR(cmd));
+		//pr_err("%s: MSM_CAM_IOCTL_V4L2_EVT_NATIVE_CMD : %d\n",
+		//	__func__, _IOC_NR(cmd));
 		sensor_native_control(arg);
 		rc = 0;
 		break;
