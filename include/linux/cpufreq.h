@@ -31,6 +31,9 @@ extern int GLOBALKT_MAX_FREQ_LIMIT;
 
 #define MAX_VDD_SC    1450000 /* uV */
 #define MIN_VDD_SC     700000 /* uV */
+
+#define USER_MIN_START	1
+#define USER_MAX_START	2
 extern unsigned int kthermal_limit;
 
 /*********************************************************************
