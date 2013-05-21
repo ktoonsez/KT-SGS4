@@ -736,13 +736,8 @@ ctrl_read:
 	kfree(list_elem);
 	DBG("%s: Returning %d bytes to %s\n", __func__, bytes_to_read,
 			dev->name);
-<<<<<<< HEAD
-	DUMP_BUFFER("Read: ", bytes_to_read, buf);
-=======
-
 	//snprintf(temp, sizeof(temp), "[%lluns]READ :", rd_poll_delta_time);
 	//DUMP_BUFFER(temp, bytes_to_read, buf);
->>>>>>> a763da3... Remove a WHOLE ASS LOAD of dmesg spamming
 
 	return bytes_to_read;
 }
@@ -1140,7 +1135,7 @@ int rmnet_usb_ctrl_init(int no_rmnet_devs, int no_rmnet_insts_per_dev)
 {
 	struct rmnet_ctrl_dev	*dev;
 	int			i, n;
-	int			status;
+	int			status = 0;
 
 	num_devs = no_rmnet_devs;
 	insts_per_dev = no_rmnet_insts_per_dev;
