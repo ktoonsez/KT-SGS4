@@ -403,6 +403,7 @@ struct request_queue {
 	/* Throttle data */
 	struct throtl_data *td;
 #endif
+	unsigned int    index;
 };
 
 #define QUEUE_FLAG_QUEUED	1	/* uses generic tag queueing */
