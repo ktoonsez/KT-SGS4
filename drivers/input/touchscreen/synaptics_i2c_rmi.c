@@ -132,9 +132,6 @@
 #define CHARGER_DISCONNECTED	0xDF
 #define CONFIGURED (1 << 7)
 
-//KT specifics
-//extern void set_screen_on_off_mhz(unsigned long onoff);
-
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data,
 		unsigned short length);
@@ -1497,25 +1494,19 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_mt_sync(rmi4_data->input_dev);
 #endif
 
-			/*if (!rmi4_data->finger[finger].state)
-			{
+			if (!rmi4_data->finger[finger].state)
 				dev_info(&rmi4_data->i2c_client->dev, "[%d][P] 0x%02x\n",
 					finger, finger_status);
-				//pr_alert("KT TOUCH BOOSTER PRESS");
-			}
 			else
-				rmi4_data->finger[finger].mcount++;*/
-			if (rmi4_data->finger[finger].state)
 				rmi4_data->finger[finger].mcount++;
-				
+
 			touch_count++;
 		}
 
 		if (rmi4_data->finger[finger].state && !finger_status) {
-			//dev_info(&rmi4_data->i2c_client->dev, "[%d][R] 0x%02x M[%d] V[%x]\n",
-			//	finger, finger_status, rmi4_data->finger[finger].mcount,
-			//	rmi4_data->fw_version_of_ic);
-			//pr_alert("KT TOUCH BOOSTER RELEASE");
+			dev_info(&rmi4_data->i2c_client->dev, "[%d][R] 0x%02x M[%d] V[%x]\n",
+				finger, finger_status, rmi4_data->finger[finger].mcount,
+				rmi4_data->fw_version_of_ic);
 
 			rmi4_data->finger[finger].mcount = 0;
 		}
@@ -4092,9 +4083,6 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
 			container_of(h, struct synaptics_rmi4_data,
 			early_suspend);
 
-	//pr_alert("SCREEN POWER OFF");
-	//set_screen_on_off_mhz(false);
-	
 	if (rmi4_data->stay_awake) {
 		rmi4_data->staying_awake = true;
 		return;
@@ -4130,8 +4118,6 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 			container_of(h, struct synaptics_rmi4_data,
 			early_suspend);
 	int retval;
-	//pr_alert("SCREEN POWER ON");
-	//set_screen_on_off_mhz(true);
 
 	if (rmi4_data->staying_awake)
 		return;
