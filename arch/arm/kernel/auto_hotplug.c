@@ -107,7 +107,7 @@ static int min_online_cpus_fn_set(const char *arg, const struct kernel_param *kp
     }
     
     //online all cores and offline them based on set value
-    schedule_work(&hotplug_online_all_work);
+    schedule_work_on(0, &hotplug_online_all_work);
         
     return ret;
 }
@@ -204,7 +204,7 @@ static void hotplug_decision_work_fn(struct work_struct *work)
 			flags |= HOTPLUG_PAUSED;
 			if (delayed_work_pending(&aphotplug_offline_work))
 				cancel_delayed_work(&aphotplug_offline_work);
-			schedule_work(&hotplug_online_all_work);
+			schedule_work_on(0, &hotplug_online_all_work);
 			return;
 		} else if (flags & HOTPLUG_PAUSED) {
 			schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
@@ -215,7 +215,7 @@ static void hotplug_decision_work_fn(struct work_struct *work)
 #endif
 			if (delayed_work_pending(&aphotplug_offline_work))
 				cancel_delayed_work(&aphotplug_offline_work);
-			schedule_work(&hotplug_online_single_work);
+			schedule_work_on(0, &hotplug_online_single_work);
 			return;
 		} else if ((avg_running <= disable_load) && (min_online_cpus < online_cpus)) {
 			/* Only queue a cpu_down() if there isn't one already pending */
@@ -275,14 +275,14 @@ void apenable_auto_hotplug(bool state)
 	}
 }
 
-static void hotplug_online_all_work_fn(struct work_struct *work)
+static void __cpuinit hotplug_online_all_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		if (likely(!cpu_online(cpu))) {
+		if (likely(!cpu_online(cpu)) && (cpu)) {
 			cpu_up(cpu);
 #if DEBUG
 			pr_info("auto_hotplug: CPU%d up.\n", cpu);
@@ -296,7 +296,7 @@ static void hotplug_online_all_work_fn(struct work_struct *work)
 	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
 }
 
-static void hotplug_offline_all_work_fn(struct work_struct *work)
+static void __cpuinit hotplug_offline_all_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled)
@@ -312,21 +312,19 @@ static void hotplug_offline_all_work_fn(struct work_struct *work)
 	}
 }
 
-static void hotplug_online_single_work_fn(struct work_struct *work)
+static void __cpuinit hotplug_online_single_work_fn(struct work_struct *work)
 {
 	int cpu;
 	if (!isEnabled)
 		return;
 
 	for_each_possible_cpu(cpu) {
-		if (cpu) {
-			if (!cpu_online(cpu)) {
-				cpu_up(cpu);
+		if (likely(!cpu_online(cpu) && (cpu))) {
+			cpu_up(cpu);
 #if DEBUG
-				pr_info("auto_hotplug: CPU%d up.\n", cpu);
+			pr_info("auto_hotplug: CPU%d up.\n", cpu);
 #endif
-				break;
-			}
+			break;
 		}
 	}
 	schedule_delayed_work_on(0, &hotplug_decision_work, MIN_SAMPLING_RATE);
@@ -339,7 +337,7 @@ static void aphotplug_offline_work_fn(struct work_struct *work)
 		return;
 
 	for_each_online_cpu(cpu) {
-		if (cpu) {
+		if (likely(cpu_online(cpu) && (cpu))) {
 			cpu_down(cpu);
 #if DEBUG
 			pr_info("auto_hotplug: CPU%d down.\n", cpu);
@@ -399,7 +397,7 @@ inline void hotplugap_boostpulse(void)
 		if (likely(num_online_cpus() < 2)) {
 			cancel_delayed_work_sync(&aphotplug_offline_work);
 			flags |= HOTPLUG_PAUSED;
-			schedule_work(&hotplug_online_single_work);
+			schedule_work_on(0, &hotplug_online_single_work);
 			schedule_delayed_work(&hotplug_unpause_work, HZ );
 		} else {
 #if DEBUG
