@@ -45,6 +45,11 @@ extern ssize_t acpuclk_get_vdd_levels_str_stock(char *buf, int isApp);
 extern void acpuclk_UV_mV_table(int cnt, int vdd_uv[]);
 extern unsigned int get_enable_oc(void);
 
+static bool Lonoff = false;
+static unsigned int Lscreen_off_scaling_enable = 0;
+static unsigned int Lscreen_off_scaling_mhz = 1890000;
+static unsigned int Lscreen_off_scaling_mhz_orig = 1890000;
+
 //Global placeholder for CPU policies
 static struct cpufreq_policy trmlpolicy[10];
 //Kthermal limit holder to stop govs from setting CPU speed higher than the thermal limit
@@ -508,6 +513,8 @@ static ssize_t __ref store_scaling_max_freq(struct cpufreq_policy *policy, const
 		new_policy.max = value;
 		ret = __cpufreq_set_policy(policy, &new_policy);
 		policy->user_policy.max = policy->max;
+		
+		Lscreen_off_scaling_mhz_orig = value;
 	}
 	return count;
 }
@@ -584,6 +591,42 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 	}
 
 	acpuclk_UV_mV_table(FREQ_STEPS-modu, u);
+	return count;
+}
+
+static ssize_t show_screen_off_scaling_enable(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Lscreen_off_scaling_enable);
+}
+static ssize_t store_screen_off_scaling_enable(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	if (value > 1)
+	    value = 1;
+	Lscreen_off_scaling_enable = value;
+
+	return count;
+}
+
+static ssize_t show_screen_off_scaling_mhz(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Lscreen_off_scaling_mhz);
+}
+static ssize_t store_screen_off_scaling_mhz(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	if (value > GLOBALKT_MAX_FREQ_LIMIT)
+		value = GLOBALKT_MAX_FREQ_LIMIT;
+	if (value < GLOBALKT_MIN_FREQ_LIMIT)
+		value = GLOBALKT_MIN_FREQ_LIMIT;
+	Lscreen_off_scaling_mhz = value;
+
 	return count;
 }
 /**
@@ -800,6 +843,8 @@ cpufreq_freq_attr_rw(scaling_booted);
 cpufreq_freq_attr_rw(freq_lock);
 cpufreq_freq_attr_rw(UV_mV_table);
 cpufreq_freq_attr_ro(UV_mV_table_stock);
+cpufreq_freq_attr_rw(screen_off_scaling_enable);
+cpufreq_freq_attr_rw(screen_off_scaling_mhz);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -818,6 +863,8 @@ static struct attribute *default_attrs[] = {
 	&freq_lock.attr,
 	&UV_mV_table.attr,
 	&UV_mV_table_stock.attr,
+	&screen_off_scaling_enable.attr,
+	&screen_off_scaling_mhz.attr,
 	NULL
 };
 
@@ -2073,6 +2120,81 @@ no_policy:
 	return ret;
 }
 EXPORT_SYMBOL(cpufreq_update_policy);
+
+int cpufreq_set_limit_defered(unsigned int flags, unsigned int value)
+{
+	unsigned int ret = -EINVAL;					
+	struct cpufreq_policy new_policy;				
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);		
+	if (ret)							
+		return -EINVAL;						
+
+	if (flags == USER_MIN_START)
+	{
+		new_policy.min = value;
+		ret = __cpufreq_set_policy(policy, &new_policy);		
+		policy->user_policy.min = policy->min;			
+	}
+	if (flags == USER_MAX_START)
+	{
+		new_policy.max = value;
+		ret = __cpufreq_set_policy(policy, &new_policy);		
+		policy->user_policy.max = policy->max;			
+	}
+	return 0;									
+}
+static void cpufreq_gov_resume(void)
+{
+	unsigned int value;
+	
+	if (Lscreen_off_scaling_enable == 1)
+	{
+		if (vfreq_lock == 1)
+		{
+			vfreq_lock = 0;
+			vfreq_lock_tempOFF = true;
+		}
+		value = Lscreen_off_scaling_mhz_orig;
+		//mhz_lvl = get_batt_level();
+		//if (mhz_lvl > 0)
+		//	value = mhz_lvl;
+		cpufreq_set_limit_defered(USER_MAX_START, value);
+		pr_alert("cpufreq_gov_resume_freq: %u\n", value);
+	}
+}
+
+static void cpufreq_gov_suspend(void)
+{
+	//struct cpufreq_policy *policy = NULL;
+	//unsigned int ret = -EINVAL;
+	unsigned int value;
+	//unsigned int mhz_lvl;
+
+	if (Lscreen_off_scaling_enable == 1)
+	{
+		if (vfreq_lock == 1)
+		{
+			vfreq_lock = 0;
+			vfreq_lock_tempOFF = true;
+		}
+		value = Lscreen_off_scaling_mhz;
+		//mhz_lvl = get_batt_level();
+		//if (mhz_lvl > 0)
+		//	value = mhz_lvl;
+		cpufreq_set_limit_defered(USER_MAX_START, value);
+		pr_alert("cpufreq_gov_suspend_freq: %u\n", value);
+	}
+}
+
+void set_screen_on_off_mhz(bool onoff)
+{
+	Lonoff = onoff;
+	if (Lonoff == 1)
+		cpufreq_gov_resume();
+	else
+		cpufreq_gov_suspend();
+}
 
 static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					unsigned long action, void *hcpu)
