@@ -95,7 +95,7 @@ static unsigned int index;
 
 static unsigned int min_online_cpus = 1;
 
-static bool isEnabled = false;
+static bool isEnabled = true;
 
 static int min_online_cpus_fn_set(const char *arg, const struct kernel_param *kp)
 {
