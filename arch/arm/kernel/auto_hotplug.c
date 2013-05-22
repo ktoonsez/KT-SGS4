@@ -364,7 +364,11 @@ static void aphotplug_offline_work_fn(struct work_struct *work)
 
 	for_each_online_cpu(cpu) {
 		if (likely(cpu_online(cpu) && (cpu))) {
-			cpu_down(cpu);
+			if (hotplug_cpu_single_off[cpu])
+			{
+				hotplug_cpu_single_off[cpu] = 0;
+				cpu_down(cpu);
+			}
 #if DEBUG
 			pr_info("auto_hotplug: CPU%d down.\n", cpu);
 #endif
@@ -479,7 +483,7 @@ static struct early_suspend auto_hotplug_suspend = {
 
 static int __init auto_hotplug_init(void)
 {
-	pr_info("auto_hotplug: v0.220 by _thalamus modded by ktoonsez for KT747\n");
+	pr_info("auto_hotplug: v0.220 by _thalamus modded by ktoonsez for KTSGS4\n");
 	pr_info("auto_hotplug: %d CPUs detected\n", CPUS_AVAILABLE);
 
 	INIT_DELAYED_WORK(&hotplug_decision_work, hotplug_decision_work_fn);
