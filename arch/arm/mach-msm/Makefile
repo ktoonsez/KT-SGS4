@@ -427,3 +427,4 @@ obj-$(CONFIG_SEC_THERMISTOR) += sec_thermistor.o fusion3-thermistor.o
 endif
 
 obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
