@@ -29,7 +29,7 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_CPU_DOWN_BLOCK_CYCLES		(22)
+#define DEF_CPU_DOWN_BLOCK_CYCLES		(11)
 #define DEF_BOOST_CPU				(1134000)
 #define DEF_BOOST_GPU				(450)
 #define DEF_BOOST_HOLD_CYCLES			(22)
