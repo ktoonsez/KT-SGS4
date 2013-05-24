@@ -338,7 +338,7 @@ static int mxt_write_config_from_pdata(struct mxt_data *data)
 	struct device *dev = &data->client->dev;
 	u8 **tsp_config = (u8 **)data->pdata->config;
 	u8 i;
-	int ret;
+	int ret = 0;
 
 	if (!tsp_config) {
 		dev_info(dev, "No cfg data in pdata\n");
@@ -363,7 +363,7 @@ static int mxt_write_config(struct mxt_fw_info *fw_info)
 	u32 current_crc;
 	u8 i, val = 0;
 	u16 reg, index;
-	int ret;
+	int ret = 0;
 
 	if (!fw_info->cfg_raw_data) {
 		dev_info(dev, "No cfg data in file\n");
@@ -1432,7 +1432,7 @@ static int mxt_initialize(struct mxt_data *data)
 {
 	struct i2c_client *client = data->client;
 
-	u32 read_info_crc, calc_info_crc;
+	u32 read_info_crc = 0, calc_info_crc = 0;
 	int ret;
 
 	ret = mxt_read_id_info(data);
@@ -1490,7 +1490,7 @@ static int  mxt_rest_initialize(struct mxt_fw_info *fw_info)
 {
 	struct mxt_data *data = fw_info->data;
 	struct device *dev = &data->client->dev;
-	int ret;
+	int ret = 0;
 
 	/* Restore memory and stop event handing */
 	ret = mxt_command_backup(data, MXT_DISALEEVT_VALUE);
@@ -1501,7 +1501,7 @@ static int  mxt_rest_initialize(struct mxt_fw_info *fw_info)
 
 	/* Write config */
 	ret = mxt_write_config(fw_info);
-	if (ret) {
+	if (ret != 0) {
 		dev_err(dev, "Failed to write config from file\n");
 		goto out;
 	}
