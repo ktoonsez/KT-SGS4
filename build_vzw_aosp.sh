@@ -68,7 +68,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 zcache' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img 
 	export curdate=`date "+%m-%d-%Y"`
 	echo "Executing loki"
-	./loki_patch-linux-x86_64 boot abootatt.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
+	./loki_patch-linux-x86_64 boot abootvzw.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
 	rm $PACKAGEDIR/boot.img
 	#cp loki_flash $PACKAGEDIR/loki_flash
 	cd $PACKAGEDIR
