@@ -2,7 +2,7 @@
 export KERNELDIR=`readlink -f .`
 export PARENT_DIR=`readlink -f ..`
 export INITRAMFS_DEST=$KERNELDIR/kernel/usr/initramfs
-export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/AOSP
+export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/AOSP_ATT
 export CONFIG_AOSP_BUILD=y
 export PACKAGEDIR=$PARENT_DIR/Packages/AOSP
 #Enable FIPS mode
@@ -41,7 +41,7 @@ rm $PACKAGEDIR/zImage
 rm arch/arm/boot/zImage
 
 echo "Make the kernel"
-make VARIANT_DEFCONFIG=KT_jf_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig jf_att_defconfig
+make VARIANT_DEFCONFIG=jf_att_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig KT_jf_defconfig
 
 HOST_CHECK=`uname -n`
 if [ $HOST_CHECK = 'ktoonsez-VirtualBox' ] || [ $HOST_CHECK = 'task650-Underwear' ]; then
@@ -67,8 +67,12 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	./mkbootfs $INITRAMFS_DEST | gzip > $PACKAGEDIR/ramdisk.gz
 	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 zcache' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img 
 	export curdate=`date "+%m-%d-%Y"`
+	echo "Executing loki"
+	./loki_patch-linux-x86_64 boot abootatt.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
+	rm $PACKAGEDIR/boot.img
+	#cp loki_flash $PACKAGEDIR/loki_flash
 	cd $PACKAGEDIR
-	cp -R ../META-INF .
+	cp -R ../META-INF-SEC ./META-INF
 	rm ramdisk.gz
 	rm zImage
 	rm ../KT-SGS4-AOSP-JB-ATT*.zip

@@ -2,9 +2,9 @@
 export KERNELDIR=`readlink -f .`
 export PARENT_DIR=`readlink -f ..`
 export INITRAMFS_DEST=$KERNELDIR/kernel/usr/initramfs
-export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/TW
+export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/AOSP_TMO
 export CONFIG_AOSP_BUILD=y
-export PACKAGEDIR=$PARENT_DIR/Packages/TW
+export PACKAGEDIR=$PARENT_DIR/Packages/AOSP
 #Enable FIPS mode
 export USE_SEC_FIPS_MODE=true
 export ARCH=arm
@@ -41,7 +41,7 @@ rm $PACKAGEDIR/zImage
 rm arch/arm/boot/zImage
 
 echo "Make the kernel"
-make VARIANT_DEFCONFIG=KT_jf_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig jf_tmo_defconfig
+make VARIANT_DEFCONFIG=jf_tmo_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig KT_jf_defconfig
 
 HOST_CHECK=`uname -n`
 if [ $HOST_CHECK = 'ktoonsez-VirtualBox' ] || [ $HOST_CHECK = 'task650-Underwear' ]; then
