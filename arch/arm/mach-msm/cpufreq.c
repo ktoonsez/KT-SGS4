@@ -299,7 +299,7 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	cpuinfo_max_freq = GLOBALKT_MAX_FREQ_LIMIT; //policy->cpuinfo.max_freq;
 	cpuinfo_min_freq = GLOBALKT_MIN_FREQ_LIMIT; //policy->cpuinfo.min_freq;
 #endif
-	pr_alert("MSM_CPUFREQ_INIT: %d-%d-%d\n", cpuinfo_max_freq, policy->max, policy->cpuinfo.max_freq);
+	//pr_alert("MSM_CPUFREQ_INIT: %d-%d-%d\n", cpuinfo_max_freq, policy->max, policy->cpuinfo.max_freq);
 	
 	cur_freq = acpuclk_get_rate(policy->cpu);
 	if (cpufreq_frequency_table_target(policy, table, cur_freq,
