@@ -2,7 +2,7 @@
 export KERNELDIR=`readlink -f .`
 export PARENT_DIR=`readlink -f ..`
 export INITRAMFS_DEST=$KERNELDIR/kernel/usr/initramfs
-export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/TW
+export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/TW_VZW
 export CONFIG_AOSP_BUILD=y
 export PACKAGEDIR=$PARENT_DIR/Packages/TW
 #Enable FIPS mode
@@ -67,8 +67,12 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	./mkbootfs $INITRAMFS_DEST | gzip > $PACKAGEDIR/ramdisk.gz
 	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 zcache' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img 
 	export curdate=`date "+%m-%d-%Y"`
+	echo "Executing loki"
+	./loki_patch-linux-x86_64 boot abootatt.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
+	rm $PACKAGEDIR/boot.img
+	#cp loki_flash $PACKAGEDIR/loki_flash
 	cd $PACKAGEDIR
-	cp -R ../META-INF .
+	cp -R ../META-INF-SEC ./META-INF
 	rm ramdisk.gz
 	rm zImage
 	rm ../KT-SGS4-TW-JB-VZW*.zip
