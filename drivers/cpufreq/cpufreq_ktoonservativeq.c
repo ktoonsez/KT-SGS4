@@ -40,7 +40,7 @@ static int hotplug_cpu_enable_down[] = { 0, 35, 45, 55 };
 static int hotplug_cpu_single_up[] = { 0, 0, 0, 0 };
 static int hotplug_cpu_single_down[] = { 0, 0, 0, 0 };
 static bool hotplug_flag_on = false;
-static unsigned int hotplug_flag_on_block = 0;
+static unsigned int Lcpu_hotplug_block_cycles = 0;
 static bool hotplug_flag_off = false;
 
 /*
@@ -126,6 +126,7 @@ static struct dbs_tuners {
 	unsigned int down_threshold_hotplug_2;
 	unsigned int down_threshold_hotplug_3;
 	unsigned int cpu_down_block_cycles;
+	unsigned int cpu_hotplug_block_cycles;
 	unsigned int touch_boost_cpu;
 	unsigned int touch_boost_2nd_core;
 	unsigned int touch_boost_3rd_core;
@@ -150,6 +151,7 @@ static struct dbs_tuners {
 	.down_threshold_hotplug_2 = 45,
 	.down_threshold_hotplug_3 = 55,
 	.cpu_down_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
+	.cpu_hotplug_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.touch_boost_cpu = DEF_BOOST_CPU,
 	.touch_boost_2nd_core = 1,
 	.touch_boost_3rd_core = 0,
@@ -286,6 +288,7 @@ show_one(down_threshold_hotplug_1, down_threshold_hotplug_1);
 show_one(down_threshold_hotplug_2, down_threshold_hotplug_2);
 show_one(down_threshold_hotplug_3, down_threshold_hotplug_3);
 show_one(cpu_down_block_cycles, cpu_down_block_cycles);
+show_one(cpu_hotplug_block_cycles, cpu_hotplug_block_cycles);
 show_one(touch_boost_2nd_core, touch_boost_2nd_core);
 show_one(touch_boost_3rd_core, touch_boost_3rd_core);
 show_one(touch_boost_4th_core, touch_boost_4th_core);
@@ -486,6 +489,21 @@ static ssize_t store_cpu_down_block_cycles(struct kobject *a, struct attribute *
 		return -EINVAL;
 
 	dbs_tuners_ins.cpu_down_block_cycles = input;
+	return count;
+}
+
+static ssize_t store_cpu_hotplug_block_cycles(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (input < 0)
+		return -EINVAL;
+
+	dbs_tuners_ins.cpu_hotplug_block_cycles = input;
 	return count;
 }
 
@@ -739,6 +757,7 @@ define_one_global_rw(down_threshold_hotplug_1);
 define_one_global_rw(down_threshold_hotplug_2);
 define_one_global_rw(down_threshold_hotplug_3);
 define_one_global_rw(cpu_down_block_cycles);
+define_one_global_rw(cpu_hotplug_block_cycles);
 define_one_global_rw(touch_boost_cpu);
 define_one_global_rw(touch_boost_2nd_core);
 define_one_global_rw(touch_boost_3rd_core);
@@ -768,6 +787,7 @@ static struct attribute *dbs_attributes[] = {
 	&down_threshold_hotplug_2.attr,
 	&down_threshold_hotplug_3.attr,
 	&cpu_down_block_cycles.attr,
+	&cpu_hotplug_block_cycles.attr,
 	&touch_boost_cpu.attr,
 	&touch_boost_2nd_core.attr,
 	&touch_boost_3rd_core.attr,
@@ -892,13 +912,13 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	{
 		if (max_load >= hotplug_cpu_enable_up[cpu] && (!cpu_online(cpu)))
 		{
-			if (hotplug_flag_on_block > dbs_tuners_ins.cpu_down_block_cycles)
+			if (Lcpu_hotplug_block_cycles > dbs_tuners_ins.cpu_hotplug_block_cycles)
 			{
 				hotplug_cpu_single_up[cpu] = 1;
 				hotplug_flag_on = true;
-				hotplug_flag_on_block = 0;
+				Lcpu_hotplug_block_cycles = 0;
 			}
-			hotplug_flag_on_block++;
+			Lcpu_hotplug_block_cycles++;
 			break;
 		}
 		else if (max_load <= hotplug_cpu_enable_down[CPUS_AVAILABLE - cpu] && (cpu_online(CPUS_AVAILABLE - cpu)))
