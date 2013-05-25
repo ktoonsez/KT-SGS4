@@ -33,6 +33,8 @@
 #include <trace/events/power.h>
 
 //KT Specifics
+int cpufreq_set_limit_defered(unsigned int flags, unsigned int value);
+
 int GLOBALKT_MIN_FREQ_LIMIT = 378000;
 int GLOBALKT_MAX_FREQ_LIMIT = 1890000;
 
@@ -49,6 +51,9 @@ static bool Lonoff = false;
 static unsigned int Lscreen_off_scaling_enable = 0;
 static unsigned int Lscreen_off_scaling_mhz = 1890000;
 static unsigned int Lscreen_off_scaling_mhz_orig = 1890000;
+static unsigned int Lbluetooth_scaling_mhz = 0;
+static unsigned int Lbluetooth_scaling_mhz_orig = 378000;
+static bool bluetooth_scaling_mhz_active = false;
 static char scaling_governor_screen_off_sel[16];
 static char scaling_governor_screen_off_sel_prev[16];
 static char scaling_sched_screen_off_sel[16];
@@ -494,7 +499,9 @@ static ssize_t __ref store_scaling_min_freq(struct cpufreq_policy *policy, const
 	new_policy.min = value;
 	ret = __cpufreq_set_policy(policy, &new_policy);
 	policy->user_policy.min = policy->min;
-
+	
+	Lbluetooth_scaling_mhz_orig = value;
+	
 	return count;
 }
 
@@ -634,6 +641,25 @@ static ssize_t store_screen_off_scaling_mhz(struct cpufreq_policy *policy,
 	if (value < GLOBALKT_MIN_FREQ_LIMIT)
 		value = GLOBALKT_MIN_FREQ_LIMIT;
 	Lscreen_off_scaling_mhz = value;
+
+	return count;
+}
+
+static ssize_t show_bluetooth_scaling_mhz(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Lbluetooth_scaling_mhz);
+}
+static ssize_t store_bluetooth_scaling_mhz(struct cpufreq_policy *policy,
+					const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	if (value > GLOBALKT_MAX_FREQ_LIMIT)
+		value = GLOBALKT_MAX_FREQ_LIMIT;
+	if (value < GLOBALKT_MIN_FREQ_LIMIT && value != 0)
+		value = GLOBALKT_MIN_FREQ_LIMIT;
+	Lbluetooth_scaling_mhz = value;
 
 	return count;
 }
@@ -876,6 +902,31 @@ static ssize_t store_freq_lock(struct cpufreq_policy *policy,
 	return count;
 }
 
+void set_bluetooth_state(unsigned int val)
+{
+	unsigned int value;
+	if (Lbluetooth_scaling_mhz != 0)
+	{
+		if (vfreq_lock == 1)
+		{
+			vfreq_lock = 0;
+			vfreq_lock_tempOFF = true;
+		}
+		if (val == 1)
+		{
+			bluetooth_scaling_mhz_active = true;
+			value = Lbluetooth_scaling_mhz;
+			cpufreq_set_limit_defered(USER_MIN_START, value);
+		}
+		else
+		{
+			bluetooth_scaling_mhz_active = false;
+			value = Lbluetooth_scaling_mhz_orig;
+			cpufreq_set_limit_defered(USER_MIN_START, value);
+		}
+	}
+}
+
 cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
 cpufreq_freq_attr_ro(cpuinfo_min_freq);
 cpufreq_freq_attr_ro(cpuinfo_max_freq);
@@ -897,6 +948,7 @@ cpufreq_freq_attr_rw(UV_mV_table);
 cpufreq_freq_attr_ro(UV_mV_table_stock);
 cpufreq_freq_attr_rw(screen_off_scaling_enable);
 cpufreq_freq_attr_rw(screen_off_scaling_mhz);
+cpufreq_freq_attr_rw(bluetooth_scaling_mhz);
 cpufreq_freq_attr_rw(scaling_governor_screen_off);
 cpufreq_freq_attr_rw(scaling_sched_screen_off);
 cpufreq_freq_attr_rw(enable_auto_hotplug);
@@ -920,6 +972,7 @@ static struct attribute *default_attrs[] = {
 	&UV_mV_table_stock.attr,
 	&screen_off_scaling_enable.attr,
 	&screen_off_scaling_mhz.attr,
+	&bluetooth_scaling_mhz.attr,
 	&scaling_governor_screen_off.attr,
 	&scaling_sched_screen_off.attr,
 	&enable_auto_hotplug.attr,
@@ -2224,19 +2277,22 @@ static void cpufreq_gov_resume(void)
 	else
 		pr_alert("cpufreq_gov_resume_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel_prev);
 
-	if (Lscreen_off_scaling_enable == 1)
+	if ((bluetooth_scaling_mhz_active == true && Lscreen_off_scaling_mhz > Lbluetooth_scaling_mhz) || (bluetooth_scaling_mhz_active == false))
 	{
-		if (vfreq_lock == 1)
+		if (Lscreen_off_scaling_enable == 1)
 		{
-			vfreq_lock = 0;
-			vfreq_lock_tempOFF = true;
+			if (vfreq_lock == 1)
+			{
+				vfreq_lock = 0;
+				vfreq_lock_tempOFF = true;
+			}
+			value = Lscreen_off_scaling_mhz_orig;
+			//mhz_lvl = get_batt_level();
+			//if (mhz_lvl > 0)
+			//	value = mhz_lvl;
+			cpufreq_set_limit_defered(USER_MAX_START, value);
+			pr_alert("cpufreq_gov_resume_freq: %u\n", value);
 		}
-		value = Lscreen_off_scaling_mhz_orig;
-		//mhz_lvl = get_batt_level();
-		//if (mhz_lvl > 0)
-		//	value = mhz_lvl;
-		cpufreq_set_limit_defered(USER_MAX_START, value);
-		pr_alert("cpufreq_gov_resume_freq: %u\n", value);
 	}
 }
 
