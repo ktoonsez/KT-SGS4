@@ -52,7 +52,7 @@
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,3,8) && ... */
 
 /* 3.4.11 is the highest 3.4 version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,4,11) && \
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3,4,60) && \
   LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
 #warning "Kernel versions after 3.4.11 are not supported"
 #endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,4,11) && ... */
