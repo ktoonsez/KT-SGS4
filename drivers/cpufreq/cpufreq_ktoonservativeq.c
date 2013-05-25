@@ -73,7 +73,7 @@ extern bool apget_enable_auto_hotplug(void);
 static bool prev_apenable;
 
 //extern void kt_is_active_benabled_gpio(bool val);
-//extern void kt_is_active_benabled_touchkey(bool val);
+extern void kt_is_active_benabled_touchkey(bool val);
 //extern void kt_is_active_benabled_power(bool val);
 
 #define LATENCY_MULTIPLIER			(1000)
@@ -634,7 +634,7 @@ static ssize_t store_boost_2nd_core_on_button(struct kobject *a, struct attribut
 	if (dbs_tuners_ins.boost_2nd_core_on_button == 1)
 	{
 		//kt_is_active_benabled_gpio(true);
-		//kt_is_active_benabled_touchkey(true);
+		kt_is_active_benabled_touchkey(true);
 		//kt_is_active_benabled_power(true);
 	}
 
@@ -654,7 +654,7 @@ static ssize_t store_boost_3rd_core_on_button(struct kobject *a, struct attribut
 	if (dbs_tuners_ins.boost_3rd_core_on_button == 1)
 	{
 		//kt_is_active_benabled_gpio(true);
-		//kt_is_active_benabled_touchkey(true);
+		kt_is_active_benabled_touchkey(true);
 		//kt_is_active_benabled_power(true);
 	}
 
@@ -674,7 +674,7 @@ static ssize_t store_boost_4th_core_on_button(struct kobject *a, struct attribut
 	if (dbs_tuners_ins.boost_4th_core_on_button == 1)
 	{
 		//kt_is_active_benabled_gpio(true);
-		//kt_is_active_benabled_touchkey(true);
+		kt_is_active_benabled_touchkey(true);
 		//kt_is_active_benabled_power(true);
 	}
 
@@ -835,6 +835,22 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		boost_hold_cycles_cnt++;
 
 		this_dbs_info->down_skip = 0;
+		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+		{
+			if (cpu_online(cpu))
+			{
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					if (trmlpolicy[cpu].cur < dbs_tuners_ins.touch_boost_cpu)
+					{
+						__cpufreq_driver_target(&trmlpolicy[cpu], dbs_tuners_ins.touch_boost_cpu,
+							CPUFREQ_RELATION_H);
+						//pr_alert("BOOST EXTRA CPUs: %d\n", cpu);
+					}
+				}
+			}
+		}
+
 		/* if we are already at full speed then break out early */
 		if (this_dbs_info->requested_freq == policy->max || policy->cur > dbs_tuners_ins.touch_boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.touch_boost_cpu)
 			return;
@@ -1009,25 +1025,29 @@ void screen_is_on_relay_kt(bool state)
 	screen_is_on = state;
 	if (state == true)
 	{
+		bool got_boost_core = false;
+		
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
 
 		if (num_online_cpus() < 2 && dbs_tuners_ins.boost_2nd_core_on_button)
 		{
 			hotplug_cpu_single_up[1] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
 		if (num_online_cpus() < 3 && dbs_tuners_ins.boost_3rd_core_on_button)
 		{
 			hotplug_cpu_single_up[2] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
 		if (num_online_cpus() < 4 && dbs_tuners_ins.boost_4th_core_on_button)
 		{
 			hotplug_cpu_single_up[3] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
-			
+		if (got_boost_core)
+			schedule_work_on(0, &hotplug_online_work);
+				
 		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
 	else
@@ -1043,6 +1063,7 @@ void boostpulse_relay_kt(void)
 {
 	if (!boostpulse_relayf)
 	{
+		bool got_boost_core = false;
 		/*if (dbs_tuners_ins.touch_boost_gpu > 0)
 		{
 			int bpc = (dbs_tuners_ins.boost_hold_cycles / 2);
@@ -1054,18 +1075,21 @@ void boostpulse_relay_kt(void)
 		if (num_online_cpus() < 2 && dbs_tuners_ins.touch_boost_2nd_core)
 		{
 			hotplug_cpu_single_up[1] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
 		if (num_online_cpus() < 3 && dbs_tuners_ins.touch_boost_3rd_core)
 		{
 			hotplug_cpu_single_up[2] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
 		if (num_online_cpus() < 4 && dbs_tuners_ins.touch_boost_4th_core)
 		{
 			hotplug_cpu_single_up[3] = 1;
-			schedule_work_on(0, &hotplug_online_work);
+			got_boost_core = true;
 		}
+		if (got_boost_core)
+			schedule_work_on(0, &hotplug_online_work);
+			
 		if (dbs_tuners_ins.touch_boost_2nd_core == 0 && dbs_tuners_ins.touch_boost_3rd_core == 0 && dbs_tuners_ins.touch_boost_4th_core == 0 && dbs_tuners_ins.touch_boost_cpu == 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
 			return;
 
@@ -1173,7 +1197,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		if (dbs_tuners_ins.boost_2nd_core_on_button == 1 || dbs_tuners_ins.boost_3rd_core_on_button == 1 || dbs_tuners_ins.boost_4th_core_on_button == 1)
     		{
       			//kt_is_active_benabled_gpio(true);
-		      	//kt_is_active_benabled_touchkey(true);
+		      	kt_is_active_benabled_touchkey(true);
       			//kt_is_active_benabled_power(true);
     		}
 		
@@ -1243,7 +1267,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		ktoonservative_is_active(false);
 		ktoonservative_is_activebd(false);
     		//kt_is_active_benabled_gpio(false);
-    		//kt_is_active_benabled_touchkey(false);
+    		kt_is_active_benabled_touchkey(false);
     		//kt_is_active_benabled_power(false);
 		
 		apenable_auto_hotplug(prev_apenable);
