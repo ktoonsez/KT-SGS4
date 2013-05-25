@@ -239,7 +239,15 @@ void set_bluetooth_state_kt(bool val)
 	{
 		disable_hotplug_bt_active = true;
 		if (num_online_cpus() < 2)
+		{
+			int cpu;
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (!cpu_online(cpu))
+					hotplug_cpu_single_up[cpu] = 1;
+			}
 			schedule_work_on(0, &hotplug_online_work);
+		}
 	}
 	else
 		disable_hotplug_bt_active = false;
