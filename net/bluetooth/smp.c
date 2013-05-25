@@ -873,8 +873,7 @@ int smp_sig_channel(struct l2cap_conn *conn, struct sk_buff *skb)
 	 * not initialized simply disconnect (done if this function
 	 * returns an error).
 	 */
-	if (code != SMP_CMD_PAIRING_REQ && code != SMP_CMD_SECURITY_REQ &&
-	    !conn->smp_chan) {
+	if (code != SMP_CMD_PAIRING_REQ && code != SMP_CMD_SECURITY_REQ) {
 		BT_ERR("Unexpected SMP command 0x%02x. Disconnecting.", code);
 		kfree_skb(skb);
 		return -ENOTSUPP;
