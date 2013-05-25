@@ -62,7 +62,7 @@ extern int elevator_change_relay(const char *name, int screen_status);
 static unsigned int Lenable_auto_hotplug = 0;
 
 //Global placeholder for CPU policies
-static struct cpufreq_policy trmlpolicy[10];
+struct cpufreq_policy trmlpolicy[10];
 //Kthermal limit holder to stop govs from setting CPU speed higher than the thermal limit
 unsigned int kthermal_limit = 0;
 
@@ -2065,8 +2065,6 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 	memcpy(&policy->cpuinfo, &data->cpuinfo,
 				sizeof(struct cpufreq_cpuinfo));
 	
-	memcpy(&trmlpolicy[policy->cpu], policy, sizeof(struct cpufreq_policy));
-	
 	if (vfreq_lock_tempOFF)
 		vfreq_lock = 1;
 
@@ -2172,6 +2170,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 		pr_debug("governor: change or update limits\n");
 		__cpufreq_governor(data, CPUFREQ_GOV_LIMITS);
 	}
+	memcpy(&trmlpolicy[policy->cpu], policy, sizeof(struct cpufreq_policy));
 
 error_out:
 	return ret;
