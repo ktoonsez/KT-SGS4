@@ -14,6 +14,8 @@ export ARCH=arm
 # export CROSS_COMPILE=/home/ktoonsez/aokp4.2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
 export CROSS_COMPILE=$PARENT_DIR/linaro4.7/bin/arm-eabi-
 
+time_start=$(date +%s.%N)
+
 echo "Remove old Package Files"
 rm -rf $PACKAGEDIR/*
 
@@ -81,3 +83,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
 fi;
+
+time_end=$(date +%s.%N)
+echo -e "${BLDYLW}Total time elapsed: ${TCTCLR}${TXTGRN}$(echo "($time_end - $time_start) / 60"|bc ) ${TXTYLW}minutes${TXTGRN} ($(echo "$time_end - $time_start"|bc ) ${TXTYLW}seconds) ${TXTCLR}"
+
