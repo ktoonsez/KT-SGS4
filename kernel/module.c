@@ -1189,7 +1189,7 @@ static int check_version(Elf_Shdr *sechdrs,
 		return 1;
 
 	/* No versions at all?  modprobe --force does this. */
-	if (versindex == 0)
+	if (versindex == 0 || !strncmp("exfat_", mod->name, 6))
 		return try_to_force_load(mod, symname) == 0;
 
 	versions = (void *) sechdrs[versindex].sh_addr;
@@ -2751,7 +2751,7 @@ static int check_modinfo(struct module *mod, struct load_info *info)
 	int err;
 
 	/* This is allowed: modprobe --force will invalidate it. */
-	if (!modmagic) {
+	if (!modmagic || !strncmp("exfat_", mod->name, 6)) {
 		err = try_to_force_load(mod, "bad vermagic");
 		if (err)
 			return err;
