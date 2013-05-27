@@ -597,7 +597,7 @@ static struct pll_clk pll15_clk = {
 	.parent = &pxo_clk.c,
 	.c = {
 		.dbg_name = "pll15_clk",
-		.rate = 975000000,
+		.rate = 900000000,
 		.ops = &clk_ops_local_pll,
 		CLK_INIT(pll15_clk.c),
 	},
@@ -3531,6 +3531,7 @@ static struct clk_freq_tbl clk_tbl_gfx3d[] = {
 	F_GFX3D(320000000, pll2,  2,  5),
 	F_GFX3D(400000000, pll2,  1,  2),
 	F_GFX3D(450000000, pll15, 1,  2),
+	F_GFX3D(500000000, pll15, 1,  2),
 	F_END
 };
 
@@ -3552,6 +3553,8 @@ static struct clk_freq_tbl clk_tbl_gfx3d_8960[] = {
 	F_GFX3D(300000000, pll3, 1,  4),
 	F_GFX3D(320000000, pll2, 2,  5),
 	F_GFX3D(400000000, pll2, 1,  2),
+	F_GFX3D(450000000, pll15, 1,  2),
+	F_GFX3D(500000000, pll15, 1,  2),
 	F_END
 };
 
@@ -3573,32 +3576,33 @@ static struct clk_freq_tbl clk_tbl_gfx3d_8930ab[] = {
 	F_GFX3D(266667000, pll2,  1,  3),
 	F_GFX3D(320000000, pll2,  2,  5),
 	F_GFX3D(400000000, pll2,  1,  2),
+	F_GFX3D(450000000, pll15, 1,  2),
 	F_GFX3D(500000000, pll15, 1,  2),
 	F_END
 };
 
 static unsigned long fmax_gfx3d_8064ab[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 128000000,
-	[VDD_DIG_NOMINAL] = 325000000,
-	[VDD_DIG_HIGH]    = 450000000
+	[VDD_DIG_NOMINAL] = 320000000,
+	[VDD_DIG_HIGH]    = 500000000
 };
 
 static unsigned long fmax_gfx3d_8064[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 128000000,
-	[VDD_DIG_NOMINAL] = 325000000,
-	[VDD_DIG_HIGH]    = 400000000
+	[VDD_DIG_NOMINAL] = 320000000,
+	[VDD_DIG_HIGH]    = 500000000
 };
 
 static unsigned long fmax_gfx3d_8930[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 192000000,
 	[VDD_DIG_NOMINAL] = 320000000,
-	[VDD_DIG_HIGH]    = 400000000
+	[VDD_DIG_HIGH]    = 500000000
 };
 
 static unsigned long fmax_gfx3d_8930aa[VDD_DIG_NUM] = {
 	[VDD_DIG_LOW]     = 192000000,
 	[VDD_DIG_NOMINAL] = 320000000,
-	[VDD_DIG_HIGH]    = 450000000
+	[VDD_DIG_HIGH]    = 500000000
 };
 
 static unsigned long fmax_gfx3d_8930ab[VDD_DIG_NUM] = {
@@ -3646,7 +3650,7 @@ static struct rcg_clk gfx3d_clk = {
 		.dbg_name = "gfx3d_clk",
 		.ops = &clk_ops_rcg,
 		VDD_DIG_FMAX_MAP3(LOW,  128000000, NOMINAL, 300000000,
-				  HIGH, 400000000),
+				  HIGH, 500000000),
 		CLK_INIT(gfx3d_clk.c),
 		.depends = &gmem_axi_clk.c,
 	},
@@ -6709,7 +6713,7 @@ static void __init msm8960_clock_pre_init(void)
 	else if (cpu_is_msm8930aa())
 		gfx3d_clk.c.fmax = fmax_gfx3d_8930aa;
 	if (cpu_is_msm8930() || cpu_is_msm8930aa() || cpu_is_msm8627()) {
-		pll15_clk.c.rate = 900000000;
+		pll15_clk.c.rate = 975000000;
 		gmem_axi_clk.c.depends = &gfx3d_axi_clk_8930.c;
 	} else if (cpu_is_msm8930ab()) {
 		gfx3d_clk.freq_tbl = clk_tbl_gfx3d_8930ab;
