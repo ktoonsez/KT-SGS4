@@ -56,3 +56,6 @@ echo "Make Mrproper"
 make mrproper
 ./build_intl_tw.sh
 
+echo "Switch to AOSP 4.2.2"
+git checkout aosp
+
