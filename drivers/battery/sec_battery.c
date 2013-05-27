@@ -811,12 +811,12 @@ static bool sec_bat_temperature(
 			battery->pdata->temp_low_threshold_normal;
 	}
 
-	dev_info(battery->dev,
+	/*dev_info(battery->dev,
 		"%s: HT(%d), HR(%d), LT(%d), LR(%d)\n",
 		__func__, battery->temp_high_threshold,
 		battery->temp_high_recovery,
 		battery->temp_low_threshold,
-		battery->temp_low_recovery);
+		battery->temp_low_recovery);*/
 	return ret;
 }
 
@@ -1634,7 +1634,7 @@ static void sec_bat_get_battery_info(
 		break;
 	}
 
-	dev_info(battery->dev,
+	/*dev_info(battery->dev,
 		"%s:Vnow(%dmV),Inow(%dmA),SOC(%d%%),Tbat(%d)\n", __func__,
 		battery->voltage_now, battery->current_now,
 		battery->capacity, battery->temperature);
@@ -1643,7 +1643,7 @@ static void sec_bat_get_battery_info(
 		battery->present ? "Connected" : "Disconnected",
 		battery->voltage_avg, battery->voltage_ocv,
 		battery->temper_amb,
-		battery->current_avg, battery->current_adc);
+		battery->current_avg, battery->current_adc);*/
 };
 
 static void sec_bat_polling_work(struct work_struct *work)
@@ -1882,13 +1882,13 @@ static void sec_bat_monitor_work(
 	sec_bat_fullcharged_check(battery);
 
 continue_monitor:
-	dev_info(battery->dev,
+	/*dev_info(battery->dev,
 		"%s: Status(%s), mode(%s), Health(%s), Cable(%d), siop_level(%d)\n",
 		__func__,
 		sec_bat_status_str[battery->status],
 		sec_bat_charging_mode_str[battery->charging_mode],
 		sec_bat_health_str[battery->health],
-		battery->cable_type, battery->siop_level);
+		battery->cable_type, battery->siop_level);*/
 
 	power_supply_changed(&battery->psy_bat);
 
