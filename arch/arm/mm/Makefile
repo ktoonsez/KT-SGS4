@@ -96,7 +96,7 @@ obj-$(CONFIG_CPU_V7)		+= proc-v7.o
 obj-$(CONFIG_EMULATE_DOMAIN_MANAGER_V7) += emulate_domain_manager-v7.o
 
 AFLAGS_proc-v6.o	:=-Wa,-march=armv6
-AFLAGS_proc-v7.o  	:=-Wa,-march=armv7-a$(plus_sec)
+AFLAGS_proc-v7.o	:=-Wa,-march=armv7-a
 
 obj-$(CONFIG_CACHE_FEROCEON_L2)	+= cache-feroceon-l2.o
 obj-$(CONFIG_CACHE_L2X0)	+= cache-l2x0.o

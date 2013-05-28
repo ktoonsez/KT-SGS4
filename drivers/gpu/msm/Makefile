@@ -1,4 +1,4 @@
-ccflags-y := -Iinclude/drm -Idrivers/gpu/msm
+ccflags-y := -Iinclude/drm -Idrivers/gpu/msm -Wframe-larger-than=1040
 
 msm_kgsl_core-y = \
 	kgsl.o \
