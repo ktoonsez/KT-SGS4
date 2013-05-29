@@ -99,6 +99,7 @@ static void __cpuinit check_tempk(struct work_struct *work)
 	else if (kmsm_thermal_info.isthrottling && temp <= kmsm_thermal_info.temp_limit_degC_stop)
 	{
 		unsigned int i;
+		bool stopThrottle = false;
 		//policy = cpufreq_cpu_get(0);
 		//if (prev_freq > 0)
 		//	__cpufreq_driver_target(policy, prev_freq, CPUFREQ_RELATION_H);
@@ -107,7 +108,7 @@ static void __cpuinit check_tempk(struct work_struct *work)
 		{
 			limit_idx = limit_idx_high;
 			kmsm_thermal_info.isthrottling = 0;
-			do_kthermal(0, 0);
+			stopThrottle = true;
 			pr_alert("STOP KTHROTTLING - current temp = %lu\n", temp);
 		}
 		for (i = 0; i < num_online_cpus(); i++)
@@ -123,6 +124,8 @@ static void __cpuinit check_tempk(struct work_struct *work)
 				do_kthermal(i, new_freq);
 			}
 		}
+		if (stopThrottle)
+			do_kthermal(0, 0);
 	}
 
 reschedule:
