@@ -37,6 +37,8 @@
 #ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
 struct device *stored_dev;
 #endif
+struct kgsl_device *Gbldevice;
+unsigned long orig_max;
 
 struct clk_pair {
 	const char *name;
@@ -374,6 +376,32 @@ static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 	return -ERANGE;
 }
 
+void set_max_gpuclk_so(unsigned long val)
+{
+	struct kgsl_pwrctrl *pwr;
+	int level;
+
+	pwr = &Gbldevice->pwrctrl;
+	
+	if (val == 0)
+		val = orig_max;
+	else if (val != 0 && orig_max == 0)
+		orig_max = pwr->pwrlevels[pwr->thermal_pwrlevel].gpu_freq;
+		
+	mutex_lock(&Gbldevice->mutex);
+	level = _get_nearest_pwrlevel(pwr, val);
+	if (level < 0)
+		goto done;
+
+	pwr->thermal_pwrlevel = level;
+
+	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
+		kgsl_pwrctrl_pwrlevel_change(Gbldevice, pwr->thermal_pwrlevel);
+
+done:
+	mutex_unlock(&Gbldevice->mutex);
+	
+}
 static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 					 struct device_attribute *attr,
 					 const char *buf, size_t count)
@@ -406,7 +434,8 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 
 	if (pwr->thermal_pwrlevel > pwr->active_pwrlevel)
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->thermal_pwrlevel);
-
+	
+	orig_max = val;
 done:
 	mutex_unlock(&device->mutex);
 	return count;
@@ -1018,6 +1047,8 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct kgsl_device_platform_data *pdata = pdev->dev.platform_data;
 
+	Gbldevice = device;
+	
 	/*acquire clocks */
 	for (i = 0; i < KGSL_MAX_CLKS; i++) {
 		if (pdata->clk_map & clks[i].map) {
