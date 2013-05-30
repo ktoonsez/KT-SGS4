@@ -92,8 +92,8 @@ enum Lcd_mDNIe_Negative {
 };
 
 enum Background_Mode {
-	DYNAMIC_MODE = 0,
-	STANDARD_MODE,
+	STANDARD_MODE = 0,
+	DYNAMIC_MODE,
 	NATURAL_MODE,
 	MOVIE_MODE,
 	AUTO_MODE,
