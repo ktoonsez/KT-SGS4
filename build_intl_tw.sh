@@ -2,7 +2,7 @@
 export KERNELDIR=`readlink -f .`
 export PARENT_DIR=`readlink -f ..`
 export INITRAMFS_DEST=$KERNELDIR/kernel/usr/initramfs
-export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/TW_TMO
+export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/TW_INTL
 export CONFIG_AOSP_BUILD=y
 export PACKAGEDIR=$PARENT_DIR/Packages/TW
 #Enable FIPS mode
