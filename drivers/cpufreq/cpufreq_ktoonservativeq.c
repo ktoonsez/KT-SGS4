@@ -598,13 +598,19 @@ static ssize_t store_boost_hold_cycles(struct kobject *a, struct attribute *b,
 static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
-	int ret;
+	int ret, cpu;
 	ret = sscanf(buf, "%u", &input);
 
 	if (input != 0 && input != 1)
 		input = 0;
 
 	dbs_tuners_ins.disable_hotplugging = input;
+	if (input == 1)
+	{
+		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			hotplug_cpu_single_up[cpu] = 1;
+		schedule_work_on(0, &hotplug_online_work);
+	}
 	return count;
 }
 
