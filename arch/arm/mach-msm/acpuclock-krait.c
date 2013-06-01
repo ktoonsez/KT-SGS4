@@ -1162,7 +1162,7 @@ static void __init drv_data_init(struct device *dev,
 	acpuclk_krait_data.wait_for_irq_khz = params->stby_khz;
 }
 
-void acpuclk_UV_mV_table(int cnt, int vdd_uv[]) {
+void acpuclk_UV_mV_table(int cnt, unsigned int vdd_uv[]) {
 
 	int i;
 	int j=0;
