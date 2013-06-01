@@ -636,17 +636,30 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 {
 	unsigned int ret = -EINVAL;
 	int modu = 0;
+	int i;
+	unsigned int volt_cur;
+	char size_cur[16];
 	unsigned int is_en_oc = get_enable_oc();
-	int u[FREQ_STEPS];
+	unsigned int u[FREQ_STEPS];
 	if (is_en_oc == 0)
 		modu = FREQ_TABLE_SIZE_OFFSET;
-
-	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15], &u[16], &u[17], &u[18], &u[19], &u[20], &u[21]);
-
-	pr_alert("store_UV_mV_table: %d\n", ret);
-	if(ret != (FREQ_STEPS-modu)) {
-		return -EINVAL;
+	for(i = 0; i < FREQ_STEPS-modu; i++)
+	{
+		ret = sscanf(buf, "%u", &volt_cur);
+		if(ret != 1)
+			return -EINVAL;
+		u[i] = volt_cur;
+		ret = sscanf(buf, "%s", size_cur);
+		buf += (strlen(size_cur)+1);
+		//pr_alert("STORE TABLE: %u-%s\n", u[i], size_cur);
 	}
+	
+	//ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15], &u[16], &u[17], &u[18], &u[19], &u[20], &u[21]);
+	
+	pr_alert("store_UV_mV_table: %d\n", FREQ_STEPS-modu);
+	//if(ret != (FREQ_STEPS-modu)) {
+	//	return -EINVAL;
+	//}
 
 	acpuclk_UV_mV_table(FREQ_STEPS-modu, u);
 	return count;
