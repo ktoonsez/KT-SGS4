@@ -465,12 +465,12 @@ static int alloc_device(struct nandsim *ns)
 		cfile = filp_open(cache_file, O_CREAT | O_RDWR | O_LARGEFILE, 0600);
 		if (IS_ERR(cfile))
 			return PTR_ERR(cfile);
-		if (!file_readable(cfile)) {
+		if (!cfile->f_op || (!cfile->f_op->read && !cfile->f_op->aio_read)) {
 			NS_ERR("alloc_device: cache file not readable\n");
 			err = -EINVAL;
 			goto err_close;
 		}
-		if (!file_writable(cfile)) {
+		if (!cfile->f_op->write && !cfile->f_op->aio_write) {
 			NS_ERR("alloc_device: cache file not writeable\n");
 			err = -EINVAL;
 			goto err_close;

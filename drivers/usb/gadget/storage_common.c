@@ -683,11 +683,11 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	 * If we can't read the file, it's no good.
 	 * If we can't write the file, use it read-only.
 	 */
-	if (!file_readable(filp)) {
+	if (!filp->f_op || !(filp->f_op->read || filp->f_op->aio_read)) {
 		LINFO(curlun, "file not readable: %s\n", filename);
 		goto out;
 	}
-	if (!file_writable(filp))
+	if (!(filp->f_op->write || filp->f_op->aio_write))
 		ro = 1;
 
 	size = i_size_read(inode->i_mapping->host);
