@@ -501,6 +501,41 @@ void __init __configure_pll(struct pll_config *config,
 	writel_relaxed(regval, PLL_CONFIG_REG(regs));
 }
 
+void configure_pllOC(struct pll_config *config,
+		struct pll_config_regs *regs, u32 ena_fsm_mode)
+{
+	u32 regval;
+
+	writel_relaxed(config->l, PLL_L_REG(regs));
+	writel_relaxed(config->m, PLL_M_REG(regs));
+	writel_relaxed(config->n, PLL_N_REG(regs));
+
+	regval = readl_relaxed(PLL_CONFIG_REG(regs));
+
+	/* Enable the MN accumulator  */
+	if (config->mn_ena_mask) {
+		regval &= ~config->mn_ena_mask;
+		regval |= config->mn_ena_val;
+	}
+
+	/* Enable the main output */
+	if (config->main_output_mask) {
+		regval &= ~config->main_output_mask;
+		regval |= config->main_output_val;
+	}
+
+	/* Set pre-divider and post-divider values */
+	regval &= ~config->pre_div_mask;
+	regval |= config->pre_div_val;
+	regval &= ~config->post_div_mask;
+	regval |= config->post_div_val;
+
+	/* Select VCO setting */
+	regval &= ~config->vco_mask;
+	regval |= config->vco_val;
+	writel_relaxed(regval, PLL_CONFIG_REG(regs));
+}
+
 void __init configure_sr_pll(struct pll_config *config,
 		struct pll_config_regs *regs, u32 ena_fsm_mode)
 {
