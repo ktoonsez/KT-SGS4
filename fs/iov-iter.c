@@ -6,8 +6,8 @@
 #include <linux/highmem.h>
 #include <linux/pagemap.h>
 
-static size_t __iovec_copy_from_user(char *vaddr, const struct iovec *iov,
-				     size_t base, size_t bytes, int atomic)
+static size_t __iovec_copy_from_user_inatomic(char *vaddr,
+			const struct iovec *iov, size_t base, size_t bytes)
 {
 	size_t copied = 0, left = 0;
 
@@ -16,10 +16,7 @@ static size_t __iovec_copy_from_user(char *vaddr, const struct iovec *iov,
 		int copy = min(bytes, iov->iov_len - base);
 
 		base = 0;
-		if (atomic)
-			left = __copy_from_user_inatomic(vaddr, buf, copy);
-		else
-			left = __copy_from_user(vaddr, buf, copy);
+		left = __copy_from_user_inatomic(vaddr, buf, copy);
 		copied += copy;
 		bytes -= copy;
 		vaddr += copy;
@@ -50,8 +47,8 @@ size_t iov_iter_copy_from_user_atomic(struct page *page,
 		left = __copy_from_user_inatomic(kaddr + offset, buf, bytes);
 		copied = bytes - left;
 	} else {
-		copied = __iovec_copy_from_user(kaddr + offset, i->iov,
-						i->iov_offset, bytes, 1);
+		copied = __iovec_copy_from_user_inatomic(kaddr + offset,
+						i->iov, i->iov_offset, bytes);
 	}
 	kunmap_atomic(kaddr);
 
@@ -78,8 +75,8 @@ size_t iov_iter_copy_from_user(struct page *page,
 		left = __copy_from_user(kaddr + offset, buf, bytes);
 		copied = bytes - left;
 	} else {
-		copied = __iovec_copy_from_user(kaddr + offset, i->iov,
-						i->iov_offset, bytes, 0);
+		copied = __iovec_copy_from_user_inatomic(kaddr + offset,
+						i->iov, i->iov_offset, bytes);
 	}
 	kunmap(page);
 	return copied;
