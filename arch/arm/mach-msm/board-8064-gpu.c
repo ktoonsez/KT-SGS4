@@ -272,6 +272,11 @@ struct platform_device device_kgsl_3d0 = {
 	},
 };
 
+void SetMAXGPUFreq(unsigned long freq)
+{
+	kgsl_3d0_pdata.pwrlevel[0].gpu_freq = freq;
+}
+
 void __init apq8064_init_gpu(void)
 {
 	unsigned int version = socinfo_get_version();
