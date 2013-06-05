@@ -24,9 +24,9 @@
 const struct file_operations bfs_file_operations = {
 	.llseek 	= generic_file_llseek,
 	.read		= do_sync_read,
-	.read_iter	= generic_file_read_iter,
+	.aio_read	= generic_file_aio_read,
 	.write		= do_sync_write,
-	.write_iter	= generic_file_write_iter,
+	.aio_write	= generic_file_aio_write,
 	.mmap		= generic_file_mmap,
 	.splice_read	= generic_file_splice_read,
 };

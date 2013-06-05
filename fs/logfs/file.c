@@ -263,8 +263,8 @@ const struct inode_operations logfs_reg_iops = {
 };
 
 const struct file_operations logfs_reg_fops = {
-	.read_iter	= generic_file_read_iter,
-	.write_iter	= generic_file_write_iter,
+	.aio_read	= generic_file_aio_read,
+	.aio_write	= generic_file_aio_write,
 	.fsync		= logfs_fsync,
 	.unlocked_ioctl	= logfs_ioctl,
 	.llseek		= generic_file_llseek,
