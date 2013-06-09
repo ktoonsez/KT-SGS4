@@ -2782,7 +2782,12 @@ config FORCE_FAST_CHARGE
 	help
 	  A simple sysfs interface to force adapters that
           are detected as USB to charge as AC.
- 
+
+config PM8921_CHARGER_CALLBACK
+	bool "CHARGER_CALLBACK"
+	default y
+	help
+	  Charger callback functions
 
 config SEC_FACTORY
 	bool "Enable FACTORY Features"
