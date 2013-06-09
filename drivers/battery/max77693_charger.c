@@ -25,6 +25,11 @@
 #define REDUCE_CURRENT_STEP	100
 #define MINIMUM_INPUT_CURRENT	300
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#define USB_FASTCHG_LOAD 1000 /* uA */
+#endif 
+
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
 
@@ -668,9 +673,13 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = max77693_get_health_state(charger);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		if (force_fast_charge == 1)
+			charger->charging_current_max = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current_max;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
+		if (force_fast_charge == 1)
+			charger->charging_current = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -707,7 +716,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 	/* check and unlock */
 	check_charger_unlock_state(charger);
-
+	
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		charger->status = val->intval;
@@ -742,6 +751,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				}
 			}
 		} else {
+			pr_alert("KTMAX77693-4-%d-%d-%d",charger->charging_current,charger->siop_level,charger->charging_current_max);
 			charger->is_charging = true;
 			/* decrease the charging current according to siop level */
 			set_charging_current =
@@ -749,11 +759,20 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (set_charging_current > 0 &&
 					set_charging_current < usb_charging_current)
 				set_charging_current = usb_charging_current;
+			if (force_fast_charge == 1)
+			{
+				set_charging_current = USB_FASTCHG_LOAD * charger->siop_level / 100;
+				charger->charging_current = USB_FASTCHG_LOAD;
+				charger->charging_current_max = USB_FASTCHG_LOAD;
+			}
+
 			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS)
 				set_charging_current_max = wpc_charging_current;
 			else
 				set_charging_current_max =
 						charger->charging_current_max;
+
+			pr_alert("KTMAX77693-5-%d-%d",set_charging_current,set_charging_current_max);
 		}
 		max77693_set_charger_state(charger, charger->is_charging);
 		/* if battery full, only disable charging  */
@@ -761,6 +780,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				(charger->status == POWER_SUPPLY_STATUS_DISCHARGING) ||
 				(value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)) {
 			/* current setting */
+			pr_alert("KTMAX77693-1-%d",set_charging_current);
 			max77693_set_charge_current(charger,
 				set_charging_current);
 			/* if battery is removed, disable input current and reenable input current
@@ -779,25 +799,38 @@ static int sec_chg_set_property(struct power_supply *psy,
 		break;
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		charger->charging_current_max = val->intval;
+		if (force_fast_charge == 1)
+			charger->charging_current_max = USB_FASTCHG_LOAD;
+		else
+			charger->charging_current_max = val->intval;
+		pr_alert("KTMAX77693-6-%d",charger->charging_current_max);
 		break;
 	/*  val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		charger->charging_current = val->intval;
+		if (force_fast_charge == 1)
+			charger->charging_current = USB_FASTCHG_LOAD;
+		else
+			charger->charging_current = val->intval;
+		pr_alert("KTMAX77693-7-%d",charger->charging_current);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
 			/* decrease the charging current according to siop level */
-			int current_now =
+			int current_now;
+			if (force_fast_charge == 1)
+				charger->charging_current = USB_FASTCHG_LOAD;
+			current_now = 
 				charger->charging_current * val->intval / 100;
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
+			pr_alert("KTMAX77693-2-%d",current_now);
 			max77693_set_charge_current(charger, current_now);
 		}
 		break;
 	case POWER_SUPPLY_PROP_POWER_NOW:
+			pr_alert("KTMAX77693-3-%d",val->intval);
 		max77693_set_charge_current(charger,
 				val->intval);
 		max77693_set_input_current(charger,
