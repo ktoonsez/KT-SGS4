@@ -1981,7 +1981,11 @@ recheck:
 
 		if (likely(!(*work_data_bits(work) & WORK_STRUCT_LINKED))) {
 			/* optimization path, not strictly necessary */
-			process_one_work(worker, work);
+			if (work != NULL && worker != NULL)
+			{
+				if (work->func != NULL)
+					process_one_work(worker, work);
+			}
 			if (unlikely(!list_empty(&worker->scheduled)))
 				process_scheduled_works(worker);
 		} else {
