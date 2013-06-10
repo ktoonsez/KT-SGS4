@@ -38,8 +38,7 @@
 /*I2C BUS ID*/
 #define I2C_LEDS_BUS_ID			21
 #define MSM_NFC_I2C_BUS_ID		17
-
-#if defined(CONFIG_CAMERA_SW_I2C)|| defined(CONFIG_MACH_JACTIVE_ATT)
+#ifdef CONFIG_CAMERA_SW_I2C
 #define MSM_CAMERA_SW_I2C_BUS_ID		27//CAMERA_SW_I2C
 #endif
 

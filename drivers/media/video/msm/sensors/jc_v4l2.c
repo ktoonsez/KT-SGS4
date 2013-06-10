@@ -146,7 +146,6 @@ struct jc_ctrl_t {
 	bool isp_null_read_sensor_fw;
 	bool samsung_app;
 	bool factory_bin;
-	int fw_retry_cnt;
 };
 
 static struct jc_ctrl_t *jc_ctrl;
@@ -836,11 +835,9 @@ static int jc_check_sum(void)
 		err = jc_readw(JC_CATEGORY_FLASH, 0x0A, &factarea_val);
 		cam_err("FactArea Checksum : %x", factarea_val);
 		cam_err("ISP - FactArea Checksum : %x", isp_val-factarea_val);
-
-		return isp_val-factarea_val;
 	}
 
-	return isp_val;
+	return 0;
 }
 
 static int jc_phone_fw_to_isp(void)
@@ -850,7 +847,6 @@ static int jc_phone_fw_to_isp(void)
 	int val;
 	int chip_erase;
 
-retry:
 	/* Set SIO receive mode : 0x4C, rising edge*/
 	err = jc_writeb(JC_CATEGORY_FLASH, 0x4B, 0x4C);
 	cam_err("err : %d", err);
@@ -899,13 +895,7 @@ retry:
 			0x07, &val);
 	} while (val == 0x01 && retries++ < JC_I2C_VERIFY);
 
-	err = jc_check_sum();
-
-	if (err != 0 && jc_ctrl->fw_retry_cnt < 2) {
-		cam_err("checksum error!! retry fw write!!: %d", jc_ctrl->fw_retry_cnt);
-		jc_ctrl->fw_retry_cnt++;
-		goto retry;
-	}
+	jc_check_sum();
 
 	return 0;
 }
@@ -917,7 +907,6 @@ static int jc_read_from_sensor_fw(void)
 	int val = 0;
 	int chip_erase;
 
-retry:
 	/* Read Sensor Flash */
 	err = jc_writeb(JC_CATEGORY_FLASH, 0x63, 0x01);
 	retries = 0;
@@ -950,13 +939,7 @@ retry:
 			0x07, &val);
 	} while (val == 0x01 && retries++ < JC_I2C_VERIFY);
 
-	err = jc_check_sum();
-
-	if (err != 0 && jc_ctrl->fw_retry_cnt < 2) {
-		cam_err("checksum error!! retry fw write!!: %d", jc_ctrl->fw_retry_cnt);
-		jc_ctrl->fw_retry_cnt++;
-		goto retry;
-	}
+	jc_check_sum();
 
 	return 0;
 }
@@ -1969,7 +1952,6 @@ static int jc_set_snapshot_mode(int mode)
 {
 	int32_t rc = 0;
 	int val = -1;
-	int retries = 0;
 
 	cam_info("Entered, shot mode %d\n", mode);
 
@@ -1985,7 +1967,7 @@ static int jc_set_snapshot_mode(int mode)
 			jc_readb(JC_CATEGORY_CAPCTRL,
 				        0x1F, &val);
 			cam_info("capture status : %d", val);
-		} while (val != 0 && retries++ < JC_I2C_VERIFY);
+		} while (val != 0);
 		if ((jc_ctrl->shot_mode == 0 ||jc_ctrl->shot_mode == 1)
 			&& (jc_ctrl->movie_mode == false)){
 			cam_info("1Sec Burst");
@@ -2116,9 +2098,8 @@ static int jc_set_touch_af_pos(int x, int y)
 
 	cam_info("Entered, touch af pos (%x, %x)\n", x, y);
 
-	if ((jc_ctrl->af_mode >= 3
-		&& jc_ctrl->af_mode <=6)
-		&& jc_ctrl->touch_af_mode == true) {
+	if (jc_ctrl->af_mode >=	3
+		&& jc_ctrl->af_mode <=6) {
 		cam_info("Now CAF mode. Return touch position setting!\n");
 		return rc;
 	}
@@ -2387,6 +2368,7 @@ static int jc_set_ev(int mode)
 static int jc_set_hjr(int mode)
 {
 	int32_t rc = 0;
+	u32 isp_mode;
 
 	cam_info("Entered, hjr %d\n", mode);
 
@@ -2395,16 +2377,37 @@ static int jc_set_hjr(int mode)
 		return rc;
 	}
 
-	if (mode == 0) {
-		cam_info("HJR Off\n");
-		jc_writeb(JC_CATEGORY_CAPCTRL,
-				0x0B, 0x00);
-	} else if (mode == 1) {
-		cam_info("HJR On\n");
-		jc_writeb(JC_CATEGORY_CAPCTRL,
-				0x0B, 0x01);
-	}
+	jc_readb(JC_CATEGORY_SYS, JC_SYS_MODE, &isp_mode);
 
+	if (isp_mode == JC_MONITOR_MODE) {
+		cam_info("monitor mode\n");
+
+		jc_set_mode(JC_PARMSET_MODE);
+
+		if (mode == 0) {
+			cam_info("HJR Off\n");
+			jc_writeb(JC_CATEGORY_CAPCTRL,
+					0x0B, 0x00);
+		} else if (mode == 1) {
+			cam_info("HJR On\n");
+			jc_writeb(JC_CATEGORY_CAPCTRL,
+					0x0B, 0x01);
+		}
+
+		jc_set_mode(JC_MONITOR_MODE);
+	} else {
+		cam_info("parameter mode\n");
+
+		if (mode == 0) {
+			cam_info("HJR Off\n");
+			jc_writeb(JC_CATEGORY_CAPCTRL,
+					0x0B, 0x00);
+		} else if (mode == 1) {
+			cam_info("HJR On\n");
+			jc_writeb(JC_CATEGORY_CAPCTRL,
+					0x0B, 0x01);
+		}
+	}
 	return rc;
 }
 
@@ -2783,27 +2786,13 @@ void sensor_native_control(void __user *arg)
 		if (ctrl_info.value_1 == CAM_FW_MODE_DUMP) {
 			jc_sensor_power_reset(&jc_s_ctrl);
 #if JC_DUMP_FW
-			jc_dump_fw();
+	jc_dump_fw();
 #endif
 			jc_sensor_power_down(&jc_s_ctrl);
 		} else if (ctrl_info.value_1 == CAM_FW_MODE_UPDATE) {
 			jc_sensor_power_reset(&jc_s_ctrl);
-			cam_info("ISP FW Force Write!\n");
-			jc_get_phone_version();
-			jc_load_SIO_fw();
-			jc_phone_fw_to_isp();
-			jc_sensor_power_reset(&jc_s_ctrl);
-			jc_get_isp_version();
-			jc_isp_boot();
-
-			cam_info("nv12 output setting\n");
-			jc_writeb(JC_CATEGORY_CAPCTRL,
-					0x0, 0x0f);
-
-			cam_info("Sensor version : %s\n", sysfs_sensor_fw_str);
-			cam_info("ISP version : %s\n", sysfs_isp_fw_str);
-			cam_info("Phone version : %s\n", sysfs_phone_fw_str);
-			cam_info("ISP FW Force Write Done!\n");
+			jc_load_fw_main();
+			jc_s_ctrl.func_tbl->sensor_power_up(&jc_s_ctrl);
 		}
 		break;
 
@@ -3086,8 +3075,6 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	jc_ctrl->need_restart_caf = false;
 	jc_ctrl->is_isp_null = false;
 	jc_ctrl->isp_null_read_sensor_fw = false;
-	jc_ctrl->touch_af_mode = false;
-	jc_ctrl->fw_retry_cnt = 0;
 
 	rc = msm_camera_request_gpio_table(data, 1);
 	if (rc < 0)

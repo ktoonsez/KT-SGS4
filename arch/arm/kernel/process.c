@@ -261,10 +261,6 @@ void cpu_idle(void)
 				cpu_die();
 #endif
 
-#ifdef CONFIG_ZRAM_FOR_ANDROID
-			could_cswap();
-#endif /* CONFIG_ZRAM_FOR_ANDROID */
-
 			/*
 			 * We need to disable interrupts here
 			 * to ensure we don't miss a wakeup call.
@@ -273,6 +269,11 @@ void cpu_idle(void)
 #ifdef CONFIG_PL310_ERRATA_769419
 			wmb();
 #endif
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+			could_cswap();
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+
 			if (hlt_counter) {
 				local_irq_enable();
 				cpu_relax();
