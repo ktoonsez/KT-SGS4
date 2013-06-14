@@ -18,9 +18,6 @@
  * This macro may have been defined in <gnu/types.h>. But we always
  * use the one here.
  */
-#undef __NFDBITS
-#define __NFDBITS	(8 * sizeof(unsigned long))
-
 #undef __FD_SETSIZE
 #define __FD_SETSIZE	1024
 
