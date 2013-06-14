@@ -64,7 +64,9 @@ struct kthread_work {
 	struct list_head	node;
 	kthread_work_func_t	func;
 	wait_queue_head_t	done;
-	struct kthread_worker	*worker;
+	atomic_t		flushing;
+	int			queue_seq;
+	int			done_seq;
 };
 
 #define KTHREAD_WORKER_INIT(worker)	{				\
