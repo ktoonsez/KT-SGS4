@@ -1351,8 +1351,8 @@ static int brightness_control(int bl_level)
 
 	candela = lux_tbl[get_candela_index(bl_level)];
 
-	pr_info("%s brightness_level : %d, candela : %d, auto : %d\n", 
-					__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
+	//pr_info("%s brightness_level : %d, candela : %d, auto : %d\n", 
+	//				__func__, mipi_pd.brightness_level, candela, get_auto_brightness());
 	cmd_size = 0;
 
 	/* LEVEL KEY ON */
