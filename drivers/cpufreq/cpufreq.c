@@ -56,6 +56,8 @@ static unsigned long Lscreen_off_GPU_mhz = 0;
 static unsigned int Lbluetooth_scaling_mhz = 0;
 static unsigned int Lbluetooth_scaling_mhz_orig = 378000;
 static bool bluetooth_scaling_mhz_active = false;
+static bool call_in_progress=false;
+static unsigned int Ldisable_som_call_in_progress = 0;
 static char scaling_governor_screen_off_sel[16];
 static char scaling_governor_screen_off_sel_prev[16];
 static char scaling_sched_screen_off_sel[16];
@@ -1122,6 +1124,24 @@ static ssize_t store_battery_ctrl_disable_chrg(struct cpufreq_policy *policy, co
   	return count;
 }
 
+static ssize_t show_disable_som_call_in_progress(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", Ldisable_som_call_in_progress);
+}
+static ssize_t store_disable_som_call_in_progress(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int value = 0;
+	unsigned int ret;
+	ret = sscanf(buf, "%u", &value);
+	if (value > 1)
+		value = 1;
+	if (value < 0)
+		value = 0;
+	Ldisable_som_call_in_progress = value;
+
+	return count;
+}
+
 unsigned int set_battery_max_level(unsigned int value)
 {
 	struct cpufreq_policy *policy = NULL;
@@ -1190,6 +1210,7 @@ cpufreq_freq_attr_rw(screen_off_scaling_enable);
 cpufreq_freq_attr_rw(screen_off_scaling_mhz);
 cpufreq_freq_attr_rw(screen_off_GPU_mhz);
 cpufreq_freq_attr_rw(bluetooth_scaling_mhz);
+cpufreq_freq_attr_rw(disable_som_call_in_progress);
 cpufreq_freq_attr_rw(scaling_governor_screen_off);
 cpufreq_freq_attr_rw(scaling_sched_screen_off);
 cpufreq_freq_attr_rw(scaling_governor_gps);
@@ -1222,6 +1243,7 @@ static struct attribute *default_attrs[] = {
 	&screen_off_scaling_mhz.attr,
 	&screen_off_GPU_mhz.attr,
 	&bluetooth_scaling_mhz.attr,
+	&disable_som_call_in_progress.attr,
 	&scaling_governor_screen_off.attr,
 	&scaling_sched_screen_off.attr,
 	&scaling_governor_gps.attr,
@@ -2534,27 +2556,27 @@ static void cpufreq_gov_resume(void)
 	else
 		pr_alert("cpufreq_gov_resume_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel_prev);
 
-	if ((bluetooth_scaling_mhz_active == true && Lscreen_off_scaling_mhz > Lbluetooth_scaling_mhz) || (bluetooth_scaling_mhz_active == false))
+	if (Lscreen_off_scaling_enable == 1 && (!call_in_progress || Ldisable_som_call_in_progress == 0))
 	{
-		if (Lscreen_off_scaling_enable == 1)
+		if (vfreq_lock == 1)
 		{
-			if (vfreq_lock == 1)
-			{
-				vfreq_lock = 0;
-				vfreq_lock_tempOFF = true;
-			}
-			value = Lscreen_off_scaling_mhz_orig;
-			mhz_lvl = get_batt_level();
-			if (mhz_lvl > 0)
-				value = mhz_lvl;
-			cpufreq_set_limit_defered(USER_MAX_START, value);
-			pr_alert("cpufreq_gov_resume_freq: %u\n", value);
+			vfreq_lock = 0;
+			vfreq_lock_tempOFF = true;
 		}
+		value = Lscreen_off_scaling_mhz_orig;
+		mhz_lvl = get_batt_level();
+		if (mhz_lvl > 0)
+			value = mhz_lvl;
+		cpufreq_set_limit_defered(USER_MAX_START, value);
+		pr_alert("cpufreq_gov_resume_freq: %u\n", value);
 	}
 	
 	//GPU Control
-	if (Lscreen_off_GPU_mhz > 0)
-		set_max_gpuclk_so(0);
+	if  (!call_in_progress || Ldisable_som_call_in_progress == 0)
+	{
+		if (Lscreen_off_GPU_mhz > 0)
+			set_max_gpuclk_so(0);
+	}
 }
 
 static void cpufreq_gov_suspend(void)
@@ -2587,25 +2609,34 @@ static void cpufreq_gov_suspend(void)
 	else
 		pr_alert("cpufreq_gov_suspend_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel);
 
-	if (Lscreen_off_scaling_enable == 1)
+	if (!call_in_progress || Ldisable_som_call_in_progress == 0)
 	{
-		if (vfreq_lock == 1)
+		if ((bluetooth_scaling_mhz_active == true && Lscreen_off_scaling_mhz > Lbluetooth_scaling_mhz) || (bluetooth_scaling_mhz_active == false))
 		{
-			vfreq_lock = 0;
-			vfreq_lock_tempOFF = true;
+			if (vfreq_lock == 1)
+			{
+				vfreq_lock = 0;
+				vfreq_lock_tempOFF = true;
+			}
+			value = Lscreen_off_scaling_mhz;
+			mhz_lvl = get_batt_level();
+			if (mhz_lvl > 0)
+				value = mhz_lvl;
+			cpufreq_set_limit_defered(USER_MAX_START, value);
+			pr_alert("cpufreq_gov_suspend_freq: %u\n", value);
 		}
-		value = Lscreen_off_scaling_mhz;
-		mhz_lvl = get_batt_level();
-		if (mhz_lvl > 0)
-			value = mhz_lvl;
-		cpufreq_set_limit_defered(USER_MAX_START, value);
-		pr_alert("cpufreq_gov_suspend_freq: %u\n", value);
+		//GPU Control
+		if (Lscreen_off_GPU_mhz > 0)
+			set_max_gpuclk_so(Lscreen_off_GPU_mhz);
 	}
-	
-	//GPU Control
-	if (Lscreen_off_GPU_mhz > 0)
-		set_max_gpuclk_so(Lscreen_off_GPU_mhz);
 }
+
+void set_call_in_progress(bool state)
+{
+	call_in_progress = state;
+	//pr_alert("CALL IN PROGRESS: %d\n", state);
+}
+
 
 void set_gps_status(bool stat)
 {
