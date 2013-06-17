@@ -435,7 +435,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 		//SetMAXGPUFreq(val);
 		SetGPUpll_config(0x25, val);
 	}
-	else if (val == 544000000)
+	else if (val == 545000000)
 	{
 		//pwr->pwrlevels[0].gpu_freq = val;
 		//SetMAXGPUFreq(val);
@@ -446,6 +446,12 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 		//pwr->pwrlevels[0].gpu_freq = val;
 		//SetMAXGPUFreq(val);
 		SetGPUpll_config(0x2C, val);
+	}
+	else if (val == 627000000)
+	{
+		//pwr->pwrlevels[0].gpu_freq = val;
+		//SetMAXGPUFreq(val);
+		SetGPUpll_config(0x2E, val);
 	}
 
 	internal_max = val;
