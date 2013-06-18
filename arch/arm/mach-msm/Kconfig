@@ -2792,7 +2792,7 @@ config FORCE_FAST_CHARGE
 
 config PM8921_CHARGER_CALLBACK
 	bool "CHARGER_CALLBACK"
-	default y
+	default n
 	help
 	  Charger callback functions
 
