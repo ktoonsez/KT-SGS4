@@ -289,7 +289,7 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		printk(KERN_DEBUG"haptic power_on is finished.\n");
+		//printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -299,7 +299,7 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		printk(KERN_DEBUG"haptic power_off is finished.\n");
+		//printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
