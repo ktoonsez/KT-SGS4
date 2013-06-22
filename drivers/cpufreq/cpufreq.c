@@ -2609,7 +2609,7 @@ static void cpufreq_gov_suspend(void)
 	else
 		pr_alert("cpufreq_gov_suspend_gov_SCHED_DENIED2: %s\n", scaling_sched_screen_off_sel);
 
-	if (!call_in_progress || Ldisable_som_call_in_progress == 0)
+	if (Lscreen_off_scaling_enable == 1 && (!call_in_progress || Ldisable_som_call_in_progress == 0))
 	{
 		if ((bluetooth_scaling_mhz_active == true && Lscreen_off_scaling_mhz > Lbluetooth_scaling_mhz) || (bluetooth_scaling_mhz_active == false))
 		{
@@ -2625,10 +2625,10 @@ static void cpufreq_gov_suspend(void)
 			cpufreq_set_limit_defered(USER_MAX_START, value);
 			pr_alert("cpufreq_gov_suspend_freq: %u\n", value);
 		}
-		//GPU Control
-		if (Lscreen_off_GPU_mhz > 0)
-			set_max_gpuclk_so(Lscreen_off_GPU_mhz);
 	}
+	//GPU Control
+	if (Lscreen_off_GPU_mhz > 0 && (!call_in_progress || Ldisable_som_call_in_progress == 0))
+		set_max_gpuclk_so(Lscreen_off_GPU_mhz);
 }
 
 void set_call_in_progress(bool state)
