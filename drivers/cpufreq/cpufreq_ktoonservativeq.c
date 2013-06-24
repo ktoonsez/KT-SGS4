@@ -128,6 +128,7 @@ static struct dbs_tuners {
 	unsigned int cpu_down_block_cycles;
 	unsigned int cpu_hotplug_block_cycles;
 	unsigned int touch_boost_cpu;
+	unsigned int touch_boost_cpu_all_cores;
 	unsigned int touch_boost_2nd_core;
 	unsigned int touch_boost_3rd_core;
 	unsigned int touch_boost_4th_core;
@@ -153,6 +154,7 @@ static struct dbs_tuners {
 	.cpu_down_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.cpu_hotplug_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.touch_boost_cpu = DEF_BOOST_CPU,
+	.touch_boost_cpu_all_cores = 1,
 	.touch_boost_2nd_core = 1,
 	.touch_boost_3rd_core = 0,
 	.touch_boost_4th_core = 0,
@@ -267,6 +269,12 @@ static ssize_t show_touch_boost_cpu(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
 	return sprintf(buf, "%u\n", dbs_tuners_ins.touch_boost_cpu / 1000);
+}
+
+static ssize_t show_touch_boost_cpu_all_cores(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", dbs_tuners_ins.touch_boost_cpu_all_cores);
 }
 
 /* cpufreq_ktoonservative Governor Tunables */
@@ -525,6 +533,22 @@ static ssize_t store_touch_boost_cpu(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+static ssize_t store_touch_boost_cpu_all_cores(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input != 0 && input != 1)
+		input = 1;
+	dbs_tuners_ins.touch_boost_cpu_all_cores = input;
+	return count;
+}
+
 static ssize_t store_touch_boost_2nd_core(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -765,6 +789,7 @@ define_one_global_rw(down_threshold_hotplug_3);
 define_one_global_rw(cpu_down_block_cycles);
 define_one_global_rw(cpu_hotplug_block_cycles);
 define_one_global_rw(touch_boost_cpu);
+define_one_global_rw(touch_boost_cpu_all_cores);
 define_one_global_rw(touch_boost_2nd_core);
 define_one_global_rw(touch_boost_3rd_core);
 define_one_global_rw(touch_boost_4th_core);
@@ -795,6 +820,7 @@ static struct attribute *dbs_attributes[] = {
 	&cpu_down_block_cycles.attr,
 	&cpu_hotplug_block_cycles.attr,
 	&touch_boost_cpu.attr,
+	&touch_boost_cpu_all_cores.attr,
 	&touch_boost_2nd_core.attr,
 	&touch_boost_3rd_core.attr,
 	&touch_boost_4th_core.attr,
@@ -841,26 +867,30 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		boost_hold_cycles_cnt++;
 
 		this_dbs_info->down_skip = 0;
-		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-		{
-			if (cpu_online(cpu))
-			{
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					if (trmlpolicy[cpu].cur < dbs_tuners_ins.touch_boost_cpu)
-					{
-						__cpufreq_driver_target(&trmlpolicy[cpu], dbs_tuners_ins.touch_boost_cpu,
-							CPUFREQ_RELATION_H);
-						//pr_alert("BOOST EXTRA CPUs: %d\n", cpu);
-					}
-				}
-			}
-		}
 
 		/* if we are already at full speed then break out early */
 		if (this_dbs_info->requested_freq == policy->max || policy->cur > dbs_tuners_ins.touch_boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.touch_boost_cpu)
 			return;
 
+		if (dbs_tuners_ins.touch_boost_cpu_all_cores)
+		{
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					if (cpu_online(cpu))
+					{
+						if (trmlpolicy[cpu].cur < dbs_tuners_ins.touch_boost_cpu)
+						{
+							__cpufreq_driver_target(&trmlpolicy[cpu], dbs_tuners_ins.touch_boost_cpu,
+								CPUFREQ_RELATION_H);
+							//pr_alert("BOOST EXTRA CPUs: %d\n", cpu);
+						}
+					}
+				}
+			}
+		}
+		
 		this_dbs_info->requested_freq = dbs_tuners_ins.touch_boost_cpu;
 		__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
 			CPUFREQ_RELATION_H);
@@ -1070,6 +1100,9 @@ void boostpulse_relay_kt(void)
 	if (!boostpulse_relayf)
 	{
 		bool got_boost_core = false;
+
+		if (dbs_tuners_ins.touch_boost_2nd_core == 0 && dbs_tuners_ins.touch_boost_3rd_core == 0 && dbs_tuners_ins.touch_boost_4th_core == 0 && dbs_tuners_ins.touch_boost_cpu == 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
+			return;
 		/*if (dbs_tuners_ins.touch_boost_gpu > 0)
 		{
 			int bpc = (dbs_tuners_ins.boost_hold_cycles / 2);
@@ -1096,9 +1129,6 @@ void boostpulse_relay_kt(void)
 		if (got_boost_core)
 			schedule_work_on(0, &hotplug_online_work);
 			
-		if (dbs_tuners_ins.touch_boost_2nd_core == 0 && dbs_tuners_ins.touch_boost_3rd_core == 0 && dbs_tuners_ins.touch_boost_4th_core == 0 && dbs_tuners_ins.touch_boost_cpu == 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
-			return;
-
 		boostpulse_relayf = true;
 		boost_hold_cycles_cnt = 0;
 		//dbs_tuners_ins.sampling_rate = min_sampling_rate;
