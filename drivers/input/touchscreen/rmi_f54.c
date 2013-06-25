@@ -2205,11 +2205,7 @@ static void get_fw_ver_bin(void)
 	set_default_result(data);
 	sprintf(data->cmd_buff, "SY%02X%02X%02X",
 			rmi4_data->ic_revision_of_bin,
-#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
-			rmi4_data->factory_read_panel_wakeup,
-#else
 			rmi4_data->board->panel_touch_type,
-#endif
 			rmi4_data->fw_version_of_bin);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
@@ -2226,11 +2222,7 @@ static void get_fw_ver_ic(void)
 	set_default_result(data);
 	sprintf(data->cmd_buff, "SY%02X%02X%02X",
 			rmi4_data->ic_revision_of_ic,
-#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
-			rmi4_data->factory_read_panel_wakeup,
-#else
 			rmi4_data->board->panel_touch_type,
-#endif
 			rmi4_data->fw_version_of_ic);
 
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
@@ -2248,14 +2240,9 @@ static void get_fac_fw_ver_bin(void)
 	const struct firmware *fw_entry = NULL;
 
 	set_default_result(data);
-#if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-	retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_HSYNC_FAC,
-			&rmi4_data->i2c_client->dev);
-#else
+
 	retval = request_firmware(&fw_entry, FW_IMAGE_NAME_B0_FAC,
 			&rmi4_data->i2c_client->dev);
-#endif
-
 	if (retval < 0) {
 		dev_err(&rmi4_data->i2c_client->dev,
 				"%s: factory firmware request failed\n",
@@ -2434,13 +2421,8 @@ static int check_rx_tx_num(void)
 			__func__, data->cmd_param[0], data->cmd_param[1]);
 		node = -1;
 	} else {
-#if defined(CONFIG_MACH_JACTIVE_EUR)
-		node = data->cmd_param[0] * rmi4_data->num_of_rx +
-						data->cmd_param[1];
-#else
 		node = data->cmd_param[0] * rmi4_data->num_of_tx +
 						data->cmd_param[1];
-#endif
 		dev_info(&rmi4_data->i2c_client->dev, "%s: node = %d\n",
 				__func__, node);
 	}
@@ -4378,26 +4360,6 @@ static int synaptics_rmi4_f54_init(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 #ifdef FACTORY_MODE
-#if defined(CONFIG_MACH_JF_DCM)
-	#define NUM_RX	28
-	#define NUM_TX	16
-
-	dev_info(&rmi4_data->i2c_client->dev,
-				"%s: num_of_tx = %d. num_of_rx = %d\n",
-				__func__, rmi4_data->num_of_tx, rmi4_data->num_of_rx );
-
-	if(!rx || !tx){
-		if (!rmi4_data->board->num_of_rx && !rmi4_data->board->num_of_tx) {
-			rx = rmi4_data->board->num_of_rx;
-			tx = rmi4_data->board->num_of_tx;
-		}
-		else{
-			rx = NUM_RX;
-			tx = NUM_TX;
-		}
-	}
-#endif
-
 	factory_data = kzalloc(sizeof(*factory_data), GFP_KERNEL);
 	if (!factory_data) {
 		dev_err(&rmi4_data->i2c_client->dev,

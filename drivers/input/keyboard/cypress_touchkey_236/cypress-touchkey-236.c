@@ -608,13 +608,6 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 		}
 
 	while (retry < 3) {
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[TouchKey] Failed to read Keycode_reg.\n");
@@ -630,24 +623,11 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 			data[3] = 0x40;
 		}
 
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(50);
 
 		/* Check autocal status */
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 6);
 
 		if (glove_value == 1) {
@@ -726,13 +706,6 @@ void touchkey_flip_cover(int value)
 		}
 
 	while (retry < 3) {
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[Touchkey] Failed to read Keycode_reg %d times.\n",
@@ -749,24 +722,11 @@ void touchkey_flip_cover(int value)
 				data[3] = 0x40;
 		}
 
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(100);
 
 		/* Check autocal status */
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
 
 		if (value == 1){
@@ -970,14 +930,15 @@ static ssize_t touchkey_firm_status_show(struct device *dev,
 {
 	struct cypress_touchkey_info *info = dev_get_drvdata(dev);
 	int count = 0;
+	char buff[16] = {0};
 	dev_info(&info->client->dev, "[TouchKey] touchkey_update_status: %d\n",
 						info->touchkey_update_status);
 	if (info->touchkey_update_status == 0)
-		count = snprintf(buf, 20, "PASS\n");
+		count = snprintf(buff, sizeof(buff), "PASS\n");
 	else if (info->touchkey_update_status == 1)
-		count = snprintf(buf, 20, "Downloading\n");
+		count = snprintf(buff, sizeof(buff), "Downloading\n");
 	else if (info->touchkey_update_status == -1)
-		count = snprintf(buf, 20, "Fail\n");
+		count = snprintf(buff, sizeof(buff), "Fail\n");
 	return count;
 }
 
@@ -986,15 +947,16 @@ static ssize_t touch_update_read(struct device *dev,
 {
 	struct cypress_touchkey_info *info = dev_get_drvdata(dev);
 	int count = 0;
+	char buff[16] = {0};
 
 	dev_info(&info->client->dev, "[TouchKey] touchkey_update_read: %d\n",
 						info->touchkey_update_status);
 	if (info->touchkey_update_status == 0)
-		count = snprintf(buf, 20, "PASS\n");
+		count = snprintf(buff, sizeof(buff), "PASS\n");
 	else if (info->touchkey_update_status == 1)
-		count = snprintf(buf, 20, "Downloading\n");
+		count = snprintf(buff, sizeof(buff), "Downloading\n");
 	else if (info->touchkey_update_status == -1)
-		count = snprintf(buf, 20, "Fail\n");
+		count = snprintf(buff, sizeof(buff), "Fail\n");
 	return count;
 }
 
@@ -1552,14 +1514,15 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 #if defined(CONFIG_MACH_JF_DCM)
 	msleep(50);
 #endif
+	ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
 
-	if (get_lcd_attached() == 0) {
-		printk(KERN_ERR "[TouchKey] %s %d Device wasn't connected to board \n",
+#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
+	if (ret < 0) {
+		printk(KERN_ERR "[TouchKey] %s %d i2c transfer error\n",
 			__func__, __LINE__);
 		goto err_i2c_check;
 		}
-
-	ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
+#else
 	if (ret < 0) {
 		disable_irq(client->irq);
 		if (ISSP_main() == 0) {
@@ -1572,6 +1535,7 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 			goto err_i2c_check;
 			}
 		}
+#endif
 
 #ifdef TSP_BOOSTER
 	cypress_init_dvfs(info);
@@ -1632,10 +1596,6 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 				enable_irq(client->irq);
 				break;
 			}
-			info->power_onoff(0);
-			msleep(70);
-			info->power_onoff(1);
-			msleep(50);
 			dev_err(&client->dev,
 				"[TouchKey] Touchkey_update failed... retry...\n");
 		}
@@ -1665,10 +1625,6 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 				enable_irq(client->irq);
 				break;
 			}
-			info->power_onoff(0);
-			msleep(70);
-			info->power_onoff(1);
-			msleep(50);
 			dev_err(&client->dev,
 				"[TouchKey] Touchkey_update failed... retry...\n");
 		}
