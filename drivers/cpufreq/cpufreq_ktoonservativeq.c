@@ -71,6 +71,7 @@ extern void boost_the_gpu(int freq, int cycles);
 extern void apenable_auto_hotplug(bool state);
 extern bool apget_enable_auto_hotplug(void);
 static bool prev_apenable;
+static bool hotplugInProgress = false;
 
 //extern void kt_is_active_benabled_gpio(bool val);
 extern void kt_is_active_benabled_touchkey(bool val);
@@ -250,7 +251,8 @@ void set_bluetooth_state_kt(bool val)
 				if (!cpu_online(cpu))
 					hotplug_cpu_single_up[cpu] = 1;
 			}
-			schedule_work_on(0, &hotplug_online_work);
+			if (!hotplugInProgress)
+				schedule_work_on(0, &hotplug_online_work);
 		}
 	}
 	else
@@ -633,7 +635,8 @@ static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b,
 	{
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 			hotplug_cpu_single_up[cpu] = 1;
-		schedule_work_on(0, &hotplug_online_work);
+		if (!hotplugInProgress)
+			schedule_work_on(0, &hotplug_online_work);
 	}
 	return count;
 }
@@ -868,9 +871,6 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		this_dbs_info->down_skip = 0;
 
-		/* if we are already at full speed then break out early */
-		if (this_dbs_info->requested_freq == policy->max || policy->cur > dbs_tuners_ins.touch_boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.touch_boost_cpu)
-			return;
 
 		if (dbs_tuners_ins.touch_boost_cpu_all_cores)
 		{
@@ -890,6 +890,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 				}
 			}
 		}
+		/* if we are already at full speed then break out early */
+		if (this_dbs_info->requested_freq == policy->max || policy->cur > dbs_tuners_ins.touch_boost_cpu || this_dbs_info->requested_freq > dbs_tuners_ins.touch_boost_cpu)
+			return;
 		
 		this_dbs_info->requested_freq = dbs_tuners_ins.touch_boost_cpu;
 		__cpufreq_driver_target(policy, this_dbs_info->requested_freq,
@@ -990,7 +993,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			if (Lcpu_up_block_cycles > dbs_tuners_ins.cpu_down_block_cycles && (dbs_tuners_ins.no_extra_cores_screen_off == 0 || (dbs_tuners_ins.no_extra_cores_screen_off == 1 && screen_is_on)))
 			{
 				hotplug_flag_on = false;
-				schedule_work_on(0, &hotplug_online_work);
+				if (!hotplugInProgress)
+					schedule_work_on(0, &hotplug_online_work);
 				Lcpu_up_block_cycles = 0;
 			}
 			Lcpu_up_block_cycles++;
@@ -1026,7 +1030,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			if (Lcpu_down_block_cycles > dbs_tuners_ins.cpu_down_block_cycles)
 			{
 				hotplug_flag_off = false;
-				schedule_work_on(0, &hotplug_offline_work);
+				if (!hotplugInProgress)
+					schedule_work_on(0, &hotplug_offline_work);
 				Lcpu_down_block_cycles = 0;
 			}
 			Lcpu_down_block_cycles++;
@@ -1082,7 +1087,10 @@ void screen_is_on_relay_kt(bool state)
 			got_boost_core = true;
 		}
 		if (got_boost_core)
-			schedule_work_on(0, &hotplug_online_work);
+		{
+			if (!hotplugInProgress)
+				schedule_work_on(0, &hotplug_online_work);
+		}
 				
 		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
@@ -1127,7 +1135,10 @@ void boostpulse_relay_kt(void)
 			got_boost_core = true;
 		}
 		if (got_boost_core)
-			schedule_work_on(0, &hotplug_online_work);
+		{
+			if (!hotplugInProgress)
+				schedule_work_on(0, &hotplug_online_work);
+		}
 			
 		boostpulse_relayf = true;
 		boost_hold_cycles_cnt = 0;
@@ -1162,6 +1173,7 @@ static void __cpuinit hotplug_offline_work_fn(struct work_struct *work)
 			//pr_info("auto_hotplug: CPU%d down.\n", cpu);
 		}
 	}
+	hotplugInProgress = false;
 }
 
 static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
@@ -1178,6 +1190,7 @@ static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
 			//pr_info("auto_hotplug: CPU%d up.\n", cpu);
 		}
 	}
+	hotplugInProgress = false;
 }
 
 static void do_dbs_timer(struct work_struct *work)
