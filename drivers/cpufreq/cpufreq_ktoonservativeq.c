@@ -254,7 +254,7 @@ void set_bluetooth_state_kt(bool val)
 					hotplug_cpu_single_up[cpu] = 1;
 			}
 			if (!hotplugInProgress)
-				schedule_work_on(0, &hotplug_online_work);
+				queue_work_on(0, dbs_wq, &hotplug_online_work);
 		}
 	}
 	else
@@ -638,7 +638,7 @@ static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b,
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 			hotplug_cpu_single_up[cpu] = 1;
 		if (!hotplugInProgress)
-			schedule_work_on(0, &hotplug_online_work);
+			queue_work_on(0, dbs_wq, &hotplug_online_work);
 	}
 	return count;
 }
@@ -996,7 +996,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			{
 				hotplug_flag_on = false;
 				if (!hotplugInProgress)
-					schedule_work_on(0, &hotplug_online_work);
+					queue_work_on(0, dbs_wq, &hotplug_online_work);
 				Lcpu_up_block_cycles = 0;
 			}
 			Lcpu_up_block_cycles++;
@@ -1033,7 +1033,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			{
 				hotplug_flag_off = false;
 				if (!hotplugInProgress)
-					schedule_work_on(0, &hotplug_offline_work);
+					queue_work_on(0, dbs_wq, &hotplug_offline_work);
 				Lcpu_down_block_cycles = 0;
 			}
 			Lcpu_down_block_cycles++;
@@ -1091,7 +1091,7 @@ void screen_is_on_relay_kt(bool state)
 		if (got_boost_core)
 		{
 			if (!hotplugInProgress)
-				schedule_work_on(0, &hotplug_online_work);
+				queue_work_on(0, dbs_wq, &hotplug_online_work);
 		}
 				
 		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
@@ -1139,7 +1139,7 @@ void boostpulse_relay_kt(void)
 		if (got_boost_core)
 		{
 			if (!hotplugInProgress)
-				schedule_work_on(0, &hotplug_online_work);
+				queue_work_on(0, dbs_wq, &hotplug_online_work);
 		}
 			
 		boostpulse_relayf = true;
