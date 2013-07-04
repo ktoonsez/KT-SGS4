@@ -996,7 +996,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			{
 				hotplug_flag_on = false;
 				if (!hotplugInProgress)
-					queue_work_on(0, dbs_wq, &hotplug_online_work);
+					queue_work_on(policy->cpu, dbs_wq, &hotplug_online_work);
 				Lcpu_up_block_cycles = 0;
 			}
 			Lcpu_up_block_cycles++;
@@ -1033,7 +1033,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 			{
 				hotplug_flag_off = false;
 				if (!hotplugInProgress)
-					queue_work_on(0, dbs_wq, &hotplug_offline_work);
+					queue_work_on(policy->cpu, dbs_wq, &hotplug_offline_work);
 				Lcpu_down_block_cycles = 0;
 			}
 			Lcpu_down_block_cycles++;
