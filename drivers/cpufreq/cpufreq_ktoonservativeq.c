@@ -1229,6 +1229,8 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 {
 	dbs_info->enable = 0;
 	cancel_delayed_work_sync(&dbs_info->work);
+	cancel_work_sync(&hotplug_offline_work);
+	cancel_work_sync(&hotplug_online_work);
 }
 
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
