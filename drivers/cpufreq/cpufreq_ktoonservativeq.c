@@ -157,7 +157,7 @@ static struct dbs_tuners {
 	.cpu_down_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.cpu_hotplug_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.touch_boost_cpu = DEF_BOOST_CPU,
-	.touch_boost_cpu_all_cores = 1,
+	.touch_boost_cpu_all_cores = 0,
 	.touch_boost_2nd_core = 1,
 	.touch_boost_3rd_core = 0,
 	.touch_boost_4th_core = 0,
