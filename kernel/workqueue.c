@@ -1812,14 +1812,25 @@ __acquires(&gcwq->lock)
 	struct worker *collision;
 	
 	if (unlikely(!cwq))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: cwq");
 		goto nullgetwork;
+	}
+
+	cpu_intensive = cwq->wq->flags & WQ_CPU_INTENSIVE;
+
 	gcwq = cwq->gcwq;
 	if (unlikely(!gcwq))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: gcwq");
 		goto nullgetwork;
+	}
 	bwh = busy_worker_head(gcwq, work);
 	if (unlikely(!bwh))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: bwh");
 		goto nullgetwork;
-	cpu_intensive = cwq->wq->flags & WQ_CPU_INTENSIVE;
+	}
 #ifdef CONFIG_LOCKDEP
 	/*
 	 * It is permissible to free the struct work_struct from
@@ -1920,6 +1931,8 @@ __acquires(&gcwq->lock)
 	
 	return;
 nullgetwork:
+	if (unlikely(cpu_intensive))
+		worker_clr_flags(worker, WORKER_CPU_INTENSIVE);
 	if (likely(&worker->hentry))
 		hlist_del_init(&worker->hentry);
 	worker->current_work = NULL;
