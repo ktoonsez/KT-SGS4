@@ -216,7 +216,7 @@ static void notification_available_cb(struct urb *urb)
 	}
 
 	if (!urb->actual_length) {
-		pr_err("Received Zero actual length: %d", urb->actual_length);
+		//pr_err("Received Zero actual length: %d", urb->actual_length);
 		return;
 	}
 	ctrl = urb->transfer_buffer;
