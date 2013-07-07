@@ -542,13 +542,20 @@ static int cpufreq_interactive_speedchange_task(void *data)
 		for_each_cpu(cpu, &tmp_mask) {
 			unsigned int j;
 			unsigned int max_freq = 0;
-
+			
 			pcpu = &per_cpu(cpuinfo, cpu);
 			if (!down_read_trylock(&pcpu->enable_sem))
 				continue;
 			if (!pcpu->governor_enabled) {
 				up_read(&pcpu->enable_sem);
 				continue;
+			}
+			
+			//KT hook
+			if (kt_freq_control[cpu] > 0)
+			{
+				max_freq = kt_freq_control[cpu];
+				goto skipcpu;
 			}
 
 			for_each_cpu(j, pcpu->policy->cpus) {
@@ -561,6 +568,7 @@ static int cpufreq_interactive_speedchange_task(void *data)
 				cpufreq_notify_utilization(pcpu->policy, (pcpu->cpu_load * pcpu->policy->cur) / pcpu->policy->cpuinfo.max_freq);
 			}
 
+skipcpu:
 			if (max_freq != pcpu->policy->cur)
 				__cpufreq_driver_target(pcpu->policy,
 							max_freq,
