@@ -653,7 +653,7 @@ static ssize_t store_lockout_2nd_core_hotplug(struct kobject *a, struct attribut
 	int ret, cpu;
 	ret = sscanf(buf, "%u", &input);
 
-	if (input != 0 && input != 1)
+	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
 	dbs_tuners_ins.lockout_2nd_core_hotplug = input;
@@ -663,6 +663,12 @@ static ssize_t store_lockout_2nd_core_hotplug(struct kobject *a, struct attribut
 		hotplug_cpu_single_up[1] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (input == 2)
+	{
+		hotplug_cpu_single_down[1] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
 	}
 	return count;
 }
@@ -674,7 +680,7 @@ static ssize_t store_lockout_3rd_core_hotplug(struct kobject *a, struct attribut
 	int ret, cpu;
 	ret = sscanf(buf, "%u", &input);
 
-	if (input != 0 && input != 1)
+	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
 	dbs_tuners_ins.lockout_3rd_core_hotplug = input;
@@ -684,6 +690,12 @@ static ssize_t store_lockout_3rd_core_hotplug(struct kobject *a, struct attribut
 		hotplug_cpu_single_up[2] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (input == 2)
+	{
+		hotplug_cpu_single_down[2] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
 	}
 	return count;
 }
@@ -695,7 +707,7 @@ static ssize_t store_lockout_4th_core_hotplug(struct kobject *a, struct attribut
 	int ret, cpu;
 	ret = sscanf(buf, "%u", &input);
 
-	if (input != 0 && input != 1)
+	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
 	dbs_tuners_ins.lockout_4th_core_hotplug = input;
@@ -705,6 +717,12 @@ static ssize_t store_lockout_4th_core_hotplug(struct kobject *a, struct attribut
 		hotplug_cpu_single_up[3] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (input == 2)
+	{
+		hotplug_cpu_single_down[3] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
 	}
 	return count;
 }
@@ -1099,7 +1117,7 @@ boostcomplete:
 	{
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 		{
-			if (max_load >= hotplug_cpu_enable_up[cpu] && (!cpu_online(cpu)))
+			if (max_load >= hotplug_cpu_enable_up[cpu] && (!cpu_online(cpu)) && hotplug_cpu_lockout[cpu] != 2)
 			{
 				if (Lcpu_hotplug_block_cycles > dbs_tuners_ins.cpu_hotplug_block_cycles)
 				{
@@ -1110,7 +1128,7 @@ boostcomplete:
 				Lcpu_hotplug_block_cycles++;
 				break;
 			}
-			else if (max_load <= hotplug_cpu_enable_down[CPUS_AVAILABLE - cpu] && (cpu_online(CPUS_AVAILABLE - cpu)) && !hotplug_cpu_lockout[CPUS_AVAILABLE - cpu])
+			else if (max_load <= hotplug_cpu_enable_down[CPUS_AVAILABLE - cpu] && (cpu_online(CPUS_AVAILABLE - cpu)) && hotplug_cpu_lockout[CPUS_AVAILABLE - cpu] != 1)
 			{
 				hotplug_cpu_single_down[CPUS_AVAILABLE - cpu] = 1;
 				hotplug_flag_off = true;
@@ -1160,7 +1178,7 @@ boostcomplete:
 		return;
 	}
 	
-	if (hotplug_flag_off && !dbs_tuners_ins.disable_hotplugging && disable_hotplug_bt_active == false && policy->cpu == 0) {
+	if (policy->cpu == 0 && hotplug_flag_off && !dbs_tuners_ins.disable_hotplugging && disable_hotplug_bt_active == false) {
 		if (num_online_cpus() > 1)
 		{
 			if (Lcpu_down_block_cycles > dbs_tuners_ins.cpu_down_block_cycles)
@@ -1215,36 +1233,41 @@ void setExtraCores(unsigned int requested_freq)
 	}
 }
 
+void check_boost_cores_up(bool dec1, bool dec2, bool dec3)
+{
+	bool got_boost_core = false;
+
+	if (!cpu_online(1) && dec1 && hotplug_cpu_lockout[1] != 2)
+	{
+		hotplug_cpu_single_up[1] = 1;
+		got_boost_core = true;
+	}
+	if (!cpu_online(2) && dec2 && hotplug_cpu_lockout[2] != 2)
+	{
+		hotplug_cpu_single_up[2] = 1;
+		got_boost_core = true;
+	}
+	if (!cpu_online(3) && dec3 && hotplug_cpu_lockout[3] != 2)
+	{
+		hotplug_cpu_single_up[3] = 1;
+		got_boost_core = true;
+	}
+	if (got_boost_core)
+	{
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+}
+
 void screen_is_on_relay_kt(bool state)
 {
 	screen_is_on = state;
 	if (state == true)
 	{
-		bool got_boost_core = false;
-		
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
 
-		if (num_online_cpus() < 2 && dbs_tuners_ins.boost_2nd_core_on_button)
-		{
-			hotplug_cpu_single_up[1] = 1;
-			got_boost_core = true;
-		}
-		if (num_online_cpus() < 3 && dbs_tuners_ins.boost_3rd_core_on_button)
-		{
-			hotplug_cpu_single_up[2] = 1;
-			got_boost_core = true;
-		}
-		if (num_online_cpus() < 4 && dbs_tuners_ins.boost_4th_core_on_button)
-		{
-			hotplug_cpu_single_up[3] = 1;
-			got_boost_core = true;
-		}
-		if (got_boost_core)
-		{
-			if (!hotplugInProgress)
-				queue_work_on(0, dbs_wq, &hotplug_online_work);
-		}
+		check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
 				
 		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
@@ -1273,26 +1296,7 @@ void boostpulse_relay_kt(void)
 			else
 				boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, 0);
 		}*/
-		if (num_online_cpus() < 2 && dbs_tuners_ins.touch_boost_2nd_core)
-		{
-			hotplug_cpu_single_up[1] = 1;
-			got_boost_core = true;
-		}
-		if (num_online_cpus() < 3 && dbs_tuners_ins.touch_boost_3rd_core)
-		{
-			hotplug_cpu_single_up[2] = 1;
-			got_boost_core = true;
-		}
-		if (num_online_cpus() < 4 && dbs_tuners_ins.touch_boost_4th_core)
-		{
-			hotplug_cpu_single_up[3] = 1;
-			got_boost_core = true;
-		}
-		if (got_boost_core)
-		{
-			if (!hotplugInProgress)
-				queue_work_on(0, dbs_wq, &hotplug_online_work);
-		}
+		check_boost_cores_up(dbs_tuners_ins.touch_boost_2nd_core, dbs_tuners_ins.touch_boost_3rd_core, dbs_tuners_ins.touch_boost_4th_core);
 			
 		boostpulse_relayf = true;
 		boost_hold_cycles_cnt = 0;
