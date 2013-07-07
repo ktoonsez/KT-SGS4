@@ -1930,7 +1930,27 @@ __acquires(&gcwq->lock)
 	cwq_dec_nr_in_flight(cwq, work_color, false);
 	
 	return;
+
 nullgetwork:
+	debug_work_deactivate(work);
+	list_del_init(&work->entry);
+
+	if (unlikely(cpu_intensive))
+		worker_set_flags(worker, WORKER_CPU_INTENSIVE, true);
+
+	gcwq = get_work_gcwq(work);
+	if (unlikely(gcwq))
+		spin_unlock_irq(&gcwq->lock);
+		
+	smp_wmb();	// paired with test_and_set_bit(PENDING)
+	work_clear_pending(work);
+	trace_workqueue_execute_start(work);
+	f(work);
+	trace_workqueue_execute_end(work);
+
+	if (unlikely(gcwq))
+		spin_lock_irq(&gcwq->lock);
+	
 	if (unlikely(cpu_intensive))
 		worker_clr_flags(worker, WORKER_CPU_INTENSIVE);
 	if (likely(&worker->hentry))
