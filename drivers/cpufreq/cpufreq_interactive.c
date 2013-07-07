@@ -419,7 +419,7 @@ static int cpufreq_interactive_up_task(void *data)
 		for_each_cpu(cpu, &tmp_mask) {
 			unsigned int j;
 			unsigned int max_freq = 0;
-
+			
 			pcpu = &per_cpu(cpuinfo, cpu);
 			smp_rmb();
 
@@ -427,6 +427,13 @@ static int cpufreq_interactive_up_task(void *data)
 				continue;
 
 			mutex_lock(&set_speed_lock);
+			
+			//KT hook
+			if (kt_freq_control[cpu] > 0)
+			{
+				max_freq = kt_freq_control[cpu];
+				goto skipcpu;
+			}
 
 			for_each_cpu(j, pcpu->policy->cpus) {
 				struct cpufreq_interactive_cpuinfo *pjcpu =
@@ -436,6 +443,7 @@ static int cpufreq_interactive_up_task(void *data)
 					max_freq = pjcpu->target_freq;
 			}
 
+skipcpu:
 			if (max_freq != pcpu->policy->cur)
 				__cpufreq_driver_target(pcpu->policy,
 							max_freq,
@@ -473,6 +481,13 @@ static void cpufreq_interactive_freq_down(struct work_struct *work)
 
 		mutex_lock(&set_speed_lock);
 
+		//KT hook
+		if (kt_freq_control[cpu] > 0)
+		{
+			max_freq = kt_freq_control[cpu];
+			goto skipcpu;
+		}
+
 		for_each_cpu(j, pcpu->policy->cpus) {
 			struct cpufreq_interactive_cpuinfo *pjcpu =
 				&per_cpu(cpuinfo, j);
@@ -481,6 +496,7 @@ static void cpufreq_interactive_freq_down(struct work_struct *work)
 				max_freq = pjcpu->target_freq;
 		}
 
+skipcpu:
 		if (max_freq != pcpu->policy->cur)
 			__cpufreq_driver_target(pcpu->policy, max_freq,
 						CPUFREQ_RELATION_H);
