@@ -1501,7 +1501,7 @@ static int  mxt_rest_initialize(struct mxt_fw_info *fw_info)
 
 	/* Write config */
 	ret = mxt_write_config(fw_info);
-	if (ret != 0) {
+	if (ret) {
 		dev_err(dev, "Failed to write config from file\n");
 		goto out;
 	}

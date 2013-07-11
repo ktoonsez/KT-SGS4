@@ -2205,7 +2205,11 @@ static void get_fw_ver_bin(void)
 	set_default_result(data);
 	sprintf(data->cmd_buff, "SY%02X%02X%02X",
 			rmi4_data->ic_revision_of_bin,
+#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
+			rmi4_data->factory_read_panel_wakeup,
+#else
 			rmi4_data->board->panel_touch_type,
+#endif
 			rmi4_data->fw_version_of_bin);
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
 
@@ -2222,7 +2226,11 @@ static void get_fw_ver_ic(void)
 	set_default_result(data);
 	sprintf(data->cmd_buff, "SY%02X%02X%02X",
 			rmi4_data->ic_revision_of_ic,
+#ifdef CONFIG_TOUCHSCREEN_FACTORY_PLATFORM
+			rmi4_data->factory_read_panel_wakeup,
+#else
 			rmi4_data->board->panel_touch_type,
+#endif
 			rmi4_data->fw_version_of_ic);
 
 	set_cmd_result(data, data->cmd_buff, strlen(data->cmd_buff));
@@ -4367,6 +4375,26 @@ static int synaptics_rmi4_f54_init(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 #ifdef FACTORY_MODE
+#if defined(CONFIG_MACH_JF_DCM)
+	#define NUM_RX	28
+	#define NUM_TX	16
+
+	dev_info(&rmi4_data->i2c_client->dev,
+				"%s: num_of_tx = %d. num_of_rx = %d\n",
+				__func__, rmi4_data->num_of_tx, rmi4_data->num_of_rx );
+
+	if(!rx || !tx){
+		if (!rmi4_data->board->num_of_rx && !rmi4_data->board->num_of_tx) {
+			rx = rmi4_data->board->num_of_rx;
+			tx = rmi4_data->board->num_of_tx;
+		}
+		else{
+			rx = NUM_RX;
+			tx = NUM_TX;
+		}
+	}
+#endif
+
 	factory_data = kzalloc(sizeof(*factory_data), GFP_KERNEL);
 	if (!factory_data) {
 		dev_err(&rmi4_data->i2c_client->dev,
