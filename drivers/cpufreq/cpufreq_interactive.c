@@ -247,7 +247,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->floor_freq = new_freq;
 	pcpu->floor_validate_time = pcpu->timer_run_time;
 
-	if (pcpu->target_freq == new_freq) {
+	if (pcpu->target_freq == new_freq && kt_freq_control[1] == 0) {
 		trace_cpufreq_interactive_already(data, cpu_load,
 						  pcpu->target_freq, new_freq);
 		goto rearm_if_notmax;
