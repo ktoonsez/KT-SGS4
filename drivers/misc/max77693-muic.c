@@ -44,6 +44,9 @@ static struct max77693_muic_info *gInfo;
 /* For restore charger interrupt states */
 static u8 chg_int_state;
 
+extern void send_cable_state(unsigned int state);
+unsigned int gbatt_chg_prev = 0;
+
 /* MAX77693 MUIC CHG_TYP setting values */
 enum {
 	/* No Valid voltage at VB (Vvb < Vvbdet) */
@@ -665,6 +668,10 @@ void max77693_muic_monitor_status(void){
 	ret = max77693_bulk_read(gInfo->muic, MAX77693_MUIC_REG_STATUS1, 2, status);
 	dev_info(gInfo->dev, "func:%s, ST1:0x%x, ST2:0x%x CABLE:%d\n", __func__,
 			status[0], status[1], gInfo->cable_type);
+
+	if (gInfo->cable_type != gbatt_chg_prev)
+		send_cable_state(gInfo->cable_type);
+	gbatt_chg_prev = gInfo->cable_type;
 }
 EXPORT_SYMBOL(max77693_muic_monitor_status);
 
