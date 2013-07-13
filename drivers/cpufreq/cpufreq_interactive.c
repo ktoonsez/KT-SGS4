@@ -376,7 +376,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 		new_freq = choose_freq(pcpu, loadadjfreq);
 	}
 
-	if (pcpu->target_freq >= hispeed_freq &&
+	if (kt_freq_control[1] == 0 && pcpu->target_freq >= hispeed_freq &&
 	    new_freq > pcpu->target_freq &&
 	    now - pcpu->hispeed_validate_time <
 	    freq_to_above_hispeed_delay(pcpu->target_freq)) {
@@ -402,7 +402,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	 * Do not scale below floor_freq unless we have been at or above the
 	 * floor frequency for the minimum sample time since last validated.
 	 */
-	if (new_freq < pcpu->floor_freq) {
+	if (kt_freq_control[1] == 0 && new_freq < pcpu->floor_freq) {
 		if (now - pcpu->floor_validate_time < min_sample_time) {
 			trace_cpufreq_interactive_notyet(
 				data, cpu_load, pcpu->target_freq,
