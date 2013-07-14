@@ -763,10 +763,35 @@ static ssize_t store_enable_oc(struct kobject *kobj,
 	return count;
 }
 
+void set_mtp_type(unsigned int val);
+unsigned int get_mtp_type(void);
+
+static ssize_t show_enable_google_mtp(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", get_mtp_type());
+}
+
+static ssize_t store_enable_google_mtp(struct kobject *kobj,
+			struct attribute *attr, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	set_mtp_type(value);
+	return count;
+}
+
 static struct global_attr enable_oc_attr = __ATTR(enable_oc, 0666, show_enable_oc, store_enable_oc);
+static struct global_attr enable_google_mtp_attr = __ATTR(enable_google_mtp, 0666, show_enable_google_mtp, store_enable_google_mtp);
 
 static struct attribute *acpuclock8064_attributes[] = {
 	&enable_oc_attr.attr,
+	&enable_google_mtp_attr.attr,
 	NULL,
 };
 

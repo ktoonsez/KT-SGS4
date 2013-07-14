@@ -67,11 +67,11 @@
 #include "f_acm.c"
 #include "f_adb.c"
 #include "f_ccid.c"
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_MTP
+//#ifdef CONFIG_USB_ANDROID_SAMSUNG_MTP
 #include "f_mtp_samsung.c"
-#else
+//#else
 #include "f_mtp.c"
-#endif
+//#endif
 #include "f_accessory.c"
 #ifdef CONFIG_USB_ANDROID_CDC_ECM
 #include "f_ecm.c"
@@ -91,6 +91,10 @@ MODULE_LICENSE("GPL");
 MODULE_VERSION("1.0");
 
 static const char longname[] = "Gadget Android";
+static int is_samsung_mtp = 0;
+struct android_usb_function *gbl_usb_func;
+struct usb_composite_dev *gbl_cdev;
+struct usb_configuration *gbl_cfg;
 
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 static int composite_string_index;
@@ -988,18 +992,38 @@ static struct android_usb_function ccid_function = {
 static int mtp_function_init(struct android_usb_function *f,
 		struct usb_composite_dev *cdev)
 {
-	return mtp_setup();
+	int ret;
+	gbl_usb_func = f;
+	gbl_cdev = cdev;
+	ret = mtp_setupS();
+	pr_alert("MTP-KTOONSEZ_initS - type:%d ret:%d", is_samsung_mtp, ret);
+	ret = mtp_setupG();
+	pr_alert("MTP-KTOONSEZ_initG - type:%d ret:%d", is_samsung_mtp, ret);
+	
+	return ret;
 }
 
 static void mtp_function_cleanup(struct android_usb_function *f)
 {
-	mtp_cleanup();
+	pr_alert("MTP-KTOONSEZ_cleanup - type:%d", is_samsung_mtp);
+	if (is_samsung_mtp)
+		mtp_cleanupS();
+	else
+		mtp_cleanupG();
 }
 
 static int mtp_function_bind_config(struct android_usb_function *f,
 		struct usb_configuration *c)
 {
-	return mtp_bind_config(c, false);
+	int ret;
+	gbl_cfg = c;
+	if (is_samsung_mtp)
+		ret = mtp_bind_configS(c, false);
+	else
+		ret = mtp_bind_configG(c, false);
+
+	pr_alert("MTP-KTOONSEZ_mtp_bind_config - type:%d ret:%d", is_samsung_mtp, ret);
+	return ret;
 }
 
 static int ptp_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
@@ -1015,14 +1039,27 @@ static void ptp_function_cleanup(struct android_usb_function *f)
 
 static int ptp_function_bind_config(struct android_usb_function *f, struct usb_configuration *c)
 {
-	return mtp_bind_config(c, true);
+	int ret;
+	if (is_samsung_mtp)
+		ret = mtp_bind_configS(c, true);
+	else
+		ret = mtp_bind_configG(c, true);
+
+	pr_alert("MTP-KTOONSEZ_ptp_bind_config - type:%d ret:%d", is_samsung_mtp, ret);
+	return ret;
 }
 
 static int mtp_function_ctrlrequest(struct android_usb_function *f,
 					struct usb_composite_dev *cdev,
 					const struct usb_ctrlrequest *c)
 {
-	return mtp_ctrlrequest(cdev, c);
+	int ret;
+	if (is_samsung_mtp)
+		return mtp_ctrlrequestS(cdev, c);
+	else
+		return mtp_ctrlrequestG(cdev, c);
+	return ret;
+	
 }
 
 static struct android_usb_function mtp_function = {
@@ -2402,7 +2439,7 @@ static int android_bind_config(struct usb_configuration *c)
 static void android_unbind_config(struct usb_configuration *c)
 {
 	struct android_dev *dev = cdev_to_android_dev(c->cdev);
-
+	pr_alert("MTP-KTOONSEZ_unbind_config - type:%d", is_samsung_mtp);
 	android_unbind_enabled_functions(dev, c);
 }
 
@@ -2785,6 +2822,16 @@ static int android_remove(struct platform_device *pdev)
 	}
 
 	return 0;
+}
+
+void set_mtp_type(unsigned int val)
+{
+	is_samsung_mtp = val;
+	pr_alert("MTP-KTOONSEZ_set_mtp_type - type:%d", is_samsung_mtp);
+}
+unsigned int get_mtp_type(void)
+{
+	return is_samsung_mtp;
 }
 
 static const struct platform_device_id android_id_table[] __devinitconst = {
