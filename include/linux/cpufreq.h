@@ -372,7 +372,7 @@ int get_min_freq(void);
 #define MAX_FREQ_LIMIT		get_max_freq() /* 1512000 */
 #define MIN_FREQ_LIMIT		get_min_freq() /* 384000 */
 
-#define MIN_TOUCH_LIMIT		1134000
+#define MIN_TOUCH_LIMIT		378000
 #define MIN_TOUCH_LIMIT_SECOND	810000
 
 #ifdef CONFIG_TARGET_SERIES_DALI
