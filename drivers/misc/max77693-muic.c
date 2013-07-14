@@ -45,7 +45,9 @@ static struct max77693_muic_info *gInfo;
 static u8 chg_int_state;
 
 extern void send_cable_state(unsigned int state);
+extern void send_cable_state_kt(unsigned int state);
 unsigned int gbatt_chg_prev = 0;
+bool ktoonservative_is_active_chrg = false;
 
 /* MAX77693 MUIC CHG_TYP setting values */
 enum {
@@ -661,6 +663,11 @@ static ssize_t max77693_muic_set_apo_factory(struct device *dev,
 }
 #endif /* !CONFIG_MUIC_MAX77693_SUPPORT_CAR_DOCK */
 
+void ktoonservative_is_activechrg(bool val)
+{
+	ktoonservative_is_active_chrg = val;
+}
+
 void max77693_muic_monitor_status(void){
 	int ret;
 	u8 status[2];
@@ -670,10 +677,19 @@ void max77693_muic_monitor_status(void){
 			status[0], status[1], gInfo->cable_type);
 
 	if (gInfo->cable_type != gbatt_chg_prev)
+	{
 		send_cable_state(gInfo->cable_type);
+		if (ktoonservative_is_active_chrg)
+			send_cable_state_kt(gInfo->cable_type);
+	}
 	gbatt_chg_prev = gInfo->cable_type;
 }
 EXPORT_SYMBOL(max77693_muic_monitor_status);
+
+unsigned int get_cable_state(void)
+{
+	return gInfo->cable_type;
+}
 
 #if !defined(CONFIG_MUIC_MAX77693_SUPPORT_CAR_DOCK)
 static DEVICE_ATTR(apo_factory, 0664,
