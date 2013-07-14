@@ -92,6 +92,8 @@ unsigned int kthermal_limit = 0;
 
 extern void apenable_auto_hotplug(bool state);
 
+static bool never_set[10];
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -886,7 +888,11 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	ret = sscanf(buf, "%15s", str_governor);
 	if (ret != 1)
 		return -EINVAL;
-
+	pr_alert("STORE GOVERNOR %s - %s", str_governor, policy->governor->name);
+	if (!never_set[policy->cpu] && !strnicmp(str_governor, "ondemand", CPUFREQ_NAME_LEN) && policy->cpu > 0)
+		return -EINVAL;
+	never_set[policy->cpu] = true;
+	
 	if (cpufreq_parse_governor(str_governor, &new_policy.policy,
 						&new_policy.governor))
 		return -EINVAL;
@@ -899,7 +905,7 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 	policy->user_policy.governor = policy->governor;
 
 	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
-
+	
 	if (ret)
 		return ret;
 	else
