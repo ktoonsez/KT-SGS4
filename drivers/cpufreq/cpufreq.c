@@ -47,6 +47,7 @@ extern ssize_t acpuclk_get_vdd_levels_str(char *buf, int isApp);
 extern ssize_t acpuclk_get_vdd_levels_str_stock(char *buf, int isApp);
 extern void acpuclk_UV_mV_table(int cnt, int vdd_uv[]);
 extern unsigned int get_enable_oc(void);
+extern unsigned int get_cable_state(void);
 
 static bool Lonoff = false;
 static unsigned int Lscreen_off_scaling_enable = 0;
@@ -503,6 +504,92 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
+void __ref send_cable_state(unsigned int state)
+{
+	if (state)
+	{
+		pr_alert("CHARGING MHZ ON %u-%u\n", Lcharging_min_mhz, Lcharging_max_mhz);
+		if (Lcharging_min_mhz && ((bluetooth_scaling_mhz_active && Lcharging_min_mhz > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
+		{
+			struct cpufreq_policy new_policy;
+			int cpu, ret;
+			cpufreq_set_limit_defered(USER_MIN_START, Lcharging_min_mhz);
+			//Set extra CPU cores to same speed
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (!cpu_online(cpu)) cpu_up(cpu);
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					ret = cpufreq_get_policy(&new_policy, cpu);
+					new_policy.min = Lcharging_min_mhz;
+					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
+				}				
+			}
+			Lcharging_mhz_active = true;
+		}
+		if (Lcharging_max_mhz)
+		{
+			struct cpufreq_policy new_policy;
+			int cpu, ret;
+			cpufreq_set_limit_defered(USER_MAX_START, Lcharging_max_mhz);
+			//Set extra CPU cores to same speed
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (!cpu_online(cpu)) cpu_up(cpu);
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					ret = cpufreq_get_policy(&new_policy, cpu);
+					new_policy.max = Lcharging_max_mhz;
+					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
+				}				
+			}
+			Lcharging_mhz_active = true;
+		}
+	}
+	else if (Lcharging_mhz_active)
+	{
+		unsigned int value;
+		value = Lcharging_min_mhz_orig;
+		pr_alert("CHARGING MHZ OFF %u-%u\n", Lcharging_min_mhz, Lcharging_max_mhz);
+		if (value && ((bluetooth_scaling_mhz_active && value > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
+		{
+			struct cpufreq_policy new_policy;
+			int cpu, ret;
+			cpufreq_set_limit_defered(USER_MIN_START, value);
+			//Set extra CPU cores to same speed
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (!cpu_online(cpu)) cpu_up(cpu);
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					ret = cpufreq_get_policy(&new_policy, cpu);
+					new_policy.min = value;
+					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
+				}				
+			}
+		}
+		value = Lcharging_max_mhz_orig;
+		if (value)
+		{
+			struct cpufreq_policy new_policy;
+			int cpu, ret;
+			cpufreq_set_limit_defered(USER_MAX_START, value);
+			//Set extra CPU cores to same speed
+			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+			{
+				if (!cpu_online(cpu)) cpu_up(cpu);
+				if (&trmlpolicy[cpu] != NULL)
+				{
+					ret = cpufreq_get_policy(&new_policy, cpu);
+					new_policy.max = value;
+					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
+				}				
+			}
+		}
+		Lcharging_mhz_active = false;
+	}
+}
+
 static ssize_t __ref store_scaling_min_freq(struct cpufreq_policy *policy, const char *buf, size_t count)
 {
 	unsigned int ret = -EINVAL;
@@ -758,6 +845,7 @@ static ssize_t store_charging_min_mhz(struct cpufreq_policy *policy,
 					const char *buf, size_t count)
 {
 	unsigned int value = 0;
+	unsigned int cbl_state;
 	unsigned int ret;
 	ret = sscanf(buf, "%u", &value);
 	if (value > GLOBALKT_MAX_FREQ_LIMIT)
@@ -765,6 +853,12 @@ static ssize_t store_charging_min_mhz(struct cpufreq_policy *policy,
 	if (value < GLOBALKT_MIN_FREQ_LIMIT && value != 0)
 		value = GLOBALKT_MIN_FREQ_LIMIT;
 	Lcharging_min_mhz = value;
+	
+	cbl_state = get_cable_state();
+	if (value == 0 && Lcharging_mhz_active && cbl_state)
+		send_cable_state(0);
+	else
+		send_cable_state(cbl_state);
 
 	return count;
 }
@@ -784,6 +878,7 @@ static ssize_t store_charging_max_mhz(struct cpufreq_policy *policy,
 	if (value < GLOBALKT_MIN_FREQ_LIMIT && value != 0)
 		value = GLOBALKT_MIN_FREQ_LIMIT;
 	Lcharging_max_mhz = value;
+	send_cable_state(get_cable_state());
 
 	return count;
 }
@@ -1212,92 +1307,6 @@ unsigned int set_battery_max_level(unsigned int value)
 		return Lscreen_off_scaling_mhz_orig;
 	else
 		return policy->user_policy.max;
-}
-
-void __ref send_cable_state(unsigned int state)
-{
-	if (state)
-	{
-		pr_alert("CHARGING MHZ ON %u-%u\n", Lcharging_min_mhz, Lcharging_max_mhz);
-		if (Lcharging_min_mhz && ((bluetooth_scaling_mhz_active && Lcharging_min_mhz > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
-		{
-			struct cpufreq_policy new_policy;
-			int cpu, ret;
-			cpufreq_set_limit_defered(USER_MIN_START, Lcharging_min_mhz);
-			//Set extra CPU cores to same speed
-			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.min = Lcharging_min_mhz;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}
-			Lcharging_mhz_active = true;
-		}
-		if (Lcharging_max_mhz)
-		{
-			struct cpufreq_policy new_policy;
-			int cpu, ret;
-			cpufreq_set_limit_defered(USER_MAX_START, Lcharging_max_mhz);
-			//Set extra CPU cores to same speed
-			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.max = Lcharging_max_mhz;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}
-			Lcharging_mhz_active = true;
-		}
-	}
-	else if (Lcharging_mhz_active)
-	{
-		unsigned int value;
-		value = Lcharging_min_mhz_orig;
-		pr_alert("CHARGING MHZ OFF %u-%u\n", Lcharging_min_mhz, Lcharging_max_mhz);
-		if (value && ((bluetooth_scaling_mhz_active && value > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
-		{
-			struct cpufreq_policy new_policy;
-			int cpu, ret;
-			cpufreq_set_limit_defered(USER_MIN_START, value);
-			//Set extra CPU cores to same speed
-			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.min = value;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}
-		}
-		value = Lcharging_max_mhz_orig;
-		if (value)
-		{
-			struct cpufreq_policy new_policy;
-			int cpu, ret;
-			cpufreq_set_limit_defered(USER_MAX_START, value);
-			//Set extra CPU cores to same speed
-			for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.max = value;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}
-		}
-		Lcharging_mhz_active = false;
-	}
 }
 
 void set_bluetooth_state(unsigned int val)
