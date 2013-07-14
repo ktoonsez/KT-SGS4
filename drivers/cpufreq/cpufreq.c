@@ -62,6 +62,8 @@ static unsigned int Lcharging_min_mhz_orig = 378000;
 static unsigned int Lcharging_max_mhz = 0;
 static unsigned int Lcharging_max_mhz_orig = 1890000;
 static bool Lcharging_mhz_active;
+static bool Lcharging_mhz_active_block_min;
+static bool Lcharging_mhz_active_block_max;
 static bool call_in_progress=false;
 static unsigned int Ldisable_som_call_in_progress = 0;
 static char scaling_governor_screen_off_sel[16];
@@ -549,7 +551,7 @@ void __ref send_cable_state(unsigned int state)
 		unsigned int value;
 		value = Lcharging_min_mhz_orig;
 		pr_alert("CHARGING MHZ OFF %u-%u\n", Lcharging_min_mhz, Lcharging_max_mhz);
-		if (value && ((bluetooth_scaling_mhz_active && value > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
+		if (value && !Lcharging_mhz_active_block_min && ((bluetooth_scaling_mhz_active && value > Lbluetooth_scaling_mhz) || !bluetooth_scaling_mhz_active))
 		{
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
@@ -567,7 +569,7 @@ void __ref send_cable_state(unsigned int state)
 			}
 		}
 		value = Lcharging_max_mhz_orig;
-		if (value)
+		if (value && !Lcharging_mhz_active_block_max)
 		{
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
@@ -584,7 +586,8 @@ void __ref send_cable_state(unsigned int state)
 				}				
 			}
 		}
-		Lcharging_mhz_active = false;
+		if (!Lcharging_mhz_active_block_min && !Lcharging_mhz_active_block_max)
+			Lcharging_mhz_active = false;
 	}
 }
 
@@ -854,7 +857,13 @@ static ssize_t store_charging_min_mhz(struct cpufreq_policy *policy,
 	
 	cbl_state = get_cable_state();
 	if (value == 0 && Lcharging_mhz_active && cbl_state)
+	{
+		Lcharging_mhz_active_block_max = true;
 		send_cable_state(0);
+		Lcharging_mhz_active_block_max = false;
+		if (Lcharging_max_mhz ==0)
+			Lcharging_mhz_active = false;
+	}
 	else
 		send_cable_state(cbl_state);
 
@@ -869,6 +878,7 @@ static ssize_t store_charging_max_mhz(struct cpufreq_policy *policy,
 					const char *buf, size_t count)
 {
 	unsigned int value = 0;
+	unsigned int cbl_state;
 	unsigned int ret;
 	ret = sscanf(buf, "%u", &value);
 	if (value > GLOBALKT_MAX_FREQ_LIMIT)
@@ -876,7 +886,18 @@ static ssize_t store_charging_max_mhz(struct cpufreq_policy *policy,
 	if (value < GLOBALKT_MIN_FREQ_LIMIT && value != 0)
 		value = GLOBALKT_MIN_FREQ_LIMIT;
 	Lcharging_max_mhz = value;
-	send_cable_state(get_cable_state());
+
+	cbl_state = get_cable_state();
+	if (value == 0 && Lcharging_mhz_active && cbl_state)
+	{
+		Lcharging_mhz_active_block_min = true;
+		send_cable_state(0);
+		Lcharging_mhz_active_block_min = false;
+		if (Lcharging_min_mhz ==0)
+			Lcharging_mhz_active = false;
+	}
+	else
+		send_cable_state(cbl_state);
 
 	return count;
 }
