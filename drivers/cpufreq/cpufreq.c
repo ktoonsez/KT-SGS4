@@ -546,17 +546,6 @@ void __ref send_cable_state(unsigned int state)
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
 			cpufreq_set_limit_defered(USER_MIN_START, Lcharging_min_mhz);
-			//Set extra CPU cores to same speed
-			/*for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.min = Lcharging_min_mhz;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}*/
 			min = Lcharging_min_mhz;
 			Lcharging_mhz_active = true;
 		}
@@ -565,17 +554,6 @@ void __ref send_cable_state(unsigned int state)
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
 			cpufreq_set_limit_defered(USER_MAX_START, Lcharging_max_mhz);
-			//Set extra CPU cores to same speed
-			/*for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.max = Lcharging_max_mhz;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}*/
 			max = Lcharging_max_mhz;
 			Lcharging_mhz_active = true;
 		}
@@ -592,17 +570,6 @@ void __ref send_cable_state(unsigned int state)
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
 			cpufreq_set_limit_defered(USER_MIN_START, value);
-			//Set extra CPU cores to same speed
-			/*for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.min = value;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}*/
 			min = value;
 		}
 		value = Lcharging_max_mhz_orig;
@@ -611,17 +578,6 @@ void __ref send_cable_state(unsigned int state)
 			struct cpufreq_policy new_policy;
 			int cpu, ret;
 			cpufreq_set_limit_defered(USER_MAX_START, value);
-			//Set extra CPU cores to same speed
-			/*for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
-			{
-				if (!cpu_online(cpu)) cpu_up(cpu);
-				if (&trmlpolicy[cpu] != NULL)
-				{
-					ret = cpufreq_get_policy(&new_policy, cpu);
-					new_policy.max = value;
-					__cpufreq_set_policy(&trmlpolicy[cpu], &new_policy);
-				}				
-			}*/
 			max = value;
 		}
 		if (!Lcharging_mhz_active_block_min && !Lcharging_mhz_active_block_max)
