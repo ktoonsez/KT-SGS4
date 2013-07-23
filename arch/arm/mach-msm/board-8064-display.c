@@ -895,10 +895,6 @@ static int mipi_panel_power_oled(int enable)
 	int rc = 0;
 
 	if (enable) {
-		set_screen_on_off_mhz(true);
-		if (ktoonservative_is_activef)
-			screen_is_on_relay_kt(true);
-			
 		pr_info("[lcd] PANEL ON\n");
 
 		/* 3000mv VCI(ANALOG) */
@@ -930,12 +926,10 @@ static int mipi_panel_power_oled(int enable)
 			return -ENODEV;
 		}
 #endif
-	} else {
-		
-		set_screen_on_off_mhz(false);
+		set_screen_on_off_mhz(true);
 		if (ktoonservative_is_activef)
-			screen_is_on_relay_kt(false);
-
+			screen_is_on_relay_kt(true);
+	} else {
 		pr_info("[lcd] PANEL OFF\n");
 
 #ifdef CONFIG_LCD_VDD3_BY_PMGPIO
@@ -964,6 +958,9 @@ static int mipi_panel_power_oled(int enable)
 			pr_err("disable reg_L30 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
+		set_screen_on_off_mhz(false);
+		if (ktoonservative_is_activef)
+			screen_is_on_relay_kt(false);
 	}
 
 	return rc;
