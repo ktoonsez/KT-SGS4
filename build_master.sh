@@ -82,7 +82,11 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 		rm $PACKAGEDIR/boot.img
 	fi;
 	cd $PACKAGEDIR
-	cp -R ../META-INF-SEC ./META-INF
+	if [ $EXEC_LOKI = 'Y' ]; then
+		cp -R ../META-INF-SEC ./META-INF
+	else
+		cp -R ../META-INF .
+	fi;
 	rm ramdisk.gz
 	rm zImage
 	rm ../$MUXEDNAMESHRT.zip
