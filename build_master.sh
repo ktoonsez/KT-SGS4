@@ -96,7 +96,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "Size of $FILENAME = $FILESIZE bytes."
 	rm ../$MREV-$PLATFORM-$CARRIER"-version.txt"
 	exec >>../$MREV-$PLATFORM-$CARRIER"-version.txt" 2>&1
-	echo "$MUXEDNAMELONG, $FILESIZE, http://ktoonsez.jonathanjsimon.com/sgs4/$PLATFORM/$MUXEDNAMELONG.zip"
+	echo "$MUXEDNAMELONG,$FILESIZE,http://ktoonsez.jonathanjsimon.com/sgs4/$PLATFORM/$MUXEDNAMELONG.zip"
 	
 	cd $KERNELDIR
 else
