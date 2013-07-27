@@ -2,4 +2,4 @@
 export CARRIER="ATT"
 export ADD_KTWEAKER="N"
 export EXEC_LOKI="Y"
-./build_main.sh
+./build_master.sh
