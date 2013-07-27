@@ -5,27 +5,27 @@ echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_att_aosp.sh
+./build_att.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_spr_aosp.sh
+./build_spr.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_tmo_aosp.sh
+./build_tmo.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_vzw_aosp.sh
+./build_vzw.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_intl_aosp.sh
+./build_intl.sh
 
 echo "Switch to Touchjizz 4.2.2"
 git checkout tw
@@ -34,27 +34,27 @@ echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_att_tw.sh
+./build_att.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_spr_tw.sh
+./build_spr.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_tmo_tw.sh
+./build_tmo.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_vzw_tw.sh
+./build_vzw.sh
 echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
-./build_intl_tw.sh
+./build_intl.sh
 
 echo "Switch to AOSP 4.2.2"
 git checkout aosp
