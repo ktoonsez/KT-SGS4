@@ -45,6 +45,11 @@ rm arch/arm/boot/zImage
 echo "Make the kernel"
 make VARIANT_DEFCONFIG=jf_att_defconfig SELINUX_DEFCONFIG=jfselinux_defconfig SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig KT_jf_defconfig
 
+curdate=`date "+%m.%d.%Y"`
+ktver="--KT-SGS4-TW-JB-ATT-"$curdate"--"
+echo "Modding .config file - "$ktver
+sed -i 's,CONFIG_LOCALVERSION="-KT-SGS4",CONFIG_LOCALVERSION="'$ktver'",' .config
+
 HOST_CHECK=`uname -n`
 if [ $HOST_CHECK = 'ktoonsez-VirtualBox' ] || [ $HOST_CHECK = 'task650-Underwear' ]; then
 	echo "Ktoonsez/task650 24!"
@@ -67,7 +72,6 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "Make boot.img"
 	./mkbootfs $INITRAMFS_DEST | gzip > $PACKAGEDIR/ramdisk.gz
 	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 zcache' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img 
-	export curdate=`date "+%m-%d-%Y"`
 	echo "Executing loki"
 	./loki_patch-linux-x86_64 boot abootatt.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
 	rm $PACKAGEDIR/boot.img
@@ -78,11 +82,18 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	rm zImage
 	rm ../KT-SGS4-TW-JB-ATT*.zip
 	zip -r ../KT-SGS4-TW-JB-ATT-$curdate.zip .
+
+	time_end=$(date +%s.%N)
+	echo -e "${BLDYLW}Total time elapsed: ${TCTCLR}${TXTGRN}$(echo "($time_end - $time_start) / 60"|bc ) ${TXTYLW}minutes${TXTGRN} ($(echo "$time_end - $time_start"|bc ) ${TXTYLW}seconds) ${TXTCLR}"
+
+	FILENAME=../KT-SGS4-TW-JB-ATT-$curdate.zip
+	FILESIZE=$(stat -c%s "$FILENAME")
+	echo "Size of $FILENAME = $FILESIZE bytes."
+	rm ../ATTversion.txt
+	exec >>../ATTversion.txt 2>&1
+	echo "KT-SGS4-TW-JB-ATT-"$curdate", "$FILESIZE", http://ktoonsez.jonathanjsimon.com/sgs4/tw/KT-SGS4-TW-JB-ATT-"$curdate".zip"
+	
 	cd $KERNELDIR
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
 fi;
-
-time_end=$(date +%s.%N)
-echo -e "${BLDYLW}Total time elapsed: ${TCTCLR}${TXTGRN}$(echo "($time_end - $time_start) / 60"|bc ) ${TXTYLW}minutes${TXTGRN} ($(echo "$time_end - $time_start"|bc ) ${TXTYLW}seconds) ${TXTCLR}"
-
