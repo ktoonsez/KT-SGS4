@@ -620,6 +620,10 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 #endif
 
 #ifdef TSP_BOOSTER
+#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
+extern int kgsl_pwrctrl_min_pwrlevel_store_kernel(int level);
+extern int kgsl_pwrctrl_num_pwrlevels_show_kernel(void);
+#endif
 static void synaptics_change_dvfs_lock(struct work_struct *work)
 {
 	struct synaptics_rmi4_data *rmi4_data =
@@ -642,6 +646,9 @@ static void synaptics_change_dvfs_lock(struct work_struct *work)
 	} else if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_SINGLE) {
 		retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 		rmi4_data->dvfs_freq = -1;
+#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
+		kgsl_pwrctrl_min_pwrlevel_store_kernel(3);
+#endif
 	}
 
 	if (retval < 0)
@@ -668,6 +675,9 @@ static void synaptics_set_dvfs_off(struct work_struct *work)
 
 	retval = set_freq_limit(DVFS_TOUCH_ID, -1);
 	rmi4_data->dvfs_freq = -1;
+#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
+	kgsl_pwrctrl_min_pwrlevel_store_kernel(3);
+#endif
 
 	if (retval < 0)
 		dev_err(&rmi4_data->i2c_client->dev,
@@ -707,6 +717,9 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 					ret = set_freq_limit(DVFS_TOUCH_ID,
 							MIN_TOUCH_LIMIT);
 					rmi4_data->dvfs_freq = MIN_TOUCH_LIMIT;
+#ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
+					kgsl_pwrctrl_min_pwrlevel_store_kernel(2);
+#endif
 
 					if (ret < 0)
 						dev_err(&rmi4_data->i2c_client->dev,
