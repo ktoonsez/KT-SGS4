@@ -3055,16 +3055,6 @@ void sensor_native_control(void __user *arg)
 		jc_set_scene_mode(ctrl_info.value_1);
 		break;
 
-	case EXT_CAM_START_GOLF_SHOT:
-		cam_info("Golf shot start, 1/1000 shutter speed");
-		jc_writeb(0x03, 0x0B, 0x18);
-		break;
-
-	case EXT_CAM_STOP_GOLF_SHOT:
-		cam_info("Golf shot stop, return normal shutter speed");
-		jc_writeb(0x03, 0x0B, 0x08);
-		break;
-
 	default:
 		break;
 	}
