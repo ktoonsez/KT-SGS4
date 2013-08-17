@@ -146,6 +146,7 @@ obj-$(CONFIG_SENSORS_SSP)	+= sensorhub/
 obj-$(CONFIG_VIBETONZ)          += motor/
 obj-$(CONFIG_SEC_FPGA)	+= barcode_emul/
 obj-$(CONFIG_IRDA_MC96)		+= irda/
+obj-$(CONFIG_NLS_UTF8)		+= exfat/
 
 obj-$(CONFIG_AUTHENTEC_VPNCLIENT_INTERCEPTOR) += interceptor/
 
