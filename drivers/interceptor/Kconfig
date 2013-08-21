@@ -1,3 +1,0 @@
-config AUTHENTEC_VPNCLIENT_INTERCEPTOR
-       tristate "AuthenTec VPNClient Interceptor"
-       default n

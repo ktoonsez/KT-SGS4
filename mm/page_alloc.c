@@ -1812,8 +1812,7 @@ get_page_from_freelist(gfp_t gfp_mask, nodemask_t *nodemask, unsigned int order,
 	nodemask_t *allowednodes = NULL;/* zonelist_cache approximation */
 	int zlc_active = 0;		/* set if using zonelist_cache */
 	int did_zlc_setup = 0;		/* just call zlc_setup() one time */
-	bool dummy_bit = false;
-	
+
 	classzone_idx = zone_idx(preferred_zone);
 zonelist_scan:
 	/*
@@ -1822,9 +1821,6 @@ zonelist_scan:
 	 */
 	for_each_zone_zonelist_nodemask(zone, z, zonelist,
 						high_zoneidx, nodemask) {
-						
-		if (zone == NULL)
-			goto this_zone_null;
 		if (NUMA_BUILD && zlc_active &&
 			!zlc_zone_worth_trying(zonelist, z, allowednodes))
 				continue;
@@ -1917,8 +1913,6 @@ try_this_zone:
 this_zone_full:
 		if (NUMA_BUILD)
 			zlc_mark_zone_full(zonelist, z);
-this_zone_null:
-		dummy_bit = true;
 	}
 
 	if (unlikely(NUMA_BUILD && page == NULL && zlc_active)) {
