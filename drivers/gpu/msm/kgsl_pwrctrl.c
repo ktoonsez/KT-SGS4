@@ -383,7 +383,7 @@ static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 void set_max_gpuclk_so(unsigned long val)
 {
 	struct kgsl_pwrctrl *pwr;
-	int level;
+	int ret, level;
 
 	pwr = &Gbldevice->pwrctrl;
 	
