@@ -49,6 +49,9 @@ extern void acpuclk_UV_mV_table(int cnt, int vdd_uv[]);
 extern unsigned int get_enable_oc(void);
 extern unsigned int get_cable_state(void);
 
+extern ssize_t get_gpu_vdd_levels_str(char *buf);
+extern void set_gpu_vdd_levels(int uv_tbl[]);
+
 static bool Lonoff = false;
 static unsigned int Lscreen_off_scaling_enable = 0;
 static unsigned int Lscreen_off_scaling_mhz = 1890000;
@@ -748,6 +751,21 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 	return count;
 }
 
+ssize_t show_GPU_mV_table(struct cpufreq_policy *policy, char *buf)
+{
+	int modu = 0;
+	return get_gpu_vdd_levels_str(buf);
+}
+
+ssize_t store_GPU_mV_table(struct cpufreq_policy *policy, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int u[3];
+	ret = sscanf(buf, "%d %d %d", &u[0], &u[1], &u[2]);
+	set_gpu_vdd_levels(u);
+	return count;
+}
+
 static ssize_t show_screen_off_scaling_enable(struct cpufreq_policy *policy, char *buf)
 {
 	return sprintf(buf, "%u\n", Lscreen_off_scaling_enable);
@@ -1412,6 +1430,7 @@ cpufreq_freq_attr_rw(scaling_booted);
 cpufreq_freq_attr_rw(freq_lock);
 cpufreq_freq_attr_rw(UV_mV_table);
 cpufreq_freq_attr_ro(UV_mV_table_stock);
+cpufreq_freq_attr_rw(GPU_mV_table);
 cpufreq_freq_attr_rw(screen_off_scaling_enable);
 cpufreq_freq_attr_rw(screen_off_scaling_mhz);
 cpufreq_freq_attr_rw(screen_off_GPU_mhz);
@@ -1448,6 +1467,7 @@ static struct attribute *default_attrs[] = {
 	&freq_lock.attr,
 	&UV_mV_table.attr,
 	&UV_mV_table_stock.attr,
+	&GPU_mV_table.attr,
 	&screen_off_scaling_enable.attr,
 	&screen_off_scaling_mhz.attr,
 	&screen_off_GPU_mhz.attr,
