@@ -159,7 +159,7 @@ struct device slimbus_dev = {
 
 static void music_is_playing_fn(struct work_struct *work)
 {
-	pr_alert("MUSIC PLAYING (FUNC) - KTOONSEZ - %d", is_music_playing);
+	//pr_alert("MUSIC PLAYING (FUNC) - KTOONSEZ - %d", is_music_playing);
 	if (is_music_playing)
 		is_music_playing_func_sent = set_music_playing_state(is_music_playing);
 }
@@ -2824,7 +2824,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		//MEDIA ON
 		if (chctrl == 0 && slc->def == 1 && slc->ref == 3)
 		{
-			pr_alert("MUSIC PLAYING (TRIG) - KTOONSEZ - %d", is_music_playing);
+			//pr_alert("MUSIC PLAYING (TRIG) - KTOONSEZ - %d", is_music_playing);
 			if (!is_music_playing)
 				schedule_delayed_work_on(0, &music_is_playing, msecs_to_jiffies(10000));
 			is_music_playing = true;
@@ -2836,7 +2836,7 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 			if (is_music_playing_func_sent)
 				set_music_playing_state(is_music_playing);
 			is_music_playing_func_sent = false;
-			pr_alert("MUSIC STOPPED - KTOONSEZ");
+			//pr_alert("MUSIC STOPPED - KTOONSEZ");
 		}
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
