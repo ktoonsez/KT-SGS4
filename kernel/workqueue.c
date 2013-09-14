@@ -1804,12 +1804,33 @@ __releases(&gcwq->lock)
 __acquires(&gcwq->lock)
 {
 	struct cpu_workqueue_struct *cwq = get_work_cwq(work);
-	struct global_cwq *gcwq = cwq->gcwq;
-	struct hlist_head *bwh = busy_worker_head(gcwq, work);
-	bool cpu_intensive = cwq->wq->flags & WQ_CPU_INTENSIVE;
+	struct global_cwq *gcwq;
+	struct hlist_head *bwh;
+	bool cpu_intensive;
 	work_func_t f = work->func;
 	int work_color;
 	struct worker *collision;
+	
+	if (unlikely(!cwq))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: cwq");
+		goto nullgetwork;
+	}
+
+	cpu_intensive = cwq->wq->flags & WQ_CPU_INTENSIVE;
+
+	gcwq = cwq->gcwq;
+	if (unlikely(!gcwq))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: gcwq");
+		goto nullgetwork;
+	}
+	bwh = busy_worker_head(gcwq, work);
+	if (unlikely(!bwh))
+	{
+		pr_alert("NULL WORKQUEUE MORONIC STUPID ASS: bwh");
+		goto nullgetwork;
+	}
 #ifdef CONFIG_LOCKDEP
 	/*
 	 * It is permissible to free the struct work_struct from
@@ -1828,7 +1849,8 @@ __acquires(&gcwq->lock)
 	 */
 	collision = __find_worker_executing_work(gcwq, bwh, work);
 	if (unlikely(collision)) {
-		move_linked_works(work, &collision->scheduled, NULL);
+		if (likely(&collision->scheduled))
+			move_linked_works(work, &collision->scheduled, NULL);
 		return;
 	}
 
@@ -1906,6 +1928,37 @@ __acquires(&gcwq->lock)
 	worker->current_work = NULL;
 	worker->current_cwq = NULL;
 	cwq_dec_nr_in_flight(cwq, work_color, false);
+	
+	return;
+
+nullgetwork:
+	debug_work_deactivate(work);
+	list_del_init(&work->entry);
+
+	if (unlikely(cpu_intensive))
+		worker_set_flags(worker, WORKER_CPU_INTENSIVE, true);
+
+	gcwq = get_work_gcwq(work);
+	if (unlikely(gcwq))
+		spin_unlock_irq(&gcwq->lock);
+		
+	smp_wmb();	// paired with test_and_set_bit(PENDING)
+	work_clear_pending(work);
+	trace_workqueue_execute_start(work);
+	f(work);
+	trace_workqueue_execute_end(work);
+
+	if (unlikely(gcwq))
+		spin_lock_irq(&gcwq->lock);
+	
+	if (unlikely(cpu_intensive))
+		worker_clr_flags(worker, WORKER_CPU_INTENSIVE);
+	if (likely(&worker->hentry))
+		hlist_del_init(&worker->hentry);
+	worker->current_work = NULL;
+	worker->current_cwq = NULL;
+	if (likely(cwq))
+		cwq_dec_nr_in_flight(cwq, work_color, false);
 }
 
 /**
@@ -1987,7 +2040,8 @@ recheck:
 
 		if (likely(!(*work_data_bits(work) & WORK_STRUCT_LINKED))) {
 			/* optimization path, not strictly necessary */
-			process_one_work(worker, work);
+			if (likely(worker) && likely(work))
+				process_one_work(worker, work);
 			if (unlikely(!list_empty(&worker->scheduled)))
 				process_scheduled_works(worker);
 		} else {
