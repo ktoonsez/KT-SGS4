@@ -1,6 +1,6 @@
 #!/bin/sh
 export PLATFORM="TW"
-export MREV="JB4.2"
+export MREV="JB4.3"
 export CURDATE=`date "+%m.%d.%Y"`
 export MUXEDNAMELONG="KT-SGS4-$MREV-$PLATFORM-$CARRIER-$CURDATE"
 export MUXEDNAMESHRT="KT-SGS4-$MREV-$PLATFORM-$CARRIER*"
