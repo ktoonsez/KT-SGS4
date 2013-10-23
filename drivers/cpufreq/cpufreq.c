@@ -538,13 +538,13 @@ static void __cpuinit set_cpu_min_max_work_fn(struct work_struct *work)
 						new_policy.min = work_speed_min;
 					if (work_speed_max)
 						new_policy.max = work_speed_max;
-					pr_alert("SET EXTRA CORES 1 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
+					//pr_alert("SET EXTRA CORES 1 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
 					__cpufreq_set_policy(policyorig, &new_policy);
 					if (work_speed_min)
 						policyorig->user_policy.min = policyorig->min;
 					if (work_speed_max)
 						policyorig->user_policy.max = policyorig->max;
-					pr_alert("SET EXTRA CORES 2 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
+					//pr_alert("SET EXTRA CORES 2 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
 				}
 			}				
 		}
