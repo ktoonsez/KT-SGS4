@@ -721,7 +721,7 @@ EXPORT_SYMBOL(arp_send);
  *	Process an arp request.
  */
 
-static int arp_process(struct sk_buff *skb)
+int arp_process(struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dev;
 	struct in_device *in_dev = __in_dev_get_rcu(dev);

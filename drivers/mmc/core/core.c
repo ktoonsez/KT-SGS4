@@ -948,7 +948,16 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 	if (data->flags & MMC_DATA_WRITE)
 		mult <<= card->csd.r2w_factor;
 
-	data->timeout_ns = card->csd.tacc_ns * mult;
+	/* 
+	 * max time value is 4.2s 
+	 * 4,294,967 is from 0xffffffff / 1000
+	 */
+
+	if ((card->csd.tacc_ns/1000 * mult) > 4294967)
+		data->timeout_ns = 0xffffffff;
+	else
+		data->timeout_ns = card->csd.tacc_ns * mult;
+
 	data->timeout_clks = card->csd.tacc_clks * mult;
 
 	/*

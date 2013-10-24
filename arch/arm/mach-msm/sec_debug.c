@@ -1387,6 +1387,10 @@ int __init sec_debug_init(void)
 	register_reboot_notifier(&nb_reboot_block);
 	atomic_notifier_chain_register(&panic_notifier_list, &nb_panic_block);
 
+	sec_debug_set_build_info();
+	sec_debug_set_upload_magic(0x776655ee);
+	sec_debug_set_upload_cause(UPLOAD_CAUSE_INIT);
+
 	if (!enable)
 		return -EPERM;
 
@@ -1395,10 +1399,7 @@ int __init sec_debug_init(void)
 #endif
 
 	debug_semaphore_init();
-	sec_debug_set_build_info();
-	sec_debug_set_upload_magic(0x776655ee);
-	sec_debug_set_upload_cause(UPLOAD_CAUSE_INIT);
-
+	
 	return 0;
 }
 

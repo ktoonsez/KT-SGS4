@@ -608,6 +608,13 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 		}
 
 	while (retry < 3) {
+
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[TouchKey] Failed to read Keycode_reg.\n");
@@ -623,11 +630,24 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 			data[3] = 0x40;
 		}
 
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(50);
 
 		/* Check autocal status */
+
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 6);
 
 		if (glove_value == 1) {
@@ -706,6 +726,13 @@ void touchkey_flip_cover(int value)
 		}
 
 	while (retry < 3) {
+
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[Touchkey] Failed to read Keycode_reg %d times.\n",
@@ -722,11 +749,24 @@ void touchkey_flip_cover(int value)
 				data[3] = 0x40;
 		}
 
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(100);
 
 		/* Check autocal status */
+
+		if (!(info->enabled)) {
+			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
+				__func__, __LINE__);
+			return ;
+			}
+
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
 
 		if (value == 1){
@@ -1818,10 +1858,10 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 			dev_attr_flip_mode.attr.name);
 			goto err_sysfs;
 		}
-#endif
 
 
 	info->is_powering_on = false;
+#endif
 
 #if defined(CONFIG_GLOVE_TOUCH)
 		tkey_info = info;

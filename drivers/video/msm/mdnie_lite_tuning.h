@@ -40,6 +40,7 @@
 #define SIG_MDNIE_VT					7
 #define SIG_MDNIE_BROWSER				8
 #define SIG_MDNIE_eBOOK					9
+#define SIG_MDNIE_EMAIL					10
 
 #define SIG_MDNIE_DYNAMIC				0
 #define SIG_MDNIE_STANDARD				1
@@ -72,6 +73,7 @@ enum Lcd_mDNIe_UI {
 	mDNIe_VT_MODE,
 	mDNIe_BROWSER_MODE,
 	mDNIe_eBOOK_MODE,
+	mDNIe_EMAIL_MODE,
 	mDNIE_BLINE_MODE,
 #if defined(CONFIG_TDMB)
 	mDNIe_DMB_MODE = 20,
@@ -125,6 +127,9 @@ struct mdnie_lite_tun_type {
 void mdnie_lite_tuning_init(void);
 void init_mdnie_class(void);
 void is_negative_on(void);
+#if defined(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL)
+int is_cabc_on ( void );
+#endif
 
 void coordinate_tunning(int x, int y);
 

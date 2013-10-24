@@ -334,11 +334,19 @@ struct msm_gpiomux_config vcap_configs[] = {
 };
 #endif
 
+#if defined(CONFIG_BOARD_JF_REFRESH)
+static struct gpiomux_setting gpio_i2c_config_rfr = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+#else
 static struct gpiomux_setting gpio_nc_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
+#endif
 
 static struct gpiomux_setting mbhc_hs_detect = {
 	.func = GPIOMUX_FUNC_1,
@@ -348,7 +356,7 @@ static struct gpiomux_setting mbhc_hs_detect = {
 
 static struct gpiomux_setting cdc_mclk = {
 	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_8MA,
+	.drv = GPIOMUX_DRV_4MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
@@ -704,6 +712,9 @@ static struct msm_gpiomux_config sensorhub_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &mcu_chg_cfg,
 		},
 	},
+};
+
+static struct msm_gpiomux_config nfc_firmware_configs[] __initdata = {
 	{
 		.gpio = 70,
 		.settings = {
@@ -798,9 +809,26 @@ static struct msm_gpiomux_config apq8064_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi7_func1_cfg,
 		},
 	},
+#if defined(CONFIG_BOARD_JF_REFRESH)
+	{
+		.gpio      = 21,		/* GSBI1 QUP I2C_CLK */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_rfr,
+			[GPIOMUX_ACTIVE] = &gpio_i2c_config_rfr,
+		},
+	},
+	{
+		.gpio      = 20,		/* GSBI1 QUP I2C_DATA */
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_rfr,
+			[GPIOMUX_ACTIVE] = &gpio_i2c_config_rfr,
+		},
+	},
+#endif
 };
 
 static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
+#if !defined(CONFIG_BOARD_JF_REFRESH)
 	{
 		.gpio      = 20,
 		.settings = {
@@ -813,6 +841,7 @@ static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
 		},
 	},
+#endif
 };
 
 static struct msm_gpiomux_config apq8064_slimbus_config[] __initdata = {
@@ -1557,25 +1586,25 @@ static struct msm_gpiomux_config apq8064_auxpcm_configs[] __initdata = {
 		.gpio = 43,	/* AUX_PCM_DOUT */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 44,	/* AUX_PCM_DIN */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 45,	/* AUX_PCM_SYNC */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 	{
 		.gpio = 46,	/* AUX_PCM_CLK */
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &auxpcm_sleep_cfg,
-		}	
+		}
 	},
 };
 
@@ -1632,6 +1661,10 @@ void __init apq8064_init_gpiomux(void)
 
 	msm_gpiomux_install(sensorhub_configs,
 			ARRAY_SIZE(sensorhub_configs));
+	if (system_rev > BOARD_REV11)
+		msm_gpiomux_install(nfc_firmware_configs,
+			ARRAY_SIZE(nfc_firmware_configs));
+
 	msm_gpiomux_install(apq8064_slimbus_config,
 			ARRAY_SIZE(apq8064_slimbus_config));
 
@@ -1649,7 +1682,7 @@ void __init apq8064_init_gpiomux(void)
 		" for these GPIO Pins\n", __func__);
 
 	msm_gpiomux_install(apq8064_auxpcm_configs,
-		ARRAY_SIZE(apq8064_auxpcm_configs));		
+		ARRAY_SIZE(apq8064_auxpcm_configs));
 
 	if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd() ||
 		machine_is_mpq8064_dtv())

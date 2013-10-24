@@ -535,6 +535,7 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	lower_inode = sdcardfs_lower_inode(inode);
 
 	fsstack_copy_attr_all(inode, lower_inode);
+	fsstack_copy_inode_size(inode, lower_inode);
 	fix_fat_permission(inode); 
 
 	generic_fillattr(inode, stat);

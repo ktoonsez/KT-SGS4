@@ -2444,15 +2444,11 @@ static int jc_set_movie_mode(int mode)
 		jc_ctrl->movie_mode = false;
 		jc_writeb(JC_CATEGORY_PARM,
 				JC_PARM_MON_MOVIE_SELECT, 0x00);
-		cam_info("Zsl mode\n");
-		jc_writeb(0x02, 0xCF, 0x01);	/*zsl mode*/
 	} else if (mode == 1) {
 		cam_info("Movie mode\n");
 		jc_ctrl->movie_mode = true;
 		jc_writeb(JC_CATEGORY_PARM,
 				JC_PARM_MON_MOVIE_SELECT, 0x01);
-		cam_info("Non zsl mode\n");
-		jc_writeb(0x02, 0xCF, 0x00);	/*non-zsl mode*/
 	}
 	return rc;
 }
@@ -2521,91 +2517,6 @@ static int jc_set_shot_mode(int mode)
 
 		jc_writeb(JC_CATEGORY_PARM,
 				0x0E, mode);
-	}
-
-	return rc;
-}
-
-static int jc_set_scene_mode(int mode)
-{
-	int32_t rc = 0;
-	u32 isp_mode;
-
-	jc_readb(JC_CATEGORY_SYS, JC_SYS_MODE, &isp_mode);
-
-	cam_info("Entered, scene mode %d / %d\n", mode, isp_mode);
-
-	if (isp_mode == JC_MONITOR_MODE) {
-		cam_info("monitor mode\n");
-
-		jc_set_mode(JC_PARMSET_MODE);
-
-		if (mode == 0) {
-			cam_info("auto scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x01);
-		} else if (mode == 5) {
-			cam_info("party scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x15);
-		} else if (mode == 7) {
-			cam_info("sunset scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x16);
-		} else if (mode == 10) {
-			cam_info("night scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x17);
-		} else if (mode == 20) {
-			cam_info("action scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x11);
-		}
-
-		jc_set_mode(JC_MONITOR_MODE);
-
-		cam_info("Restart auto focus\n");
-		if (jc_ctrl->af_mode == 3) {
-			cam_info("start CAF\n");
-			jc_writeb(JC_CATEGORY_LENS,
-					0x01, 0x03);
-			jc_writeb(JC_CATEGORY_LENS,
-					0x02, 0x01);
-		} else if (jc_ctrl->af_mode == 4) {
-			cam_info("start macro CAF\n");
-			jc_writeb(JC_CATEGORY_LENS,
-					0x01, 0x07);
-			jc_writeb(JC_CATEGORY_LENS,
-					0x02, 0x01);
-		} else if (jc_ctrl->af_mode == 5) {
-			msleep(50);
-			cam_info("start Movie CAF\n");
-			jc_writeb(JC_CATEGORY_LENS,
-					0x01, 0x04);
-			jc_writeb(JC_CATEGORY_LENS,
-					0x02, 0x01);
-		} else if (jc_ctrl->af_mode == 6) {
-			msleep(50);
-			cam_info("FD CAF\n");
-			jc_writeb(JC_CATEGORY_LENS,
-					0x01, 0x05);
-			jc_writeb(JC_CATEGORY_LENS,
-					0x02, 0x01);
-		}
-	} else {
-		cam_info("parameter mode\n");
-
-		if (mode == 0) {
-			cam_info("auto scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x01);
-		} else if (mode == 5) {
-			cam_info("party scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x15);
-		} else if (mode == 7) {
-			cam_info("sunset scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x16);
-		} else if (mode == 10) {
-			cam_info("night scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x17);
-		} else if (mode == 20) {
-			cam_info("action scene\n");
-			jc_writeb(JC_CATEGORY_PARM, 0x0E, 0x11);
-		}
 	}
 
 	return rc;
@@ -3047,10 +2958,6 @@ void sensor_native_control(void __user *arg)
 			jc_ctrl->factory_bin = false;
 		break;
 
-	case EXT_CAM_SCENEMODE:
-		jc_set_scene_mode(ctrl_info.value_1);
-		break;
-
 	case EXT_CAM_START_GOLF_SHOT:
 		cam_info("Golf shot start, 1/1000 shutter speed");
 		jc_writeb(0x03, 0x0B, 0x18);
@@ -3259,12 +3166,11 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 		cam_info("isp_ret: %d, samsung app: %d, factory bin: %d\n",
 		    isp_ret, jc_ctrl->samsung_app, jc_ctrl->factory_bin);
 
-#if 0 //remove for ged
 		if (isp_ret == 0 && jc_ctrl->samsung_app == false && jc_ctrl->factory_bin == false) {
 		    cam_err("3rd party app. skip ISP FW update\n");
 		    goto start;
 		}
-#endif
+
 		jc_ctrl->fw_update = false;
 
 		if (firmware_update_sdcard == true) {
@@ -3352,9 +3258,8 @@ static int jc_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 			return -ENOSYS;
 		}
 	}
-#if 0 //remove for ged
+
 start:
-#endif
 	cam_info("nv12 output setting\n");
 	err = jc_writeb(JC_CATEGORY_CAPCTRL,
 			0x0, 0x0f);
@@ -3398,6 +3303,8 @@ static int jc_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 
 	/* AF off */
 	data->sensor_platform_info->sensor_af_power_off();
+
+	usleep(1*1000); /* Add 1ms delay for off timing */
 
 	/* MCLK */
 	rc = msm_cam_clk_enable(&s_ctrl->sensor_i2c_client->client->dev,

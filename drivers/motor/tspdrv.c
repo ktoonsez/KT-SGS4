@@ -501,6 +501,7 @@ static ssize_t write(struct file *file, const char *buf, size_t count,
 			** (Should never happen).
 			*/
 			DbgOut((KERN_EMERG "tspdrv: invalid buffer index.\n"));
+			return 0;
 		}
 
 		/* Check bit depth */
@@ -521,6 +522,7 @@ static ssize_t write(struct file *file, const char *buf, size_t count,
 			** (Should never happen).
 			*/
 			DbgOut((KERN_EMERG "tspdrv: invalid data size.\n"));
+			return 0;
 		}
 
 		/* Check actuator index */

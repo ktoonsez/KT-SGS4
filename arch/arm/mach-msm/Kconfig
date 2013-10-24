@@ -1023,6 +1023,14 @@ config MACH_JACTIVE_ATT
 	bool "APQ8064 Samsung JACTIVE_ATT"
 	help
 	  Support for the Samsung J ACTIVE ATT device.
+
+config BOARD_JF_REFRESH
+	depends on MACH_JF_SPR 
+	default n 
+	bool "APQ8064 Samsung JF REFRESH SPR"
+	help
+	  Support for the Samsung JF device.
+
 endmenu
 
 menu "Locale Selection"
@@ -1071,6 +1079,13 @@ config MACH_JF_CMCC
 	depends on ARCH_APQ8064
 	default n
 	bool "APQ8064 Samsung JF_CMCC"
+	help
+	  Support for the Samsung JF device.
+
+config MACH_JF_CMCCCSFB
+	depends on ARCH_APQ8064
+	default n
+	bool "APQ8064 Samsung JF_CMCC_CSFB"
 	help
 	  Support for the Samsung JF device.
 

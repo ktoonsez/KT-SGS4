@@ -503,6 +503,8 @@ MODULE_DESCRIPTION(SSH_LINUX_INTERCEPTOR_MODULE_DESCRIPTION);
 
 int __init ssh_init_module(void)
 {
+
+  printk(KERN_EMERG "VPNClient built in kernel module.");
   if (ssh_interceptor_init() != 0)
     return -EIO;
   return 0;

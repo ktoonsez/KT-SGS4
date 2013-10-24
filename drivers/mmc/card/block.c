@@ -2744,9 +2744,10 @@ static int mmc_blk_probe(struct mmc_card *card)
 	}
 
 	/* init sysfs for bkops mode */
-	if (card && mmc_card_mmc(card))
+	if (card && mmc_card_mmc(card)) {
 		mmc_blk_bkops_sysfs_init(card);
-
+		spin_lock_init(&card->bkops_lock);
+	}
 	return 0;
 
  out:

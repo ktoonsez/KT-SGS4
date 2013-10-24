@@ -47,7 +47,7 @@
 
 
 
-inline int ip6_rcv_finish( struct sk_buff *skb)
+int ip6_rcv_finish( struct sk_buff *skb)
 {
 	if (skb_dst(skb) == NULL)
 		ip6_route_input(skb);

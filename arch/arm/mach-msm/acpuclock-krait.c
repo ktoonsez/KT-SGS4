@@ -489,6 +489,11 @@ out:
 	mutex_unlock(&l2_regulator_lock);
 }
 
+static int minus_vc;
+module_param_named(
+	mclk, minus_vc, int, S_IRUGO | S_IWUSR | S_IWGRP
+);
+
 /* Set the CPU's clock rate and adjust the L2 rate, voltage and BW requests. */
 static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 				  enum setrate_reason reason)
@@ -528,7 +533,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	/* Calculate voltage requirements for the current CPU. */
 	vdd_data.vdd_mem  = calculate_vdd_mem(tgt);
 	vdd_data.vdd_dig  = calculate_vdd_dig(tgt);
-	vdd_data.vdd_core = calculate_vdd_core(tgt);
+	vdd_data.vdd_core = calculate_vdd_core(tgt) + minus_vc;
 	vdd_data.ua_core = tgt->ua_core;
 
 	/* Disable AVS before voltage switch */

@@ -1331,7 +1331,8 @@ struct sensor_pict_fps {
 };
 
 struct exp_gain_cfg {
-	uint16_t gain;
+/*	uint16_t gain;*/
+	uint32_t gain;
 	uint32_t line;
 };
 

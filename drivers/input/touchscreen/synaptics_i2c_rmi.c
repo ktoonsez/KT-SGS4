@@ -1462,12 +1462,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			wy = finger_data->wy;
 #ifdef EDGE_SWIPE
 			if (f51) {
-#if defined(CONFIG_MACH_JACTIVE_ATT)
 				if (f51->proximity_controls & HAS_EDGE_SWIPE) {
-#else
-				if ((f51->proximity_controls & HAS_EDGE_SWIPE)
-					&& f51->surface_data.palm) {
-#endif
 					wx = f51->surface_data.wx;
 					wy = f51->surface_data.wy;
 				}
@@ -1683,7 +1678,7 @@ static int synaptics_rmi4_f51_edge_swipe(struct synaptics_rmi4_data *rmi4_data,
 		return -ENODEV;
 
 	if (data->edge_swipe_dg >= 90 && data->edge_swipe_dg <= 180)
-#if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_EUR)
 		f51->surface_data.angle = data->edge_swipe_dg - 90;
 #else
 		f51->surface_data.angle = data->edge_swipe_dg - 180;

@@ -2128,6 +2128,7 @@ static int ssp_check_changes(void)
 */
 static void ssp_get_positions(int *acc, int *mag)
 {
+#if !defined(CONFIG_MACH_JF_CMCCCSFB)
 	if (system_rev == BOARD_REV13)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else if (system_rev > BOARD_REV09)
@@ -2136,7 +2137,15 @@ static void ssp_get_positions(int *acc, int *mag)
 		*acc = MPU6500_TOP_RIGHT_UPPER;
 	else
 		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
+#else
+	if (system_rev > BOARD_REV09)
+		*acc = K330_TOP_LEFT_UPPER;
+	else if (system_rev > BOARD_REV04)
+		*acc = MPU6500_TOP_RIGHT_UPPER;
+	else
+		*acc = MPU6500_BOTTOM_RIGHT_UPPER;
 
+#endif
 	if (system_rev > BOARD_REV06)
 		*mag = YAS532_BOTTOM_RIGHT_LOWER;
 	else if (system_rev > BOARD_REV03)
@@ -4327,7 +4336,7 @@ static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi3_pdata = {
 };
 
 static struct msm_i2c_platform_data apq8064_i2c_qup_gsbi4_pdata = {
-	.clk_freq = 100000,
+	.clk_freq = 400000,
 	.src_clk_rate = 24000000,
 };
 

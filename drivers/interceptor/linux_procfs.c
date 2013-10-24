@@ -21,14 +21,13 @@
 extern SshInterceptor ssh_interceptor_context;
 
 /************************ Module parameters *********************************/
+unsigned int ssh_procfs_uid = 1000;
+/* MODULE_PARM_DESC(ssh_procfs_uid, "Procfs uid"); */
+/* module_param(ssh_procfs_uid, uint, 0444); */
 
-unsigned int ssh_procfs_uid = 0;
-MODULE_PARM_DESC(ssh_procfs_uid, "Procfs uid");
-module_param(ssh_procfs_uid, uint, 0444);
-
-unsigned int ssh_procfs_gid = 0;
-MODULE_PARM_DESC(ssh_procfs_gid, "Procfs gid");
-module_param(ssh_procfs_gid, uint, 0444);
+unsigned int ssh_procfs_gid = 1000;
+/* MODULE_PARM_DESC(ssh_procfs_gid, "Procfs gid"); */
+/* module_param(ssh_procfs_gid, uint, 0444); */
 
 /************************ Internal utility functions ************************/
 

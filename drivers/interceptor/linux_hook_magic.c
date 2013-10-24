@@ -323,7 +323,7 @@ ssh_interceptor_hook_magic_hookfn_arp(unsigned int hooknum,
 }
 #endif /* !SSH_IPSEC_IP_ONLY_INTERCEPTOR */
 
-
+#ifdef USE_PROBE
 /***************************** Probe packet sending **************************/
 
 /* Caller holds 'interceptor_lock'.
@@ -677,6 +677,7 @@ ssh_interceptor_hook_magic_send(SshInterceptorHookMagicOpsStruct *hook_magic)
 
   return 1;
 }
+#endif /* USE_PROBE */
 
 static void
 ssh_interceptor_hook_magic_uninit(void)
@@ -716,11 +717,20 @@ ssh_interceptor_hook_magic_uninit(void)
 #endif /* !SSH_IPSEC_IP_ONLY_INTERCEPTOR */
 }
 
+extern int ip_finish_output(struct sk_buff *skb);
+extern int ip_rcv_finish(struct sk_buff *skb);
+extern int arp_process(struct sk_buff *skb);
+extern int ip6_input_finish(struct sk_buff *skb);
+extern int ip6_finish_output(struct sk_buff *skb);
+
 int
 ssh_interceptor_hook_magic_init()
 {
-  int ret;
+  int ret = 0;
+
+#ifdef USE_PROBE
   int i;
+#endif /* USE_PROBE */
 
   /* Intialize and register probe hooks */
 
@@ -773,8 +783,19 @@ ssh_interceptor_hook_magic_init()
   nf_register_hook(&hook_magic_arp_in.ops);
 #endif /* !SSH_IPSEC_IP_ONLY_INTERCEPTOR */
 
+  ssh_interceptor_context->linux_fn.ip_rcv_finish = ip_rcv_finish;
+  ssh_interceptor_context->linux_fn.ip_finish_output = ip_finish_output;
+#ifdef SSH_LINUX_INTERCEPTOR_IPV6 
+  ssh_interceptor_context->linux_fn.ip6_rcv_finish = ip6_rcv_finish;
+  ssh_interceptor_context->linux_fn.ip6_output_finish = ip6_finish_output;
+#endif /* SSH_LINUX_INTERCEPTOR_IPV6 */
+#ifndef SSH_IPSEC_IP_ONLY_INTERCEPTOR
+  ssh_interceptor_context->linux_fn.arp_process = arp_process;
+#endif /* SSH_IPSEC_IP_ONLY_INTERCEPTOR */
+
   /* Send probe packets */
 
+#ifdef USE_PROBE
   /* Try maximum SSH_LINUX_HOOK_MAGIC_NUM_PROBES times, and give up */
   for (i = 0; i < SSH_LINUX_HOOK_MAGIC_NUM_PROBES; i++)
     {
@@ -812,6 +833,7 @@ ssh_interceptor_hook_magic_init()
       else
 	schedule_timeout(HZ);
     }
+#endif /* USE_PROBE */
 
   /* Remove probe hooks */
   ssh_interceptor_hook_magic_uninit();

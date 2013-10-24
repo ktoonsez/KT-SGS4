@@ -100,6 +100,7 @@ static void bluesleep_ext_wake_set_wq(struct work_struct *work);
 static void bluesleep_sleep_wakeup_wq(struct work_struct *work);
 static void bluesleep_start_wq(struct work_struct *work);
 static void bluesleep_stop_wq(struct work_struct *work);
+static void bluesleep_abnormal_stop_wq(struct work_struct *work);
 
 
 /* work queue */
@@ -108,6 +109,7 @@ DECLARE_DELAYED_WORK(tx_timer_expired_workqueue, bluesleep_ext_wake_set_wq);
 DECLARE_DELAYED_WORK(tx_data_wakeup_workqueue, bluesleep_sleep_wakeup_wq);
 DECLARE_DELAYED_WORK(bluesleep_start_workqueue, bluesleep_start_wq);
 DECLARE_DELAYED_WORK(bluesleep_stop_workqueue, bluesleep_stop_wq);
+DECLARE_DELAYED_WORK(bluesleep_abnormal_stop_workqueue, bluesleep_abnormal_stop_wq);
 
 
 /* Macros for handling sleep work */
@@ -121,6 +123,7 @@ DECLARE_DELAYED_WORK(bluesleep_stop_workqueue, bluesleep_stop_wq);
 
 #define bluesleep_start()     schedule_delayed_work(&bluesleep_start_workqueue, 0)
 #define bluesleep_stop()     schedule_delayed_work(&bluesleep_stop_workqueue, 0)
+#define bluesleep_abnormal_stop()     schedule_delayed_work(&bluesleep_abnormal_stop_workqueue, 0)
 
 
 /* 10 second timeout */
@@ -387,8 +390,8 @@ struct uart_port *bluesleep_get_uart_port(void)
 static int bluesleep_read_proc_lpm(char *page, char **start, off_t offset,
 					int count, int *eof, void *data)
 {
-	*eof = 1;
-	return snprintf(page, count, "unsupported to read\n");
+    *eof = 1;
+    return snprintf(page, count, "lpm: %u\n", has_lpm_enabled?1:0 );
 }
 
 static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
@@ -408,7 +411,7 @@ static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
 		bluesleep_stop();
 		has_lpm_enabled = false;
 		//bsi->uport = NULL;
-	} else {
+	} else if (b == '1') {
 		BT_ERR("(bluesleep_write_proc_lpm) Reg HCI notifier.");
 		/* HCI_DEV_REG */
 		if (!has_lpm_enabled) {
@@ -417,6 +420,12 @@ static int bluesleep_write_proc_lpm(struct file *file, const char *buffer,
 			/* if bluetooth started, start bluesleep*/
 			bluesleep_start();
 		}
+	} else if (b == '2') {
+        BT_ERR("(bluesleep_write_proc_lpm) don`t control ext_wake & uart clk");
+        if(has_lpm_enabled) {
+            has_lpm_enabled = false;
+            bluesleep_abnormal_stop();
+        }
 	}
 
 	return count;
@@ -609,6 +618,33 @@ static void bluesleep_stop_wq(struct work_struct *work)
 
 	bsi->uport = NULL;
 }
+
+/**
+ * Stops the Sleep-Mode Protocol on the Host when abnormal.
+ */
+static void bluesleep_abnormal_stop_wq(struct work_struct *work)
+{
+    BT_ERR("bluesleep_abnormal_stop_wq");
+
+    if (!test_bit(BT_PROTO, &flags)) {
+        BT_ERR("(bluesleep_abnormal_stop_wq) proto is not set. Failed to stop bluesleep");
+        bsi->uport = NULL;
+        return;
+    }
+
+    del_timer(&tx_timer);
+    clear_bit(BT_PROTO, &flags);
+
+#if BT_ENABLE_IRQ_WAKE
+    if (disable_irq_wake(bsi->host_wake_irq))
+        BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
+#endif
+    wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+
+    clear_bit(BT_TXDATA, &flags);
+    bsi->uport = NULL;
+}
+
 /**
  * Read the <code>BT_WAKE</code> GPIO pin value via the proc interface.
  * When this function returns, <code>page</code> will contain a 1 if the

@@ -727,6 +727,13 @@ config TIMA_LOG
 	default m
 	help
 	  This option enables support for dumping TIMA log
+
+config TIMA_TEST
+	tristate "Tima Test Suite"
+	default n
+	help
+	  This option enables kernel component of tima test suite
+
 	  
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

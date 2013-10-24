@@ -45,6 +45,10 @@ spinlock_t tz_lock;
  * per frame for 60fps content.
  */
 #define FLOOR			5000
+/* CEILING is 50msec, larger than any standard
+ * frame length, but less than the idle timer.
+ */
+#define CEILING			50000
 #define SWITCH_OFF		200
 #define SWITCH_OFF_RESET_TH	40
 #define SKIP_COUNTER		500
@@ -200,7 +204,6 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		return;
 
 	device->ftbl->power_stats(device, &stats);
-
 	priv->bin.total_time += stats.total_time;
 	priv->bin.busy_time += stats.busy_time;
 	/* Do not waste CPU cycles running this algorithm if

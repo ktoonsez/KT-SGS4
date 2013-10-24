@@ -93,9 +93,11 @@
 
 /****************************** Sanity checks ********************************/
 
+#if 0
 #ifndef MODULE
 #error "VPNClient can only be compiled as a MODULE"
 #endif /* MODULE */
+#endif /* 0 */
 
 #ifndef CONFIG_NETFILTER
 #error "Kernel is not compiled with CONFIG_NETFILTER"

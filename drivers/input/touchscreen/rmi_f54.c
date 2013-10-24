@@ -2434,7 +2434,7 @@ static int check_rx_tx_num(void)
 			__func__, data->cmd_param[0], data->cmd_param[1]);
 		node = -1;
 	} else {
-#if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_EUR)
 		node = data->cmd_param[0] * rmi4_data->num_of_rx +
 						data->cmd_param[1];
 #else

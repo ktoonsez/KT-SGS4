@@ -132,11 +132,13 @@ typedef unsigned int Boolean;
 
 /* Platform-specific kernel-mode definitions follow. */
 
+#if 0
 /******************************   LINUX       *****************************/
 /* Sanity checks about module support and that we are supporting it really  */
 #ifndef MODULE
 #    error  "MODULE must be defined when compiling for Linux"
 #endif
+#endif /* 0 */
 
 #include <linux/string.h>
 

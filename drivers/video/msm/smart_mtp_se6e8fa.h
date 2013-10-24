@@ -67,6 +67,10 @@ extern int get_ldi_chip(void);
 #define EVT1_REV_I_ID3_1 0x47
 #define EVT1_REV_I_ID3_2 0x27
 
+/* for REV J LDI */
+#define EVT1_REV_J_ID3_1 0x48
+#define EVT1_REV_J_ID3_2 0x28
+
 /* MAGNA LDI ID*/
 #define MAGNA_C_FIRST_ID 0x85
 #define MAGNA_C_SECOND_ID 0x86
@@ -87,7 +91,7 @@ extern int get_ldi_chip(void);
 
 
 #define MTP_START_ADDR 0xC8
-#define LUMINANCE_MAX 54
+#define LUMINANCE_MAX 57
 #define GAMMA_SET_MAX 33
 #define BIT_SHIFT 22
 /*
@@ -105,7 +109,7 @@ extern int get_ldi_chip(void);
 #define S6E8FA_MAX 11
 
 /* PANEL DEPENDENT THINGS */
-#define MAX_CANDELA 300
+#define MAX_CANDELA 350
 #define MIN_CANDELA	10
 
 /*

@@ -1648,6 +1648,13 @@ static void msmsdcc_sg_stop(struct msmsdcc_host *host)
 	sg_miter_stop(&host->pio.sg_miter);
 }
 
+static inline void msmsdcc_clear_pio_irq_mask(struct msmsdcc_host *host)
+{
+	writel_relaxed(readl_relaxed(host->base + MMCIMASK0) & ~MCI_IRQ_PIO,
+		host->base + MMCIMASK0);
+	mb();
+}
+
 static irqreturn_t
 msmsdcc_pio_irq(int irq, void *dev_id)
 {
@@ -1659,6 +1666,11 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 	char *buffer;
 
 	spin_lock(&host->lock);
+
+	if (!atomic_read(&host->clks_on) || !host->curr.data) {
+		spin_unlock(&host->lock);
+		return IRQ_NONE;
+	}
 
 	status = readl_relaxed(base + MMCISTATUS);
 
@@ -1706,25 +1718,19 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 	msmsdcc_sg_stop(host);
 	local_irq_restore(flags);
 
+	if (!host->curr.xfer_remain) {
+		msmsdcc_clear_pio_irq_mask(host);
+		goto out_unlock;
+	}
+
 	if (status & MCI_RXACTIVE && host->curr.xfer_remain < MCI_FIFOSIZE) {
 		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | MCI_RXDATAAVLBLMASK,
+				~MCI_IRQ_PIO) | MCI_RXDATAAVLBLMASK,
 				host->base + MMCIMASK0);
-		if (!host->curr.xfer_remain) {
-			/*
-			 * back to back write to MASK0 register don't need
-			 * synchronization delay.
-			 */
-			writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | 0, host->base + MMCIMASK0);
-		}
-		mb();
-	} else if (!host->curr.xfer_remain) {
-		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | 0, host->base + MMCIMASK0);
 		mb();
 	}
 
+out_unlock:
 	spin_unlock(&host->lock);
 
 	return IRQ_HANDLED;
@@ -1825,6 +1831,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 			msmsdcc_sps_exit_curr_xfer(host);
 		}
 		else if (host->curr.data) { /* Non DMA */
+			msmsdcc_clear_pio_irq_mask(host);
 			msmsdcc_reset_and_restore(host);
 			msmsdcc_stop_data(host);
 			msmsdcc_request_end(host, cmd->mrq);
@@ -1980,6 +1987,7 @@ msmsdcc_irq(int irq, void *dev_id)
 					/* Stop current SPS transfer */
 					msmsdcc_sps_exit_curr_xfer(host);
 				} else {
+					msmsdcc_clear_pio_irq_mask(host);
 					msmsdcc_reset_and_restore(host);
 					if (host->curr.data)
 						msmsdcc_stop_data(host);
@@ -2152,6 +2160,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned long		flags;
+	unsigned int error = 0;
 	int retries = 5;
 
 	/*
@@ -2161,6 +2170,18 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (host->plat->is_sdio_al_client)
 		msmsdcc_sdio_al_lpm(mmc, false);
 
+	/*
+	 * Don't start the request if SDCC is not in proper state to handle it
+	 * BAM state is checked below if applicable
+	 */
+	if (!host->pwr || !atomic_read(&host->clks_on) ||
+			host->sdcc_irq_disabled) {
+		WARN(1, "%s: %s: SDCC is in bad state. don't process new request (CMD%d)\n",
+			mmc_hostname(host->mmc), __func__, mrq->cmd->opcode);
+		error = EIO;
+		goto bad_state;
+	}
+
 	/* check if sps bam needs to be reset */
 	if (is_sps_mode(host) && host->sps.reset_bam) {
 		while (retries) {
@@ -2168,6 +2189,14 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				break;
 			pr_err("%s: msmsdcc_bam_dml_reset_and_restore returned error. %d attempts left.\n",
 					mmc_hostname(host->mmc), --retries);
+		}
+
+		/* check if BAM reset succeeded or not */
+		if (host->sps.reset_bam) {
+			pr_err("%s: bam reset failed. Not processing the new request (CMD%d)\n",
+				mmc_hostname(host->mmc), mrq->cmd->opcode);
+			error = EAGAIN;
+			goto bad_state;
 		}
 	}
 
@@ -2186,45 +2215,17 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			msmsdcc_execute_tuning(mmc, MMC_SEND_TUNING_BLOCK_HS200);
 	}
 
-	spin_lock_irqsave(&host->lock, flags);
-
 	if (host->eject) {
-		if (mrq->data && !(mrq->data->flags & MMC_DATA_READ)) {
-			mrq->cmd->error = 0;
-			mrq->data->bytes_xfered = mrq->data->blksz *
-						  mrq->data->blocks;
-		} else
-			mrq->cmd->error = -ENOMEDIUM;
-
-		spin_unlock_irqrestore(&host->lock, flags);
-		mmc_request_done(mmc, mrq);
-		return;
-	}
-
-	/*
-	 * Don't start the request if SDCC is not in proper state to handle it
-	 */
-	if (!host->pwr || !atomic_read(&host->clks_on) ||
-			host->sdcc_irq_disabled ||
-			host->sps.reset_bam) {
-		WARN(1, "%s: %s: SDCC is in bad state. don't process"
-		     " new request (CMD%d)\n", mmc_hostname(host->mmc),
-		     __func__, mrq->cmd->opcode);
-		msmsdcc_dump_sdcc_state(host);
-		mrq->cmd->error = -EIO;
-		if (mrq->data) {
-			mrq->data->error = -EIO;
-			mrq->data->bytes_xfered = 0;
-		}
-		spin_unlock_irqrestore(&host->lock, flags);
-		mmc_request_done(mmc, mrq);
-		return;
+		error = ENOMEDIUM;
+		goto card_ejected;
 	}
 
 	WARN(host->curr.mrq, "%s: %s: New request (CMD%d) received while"
 	     " other request (CMD%d) is in progress\n",
 	     mmc_hostname(host->mmc), __func__,
 	     mrq->cmd->opcode, host->curr.mrq->cmd->opcode);
+
+	spin_lock_irqsave(&host->lock, flags);
 
 	/*
 	 * Set timeout value to 10 secs (or more in case of buggy cards)
@@ -2272,6 +2273,17 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	msmsdcc_request_start(host, mrq);
 
 	spin_unlock_irqrestore(&host->lock, flags);
+	return;
+
+bad_state:
+	msmsdcc_dump_sdcc_state(host);
+card_ejected:
+	mrq->cmd->error = -error;
+	if (mrq->data) {
+		mrq->data->error = -error;
+		mrq->data->bytes_xfered = 0;
+	}
+	mmc_request_done(mmc, mrq);
 }
 
 static inline int msmsdcc_vreg_set_voltage(struct msm_mmc_reg_data *vreg,
@@ -5234,6 +5246,7 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 				/* Stop current SPS transfer */
 				msmsdcc_sps_exit_curr_xfer(host);
 			} else {
+				msmsdcc_clear_pio_irq_mask(host);
 				msmsdcc_reset_and_restore(host);
 				msmsdcc_stop_data(host);
 				if (mrq->data && mrq->data->stop)
