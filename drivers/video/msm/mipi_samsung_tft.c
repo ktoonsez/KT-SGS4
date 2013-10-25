@@ -189,8 +189,8 @@ void lcd_hsync_onoff(bool onoff)
 	if (unlikely(mfd->key != MFD_KEY)) { pr_err("%s : panel mfd invlaid",__func__); return;}
 //		return -EINVAL;
 
-#if defined(CONFIG_MACH_JACTIVE_EUR) /* HW DEFECT under REV 0.5 */
-	if( system_rev > 15 )
+#if defined(CONFIG_MACH_JACTIVE_EUR) /* HW DEFECT under REV 0.6 */
+	if( system_rev > 16 )
 		return;
 #endif
 

@@ -106,6 +106,7 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"VT_MODE",
 	"BROWSER_MODE",
 	"eBOOK_MODE",
+	"EMAIL",
 #if defined(CONFIG_TDMB)
 	"DMB_MODE",
 	"DMB_WARM_MODE",
@@ -494,16 +495,14 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 
 	case mDNIe_eBOOK_MODE:
 		DPRINT(" = eBOOK MODE =\n");
+#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
+		INPUT_PAYLOAD1(EBOOK_1);
+		INPUT_PAYLOAD2(EBOOK_2);
+#else
 		if (mdnie_tun_state.background == STANDARD_MODE) {
 			DPRINT(" = STANDARD MODE =\n");
 			INPUT_PAYLOAD1(STANDARD_EBOOK_1);
 			INPUT_PAYLOAD2(STANDARD_EBOOK_2);
-#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
-		} else if (mdnie_tun_state.background == NATURAL_MODE) {
-			DPRINT(" = NATURAL MODE =\n");
-			INPUT_PAYLOAD1(NATURAL_EBOOK_1);
-			INPUT_PAYLOAD2(NATURAL_EBOOK_2);
-#endif
 		} else if (mdnie_tun_state.background == DYNAMIC_MODE) {
 			DPRINT(" = DYNAMIC MODE =\n");
 			INPUT_PAYLOAD1(DYNAMIC_EBOOK_1);
@@ -517,7 +516,16 @@ void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
 			INPUT_PAYLOAD1(AUTO_EBOOK_1);
 			INPUT_PAYLOAD2(AUTO_EBOOK_2);
 		}
+#endif
 		break;
+
+#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
+	case mDNIe_EMAIL_MODE:
+		DPRINT(" = EMAIL MODE =\n");
+		INPUT_PAYLOAD1(EMAIL_1);
+		INPUT_PAYLOAD2(EMAIL_2);
+		break;
+#endif
 
 	case mDNIE_BLINE_MODE:
 		DPRINT(" = BLIND MODE =\n");
@@ -686,7 +694,9 @@ static ssize_t scenario_store(struct device *dev,
 	case SIG_MDNIE_eBOOK:
 		mdnie_tun_state.scenario = mDNIe_eBOOK_MODE;
 		break;
-
+	case SIG_MDNIE_EMAIL:
+		mdnie_tun_state.scenario = mDNIe_EMAIL_MODE;
+		break;
 #ifdef BROWSER_COLOR_TONE_SET
 	case SIG_MDNIE_BROWSER_TONE1:
 		mdnie_tun_state.scenario = mDNIe_BROWSER_TONE1;
@@ -1151,14 +1161,12 @@ void coordinate_tunning(int x, int y)
 	memcpy(&DYNAMIC_UI_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&DYNAMIC_VIDEO_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&DYNAMIC_VT_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-	memcpy(&DYNAMIC_EBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 
 	memcpy(&STANDARD_BROWSER_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_GALLERY_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_UI_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_VIDEO_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&STANDARD_VT_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
-	memcpy(&STANDARD_EBOOK_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 
 	memcpy(&AUTO_BROWSER_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);
 	memcpy(&AUTO_CAMERA_2[scr_wr_addr], &coordinate_data[tune_number][0], coordinate_data_size);

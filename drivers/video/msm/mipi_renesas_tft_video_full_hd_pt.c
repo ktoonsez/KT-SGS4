@@ -143,6 +143,18 @@ static char renesas_display_off[] = { 0x28, /* no param */ };
 static char renesas_sleep_in[] = { 0x10, /* no param */ };
 static char renesas_sleep_out[] = { 0x11, /* no param */ };
 
+static char renesas_cabc_off_test[] = {
+	0xCE,
+	0x80, 0x19, 0x19, 0x19, 0x19,
+	0x19, 0x19, 0x19, 0x19, 0x19,
+	0x19, 0x19, 0x19, 0x19, 
+};
+
+static char renesas_cabc_on_test[] = {
+	0xCE,
+	0x00,
+};
+
 static struct dsi_cmd_desc renesas_ready_to_on_cmds[] = {
 	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
 		sizeof(renesas_brightness_setting), renesas_brightness_setting},
@@ -210,10 +222,14 @@ static struct dsi_cmd_desc brightness_packet[] = {
 #if defined(AUTO_BRIGHTNESS_CABC_FUNCTION)
 static struct dsi_cmd_desc panel_cabc_enable_cmds[] = {
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
+		sizeof(renesas_cabc_on_test), renesas_cabc_on_test},
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
 		sizeof(renesas_cabc_enable_control), renesas_cabc_enable_control},
 };
 
 static struct dsi_cmd_desc panel_cabc_disable_cmds[] = {
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
+		sizeof(renesas_cabc_off_test), renesas_cabc_off_test},
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0,
 		sizeof(renesas_cabc_disable_control), renesas_cabc_disable_control},
 };
