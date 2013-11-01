@@ -72,6 +72,7 @@ static bool screen_is_on = true;
 extern void ktoonservative_is_active(bool val);
 extern void ktoonservative_is_activebd(bool val);
 extern void ktoonservative_is_activepk(bool val);
+extern void ktoonservative_is_activehk(bool val);
 extern void boost_the_gpu(int freq, int cycles);
 
 extern void apenable_auto_hotplug(bool state);
@@ -1446,6 +1447,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		ktoonservative_is_active(true);
 		ktoonservative_is_activebd(true);
 		ktoonservative_is_activepk(true);
+		ktoonservative_is_activehk(true);
 		ktoonservative_is_activechrg(true);
 		if (dbs_tuners_ins.boost_2nd_core_on_button == 1 || dbs_tuners_ins.boost_3rd_core_on_button == 1 || dbs_tuners_ins.boost_4th_core_on_button == 1)
     		{
@@ -1520,6 +1522,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		ktoonservative_is_active(false);
 		ktoonservative_is_activebd(false);
 		ktoonservative_is_activepk(false);
+		ktoonservative_is_activehk(false);
 		ktoonservative_is_activechrg(false);
     		//kt_is_active_benabled_gpio(false);
     		kt_is_active_benabled_touchkey(false);
