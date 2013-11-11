@@ -1343,11 +1343,6 @@ static void hdmi_edid_extract_audio_data_blocks(const uint8 *in_buf)
 			&len);
 	uint32 *adb = external_common_state->audio_data_blocks;
 
-	if (in_buf[3] & (1<<6)) {
-		DEV_INFO("%s: default audio format\n", __func__);
-		audio_ch |= 0x02;
-	}
-
 	if (sad == NULL)
 		return;
 

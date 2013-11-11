@@ -40,7 +40,6 @@
 #define SIG_MDNIE_VT					7
 #define SIG_MDNIE_BROWSER				8
 #define SIG_MDNIE_eBOOK					9
-#define SIG_MDNIE_EMAIL					10
 
 #define SIG_MDNIE_DYNAMIC				0
 #define SIG_MDNIE_STANDARD				1
@@ -73,7 +72,6 @@ enum Lcd_mDNIe_UI {
 	mDNIe_VT_MODE,
 	mDNIe_BROWSER_MODE,
 	mDNIe_eBOOK_MODE,
-	mDNIe_EMAIL_MODE,
 	mDNIE_BLINE_MODE,
 #if defined(CONFIG_TDMB)
 	mDNIe_DMB_MODE = 20,

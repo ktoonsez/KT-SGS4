@@ -2119,7 +2119,7 @@ static void gamma_init_vt232(struct SMART_DIM *pSmart, char *str, int size)
 }
 
 
-#define CCG6_MAX_TABLE 56
+#define CCG6_MAX_TABLE 53
 static int ccg6_candela_table[][2] = {
 {10, 0,},
 {11, 1,},
@@ -2175,13 +2175,10 @@ static int ccg6_candela_table[][2] = {
 {265, 51,},
 {282, 52,},
 {300, 53,},
-{316, 54,},
-{333, 55,},
-{350, 56,},
 };
 
 static int gradation_offset[][9] = {
-/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */
+/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */	
 	{0, 2, 3, 6, 7, 9, 10, 12, 15,},
 	{0, 2, 3, 6, 7, 9, 10, 12, 15,},
 	{0, 2, 3, 6, 7, 8, 9, 11, 14,},
@@ -2241,7 +2238,7 @@ static int gradation_offset[][9] = {
 #define RGB_COMPENSATION 24
 static int rgb_offset[][RGB_COMPENSATION] = {
 /*	R255 G255 B255 R203 G203 B203 R151 G151 B151
-	R87 G87 B87 R51 G51 B51 R35 G35 B35
+	R87 G87 B87 R51 G51 B51 R35 G35 B35 
 	R23 G23 B23 R11 G11 B11
 */
 {-1, 0, 0, 0, 0, -2, -2, 0, -3, -3, 1, -4, -5,
@@ -2581,7 +2578,7 @@ static void gamma_init_evt1(
 }
 
 static int gradation_offset_evt1_second[][9] = {
-/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */
+/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */	
 	{0, 1, 2, 5, 8, 10, 12, 15, 19},
 	{0, 1, 2, 5, 8, 10, 11, 14, 18},
 	{0, 1, 2, 4, 7, 9, 10, 13, 17},
@@ -2640,7 +2637,7 @@ static int gradation_offset_evt1_second[][9] = {
 
 static int rgb_offset_evt1_second[][RGB_COMPENSATION] = {
 /*	R255 G255 B255 R203 G203 B203 R151 G151 B151
-	R87 G87 B87 R51 G51 B51 R35 G35 B35
+	R87 G87 B87 R51 G51 B51 R35 G35 B35 
 	R23 G23 B23 R11 G11 B11
 */
 {-1, 0, 0, 0, 0, -2, -2, 0, -2, -5, 1, -5, -4, 3, -4, -6, 3, -5, -7, 5, -7, -9, 10, -10},
@@ -2925,7 +2922,7 @@ static void gamma_init_evt1_second(
 
 
 static int gradation_offset_evt1_third[][9] = {
-/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */
+/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */	
 	{0, 2, 3, 9, 10, 13, 15, 19, 21,},
 	{0, 2, 3, 9, 10, 12, 14, 18, 20,},
 	{0, 2, 3, 8, 10, 11, 13, 17, 19,},
@@ -2984,7 +2981,7 @@ static int gradation_offset_evt1_third[][9] = {
 
 static int rgb_offset_evt1_third[][RGB_COMPENSATION] = {
 /*	R255 G255 B255 R203 G203 B203 R151 G151 B151
-	R87 G87 B87 R51 G51 B51 R35 G35 B35
+	R87 G87 B87 R51 G51 B51 R35 G35 B35 
 	R23 G23 B23 R11 G11 B11
 */
 {0, 0, 1, -1, 1, -1, 0, 2, -2, -4, 2, -5, -6, 4, -6, -7, 4, -7, -8, 5, -7, -10, 7, -10,},
@@ -3241,278 +3238,6 @@ static void gamma_init_evt1_third(
 			str[(cnt * 2) + 1] = level_V255 & 0xff;
 		} else {
 			str[cnt+3] += rgb_offset_evt1_third[table_index][cnt];
-		}
-	}
-	/*subtration MTP_OFFSET value from generated gamma table*/
-	mtp_offset_substraction(pSmart, str);
-}
-
-static int gradation_offset_evt1_revJ[][9] = {
-/*	V255 V203 V151 V87 V51 V35 V23 V11 V3 */
-	{0, 4, 5, 10, 13, 15, 18, 21, 23},
-	{0, 4, 5, 10, 13, 14, 18, 20, 22},
-	{0, 4, 5, 9, 12, 14, 17, 19, 21},
-	{0, 3, 5, 9, 12, 13, 16, 18, 20},
-	{0, 3, 5, 8, 12, 13, 15, 17, 19},
-	{0, 3, 5, 8, 11, 12, 15, 17, 19},
-	{0, 3, 5, 7, 10, 11, 14, 16, 18},
-	{0, 2, 5, 7, 9, 10, 13, 15, 17},
-	{0, 2, 4, 6, 9, 9, 12, 14, 16},
-	{0, 2, 4, 6, 8, 9, 11, 13, 15},
-	{0, 2, 4, 6, 8, 9, 11, 13, 15},
-	{0, 2, 4, 6, 8, 9, 10, 12, 14},
-	{0, 2, 4, 6, 7, 8, 10, 12, 14},
-	{0, 2, 3, 5, 7, 8, 9, 11, 13},
-	{0, 2, 3, 5, 6, 7, 9, 11, 13},
-	{0, 2, 3, 5, 6, 7, 8, 10, 12},
-	{0, 2, 3, 5, 6, 7, 9, 10, 12},
-	{0, 2, 3, 5, 6, 7, 8, 9, 11},
-	{0, 2, 3, 4, 5, 6, 7, 8, 10},
-	{0, 2, 3, 4, 5, 6, 7, 8, 10},
-	{0, 2, 3, 3, 4, 5, 6, 7, 9},
-	{0, 2, 3, 3, 4, 5, 6, 7, 8},
-	{0, 2, 3, 3, 4, 4, 6, 6, 7},
-	{0, 2, 2, 3, 3, 3, 5, 5, 6},
-	{0, 2, 2, 3, 3, 3, 5, 5, 6},
-	{0, 2, 2, 3, 3, 3, 5, 5, 6},
-	{0, 2, 2, 2, 2, 3, 4, 4, 5},
-	{0, 2, 2, 2, 2, 3, 4, 4, 5},
-	{0, 2, 2, 2, 2, 3, 4, 4, 5},
-	{0, 1, 2, 2, 2, 2, 3, 3, 4},
-	{0, 1, 2, 2, 2, 2, 3, 3, 4},
-	{0, 1, 1, 1, 1, 1, 2, 2, 3},
-	{0, 1, 1, 1, 1, 1, 1, 2, 3},
-	{0, 1, 1, 1, 1, 1, 1, 2, 3},
-	{0, 1, 1, 1, 1, 1, 1, 2, 3},
-	{0, 1, 1, 1, 1, 0, 1, 2, 3},
-	{0, 1, 1, 0, 0, 0, 1, 2, 3},
-	{0, 0, 2, 2, 2, 3, 4, 2, 3},
-	{0, 0, 1, 3, 2, 3, 3, 2, 3},
-	{0, 0, 1, 3, 2, 2, 2, 2, 3},
-	{0, 0, 2, 3, 3, 3, 3, 2, 3},
-	{0, 0, 2, 2, 2, 2, 3, 2, 3},
-	{0, 1, 2, 2, 2, 2, 3, 2, 3},
-	{0, 1, 1, 2, 2, 2, 3, 2, 3},
-	{0, 0, 1, 2, 1, 1, 2, 1, 2},
-	{3, 0, 1, 2, 1, 1, 1, 1, 1},
-	{3, 0, 1, 1, 0, 0, 0, 1, 1},
-	{3, 0, 0, 1, 0, 0, 0, 1, 1},
-	{3, 0, 0, 0, 0, 0, 0, 0, 0},
-	{3, 0, 0, 0, 0, 0, 0, 0, 0},
-	{3, 0, 0, 0, 0, 0, 0, 0, 0},
-	{2, 0, 0, 0, 0, 0, 0, 0, 0},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0},
-	{1, 0, 0, 0, 0, -1, -1, -1, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0},
-};
-
-static int rgb_offset_evt1_revJ[][RGB_COMPENSATION] = {
-/*	R255 G255 B255 R203 G203 B203 R151 G151 B151
-	R87 G87 B87 R51 G51 B51 R35 G35 B35
-	R23 G23 B23 R11 G11 B11
-*/
-	{-1, 0, -1, -1, 1, -1, -2, 2, -2, -4, 4, -5, -7, 4, -6, -6, 3, -7, -7, 3, -9, -9, 3, -11},
-	{-1, 0, 0, -1, 1, -1, -2, 2, -2, -4, 4, -5, -7, 4, -5, -6, 3, -6, -7, 3, -9, -9, 3, -12},
-	{-1, 0, 0, -1, 1, -1, -2, 2, -2, -4, 4, -4, -7, 4, -5, -6, 3, -6, -6, 3, -9, -9, 3, -12},
-	{-1, 0, 0, -1, 1, -1, -2, 1, -1, -4, 3, -4, -6, 4, -5, -5, 3, -6, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, -1, 1, -1, -2, 1, -1, -4, 3, -4, -6, 4, -5, -5, 3, -6, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, -1, 1, -1, -2, 1, -1, -4, 3, -4, -6, 3, -5, -5, 2, -6, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, 0, 1, -1, -2, 1, -1, -4, 3, -3, -6, 3, -5, -5, 2, -6, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, 0, 1, 0, -2, 1, -1, -4, 3, -3, -6, 3, -5, -5, 2, -6, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, 0, 1, 0, -2, 1, -1, -3, 2, -3, -5, 3, -5, -5, 2, -5, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, 0, 1, 0, -2, 1, -1, -3, 2, -3, -5, 3, -5, -5, 2, -5, -6, 3, -9, -9, 3, -13},
-	{-1, 0, 0, 0, 1, 0, -1, 1, -1, -3, 2, -3, -5, 3, -5, -5, 2, -5, -6, 3, -9, -9, 3, -12},
-	{-1, 0, 0, 0, 1, 0, -1, 1, -1, -3, 2, -3, -5, 3, -4, -5, 2, -5, -6, 3, -9, -9, 3, -12},
-	{-1, 0, 0, 0, 1, 0, -1, 1, -1, -3, 2, -3, -5, 2, -4, -5, 2, -5, -6, 3, -9, -9, 3, -12},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -2, 1, -2, -5, 2, -4, -6, 1, -5, -6, 3, -9, -9, 4, -12},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -2, 1, -2, -5, 2, -4, -6, 1, -5, -6, 3, -9, -9, 4, -11},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -2, 1, -2, -5, 1, -4, -6, 1, -5, -6, 3, -9, -9, 4, -11},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -3, 1, -3, -5, 1, -4, -6, 1, -5, -6, 2, -9, -9, 4, -11},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -2, 1, -2, -5, 1, -4, -6, 1, -5, -6, 2, -9, -8, 4, -11},
-	{-1, 0, 0, 0, 0, 0, -1, 1, -1, -2, 1, -2, -4, 1, -4, -6, 1, -5, -6, 2, -8, -8, 4, -11},
-	{-1, 0, 0, 0, 0, 0, -1, 0, -1, -2, 1, -2, -4, 1, -4, -5, 1, -4, -5, 2, -8, -7, 3, -12},
-	{-1, 0, 0, 0, 0, 0, -1, 0, -1, -2, 1, -2, -3, 1, -3, -5, 1, -4, -5, 2, -7, -7, 3, -12},
-	{-1, 0, 0, 0, 0, 0, -1, 0, -1, -2, 1, -2, -3, 1, -3, -5, 1, -4, -5, 2, -7, -7, 3, -12},
-	{-1, 0, 0, 0, 0, 0, -1, 0, -1, -2, 1, -2, -3, 1, -3, -5, 1, -4, -5, 2, -7, -7, 3, -12},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -3, 1, -3, -4, 1, -4, -4, 2, -6, -7, 2, -12},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -3, 1, -3, -4, 1, -4, -4, 1, -6, -7, 2, -12},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -3, 1, -3, -4, 1, -4, -4, 1, -6, -7, 2, -12},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -2, 1, -2, -3, 0, -2, -3, 1, -5, -7, 2, -11},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -2, 1, -2, -3, 0, -2, -3, 1, -5, -7, 2, -11},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -2, 1, -2, -2, 1, -2, -3, 0, -2, -3, 1, -5, -7, 2, -11},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, -1, -1, 1, -2, -3, 0, -2, -3, 1, -4, -7, 2, -12},
-	{-1, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, -1, -1, 1, -2, -3, 0, -2, -3, 1, -3, -7, 2, -12},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, -1, -1, 1, -1, -3, 0, -1, -2, 1, -2, -6, 2, -12},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, -1, -1, 1, -1, -3, 0, -1, -2, 1, -2, -6, 2, -12},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, -1, 1, -1, -2, 0, -1, -2, 0, -2, -5, 1, -11},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, -1, 0, -1, -1, 0, 0, -2, 0, -2, -4, 1, -9},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, -1, 0, -1, -1, 0, 0, -2, 0, -3, -3, 1, -7},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -2, 0, -2, -3, 1, -7},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -2, -2, 0, -2, -3, 0, -2, -5, 0, -4, -6, 4, -10},
-	{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -2, -2, 0, -2, -3, 0, -2, -4, 0, -3, -5, 4, -9},
-	{0, 0, 1, 0, 0, 0, 0, 0, 0, -1, 0, -1, -2, 0, -2, -2, 0, -2, -4, 1, -3, -5, 4, -8},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, -1, -2, 0, -2, -2, 0, -2, -4, 0, -3, -5, 3, -8},
-	{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1, -2, 0, -2, -2, 0, -2, -4, 0, -3, -5, 3, -7},
-	{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, -1, -2, 0, -2, -2, 0, -2, -4, 0, -3, -4, 3, -7},
-	{0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, -1, -2, 0, -2, -2, 0, -2, -3, 0, -3, -4, 3, -7},
-	{0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, -1, -2, 0, -2, -1, 0, -1, -3, 0, -2, -4, 3, -7},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-};
-
-static void gamma_init_evt1_revJ(
-				struct SMART_DIM *pSmart, char *str, int size)
-{
-	long long candela_level[S6E8FA_TABLE_MAX] = {-1, };
-	int bl_index[S6E8FA_TABLE_MAX] = {-1, };
-
-	long long temp_cal_data = 0;
-	int bl_level;
-
-	int level_255_temp_MSB = 0;
-	int level_V255 = 0;
-
-	int point_index;
-	int cnt;
-	int table_index;
-
-	/*calculate candela level */
-	if (pSmart->brightness_level > AOR_FIX_CD) {
-		/* 350CD ~ 190CD */
-		bl_level = pSmart->brightness_level;
-	} else if ((pSmart->brightness_level <= AOR_FIX_CD) &&
-				(pSmart->brightness_level >= AOR_ADJUST_CD)) {
-		/* 180CD ~ 110CD */
-		if (pSmart->brightness_level == 111)
-			bl_level = 186;
-		else if (pSmart->brightness_level == 119)
-			bl_level = 198;
-		else if (pSmart->brightness_level == 126)
-			bl_level = 208;
-		else if (pSmart->brightness_level == 134)
-			bl_level = 222;
-		else if (pSmart->brightness_level == 143)
-			bl_level = 235;
-		else if (pSmart->brightness_level == 152)
-			bl_level = 247;
-		else if (pSmart->brightness_level == 162)
-			bl_level = 260;
-		else
-			bl_level = 278;
-	} else {
-		/* 110CD ~ 10CD */
-		bl_level = AOR_ADJUST_CD;
-	}
-
-	if (pSmart->brightness_level < 350) {
-		for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
-			point_index = S6E8FA_ARRAY[cnt+1];
-			temp_cal_data =
-			((long long)(candela_coeff_2p15[point_index])) *
-			((long long)(bl_level));
-			candela_level[cnt] = temp_cal_data;
-		}
-
-	} else {
-		for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
-			point_index = S6E8FA_ARRAY[cnt+1];
-			temp_cal_data =
-			((long long)(candela_coeff_2p2[point_index])) *
-			((long long)(bl_level));
-			candela_level[cnt] = temp_cal_data;
-		}
-
-	}
-
-
-#ifdef SMART_DIMMING_DEBUG
-	printk(KERN_INFO "\n candela_1:%llu  candela_3:%llu  candela_11:%llu ",
-		candela_level[0], candela_level[1], candela_level[2]);
-	printk(KERN_INFO "candela_23:%llu  candela_35:%llu  candela_51:%llu ",
-		candela_level[3], candela_level[4], candela_level[5]);
-	printk(KERN_INFO "candela_87:%llu  candela_151:%llu  candela_203:%llu ",
-		candela_level[6], candela_level[7], candela_level[8]);
-	printk(KERN_INFO "candela_255:%llu brightness_level %d\n", candela_level[9], pSmart->brightness_level);
-#endif
-	/* max 350cd */
-	memcpy(curve_1p9, curve_1p9_350, sizeof(curve_1p9_350));
-	memcpy(curve_2p2, curve_2p2_350, sizeof(curve_2p2_350));
-
-	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++) {
-		if (searching_function(candela_level[cnt],
-			&(bl_index[cnt]), GAMMA_CURVE_2P2)) {
-			pr_info("%s searching functioin error cnt:%d\n",
-			__func__, cnt);
-		}
-	}
-
-	/*
-	*	Candela compensation
-	*/
-	for (cnt = 1; cnt < S6E8FA_TABLE_MAX; cnt++) {
-		table_index = find_cadela_table(pSmart->brightness_level);
-
-		if (table_index == -1) {
-			table_index = CCG6_MAX_TABLE;
-			pr_info("%s fail candela table_index cnt : %d brightness %d",
-				__func__, cnt, pSmart->brightness_level);
-		}
-
-		bl_index[S6E8FA_TABLE_MAX - cnt] +=
-			gradation_offset_evt1_revJ[table_index][cnt - 1];
-
-		/* THERE IS M-GRAY0 target */
-		if (bl_index[S6E8FA_TABLE_MAX - cnt] == 0)
-			bl_index[S6E8FA_TABLE_MAX - cnt] = 1;
-	}
-
-#ifdef SMART_DIMMING_DEBUG
-	printk(KERN_INFO "\n bl_index_1:%d  bl_index_3:%d  bl_index_11:%d",
-		bl_index[0], bl_index[1], bl_index[2]);
-	printk(KERN_INFO "bl_index_23:%d bl_index_35:%d  bl_index_51:%d",
-		bl_index[3], bl_index[4], bl_index[5]);
-	printk(KERN_INFO "bl_index_87:%d  bl_index_151:%d bl_index_203:%d",
-		bl_index[6], bl_index[7], bl_index[8]);
-	printk(KERN_INFO "bl_index_255:%d\n", bl_index[9]);
-#endif
-	/*Generate Gamma table*/
-	for (cnt = 0; cnt < S6E8FA_TABLE_MAX; cnt++)
-		(void)Make_hexa[cnt](bl_index , pSmart, str);
-
-	/*
-	*	RGB compensation
-	*/
-	for (cnt = 0; cnt < RGB_COMPENSATION; cnt++) {
-		table_index = find_cadela_table(pSmart->brightness_level);
-
-		if (table_index == -1) {
-			table_index = CCG6_MAX_TABLE;
-			pr_info("%s fail RGB table_index cnt : %d brightness %d",
-				__func__, cnt, pSmart->brightness_level);
-		}
-
-		if (cnt < 3) {
-			level_V255 = str[cnt * 2] << 8 | str[(cnt * 2) + 1];
-			level_V255 +=
-				rgb_offset_evt1_revJ[table_index][cnt];
-			level_255_temp_MSB = level_V255 / 256;
-
-			str[cnt * 2] = level_255_temp_MSB & 0xff;
-			str[(cnt * 2) + 1] = level_V255 & 0xff;
-		} else {
-			str[cnt+3] += rgb_offset_evt1_revJ[table_index][cnt];
 		}
 	}
 	/*subtration MTP_OFFSET value from generated gamma table*/
@@ -3796,10 +3521,6 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 				gamma_init_evt1_third(psmart,
 				(char *)(&(psmart->gen_table[lux_loop].gamma_setting)),
 				GAMMA_SET_MAX);
-			else if (id3 == EVT1_REV_J_ID3_1 || id3 == EVT1_REV_J_ID3_2)
-				gamma_init_evt1_revJ(psmart,
-				(char *)(&(psmart->gen_table[lux_loop].gamma_setting)),
-				GAMMA_SET_MAX);
 			else if (id3 == EVT1_FIRST_ID || id3 == EVT1_SECOND_ID)
 				gamma_init_evt1_second(psmart,
 				(char *)(&(psmart->gen_table[lux_loop].gamma_setting)),
@@ -3816,7 +3537,7 @@ int smart_dimming_init(struct SMART_DIM *psmart)
 				gamma_init_vt888(psmart,
 				(char *)(&(psmart->gen_table[lux_loop].gamma_setting)),
 				GAMMA_SET_MAX);
-		} else {
+		} else { 
 			if (id3 == MAGNA_C_FIRST_ID || id3 == MAGNA_C_SECOND_ID)
 				gamma_init_evt1_third(psmart,
 				(char *)(&(psmart->gen_table[lux_loop].gamma_setting)),
