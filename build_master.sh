@@ -1,6 +1,6 @@
 #!/bin/sh
 export PLATFORM="AOSP"
-export MREV="JB4.4"
+export MREV="KK4.4"
 export CURDATE=`date "+%m.%d.%Y"`
 export MUXEDNAMELONG="KT-SGS4-$MREV-$PLATFORM-$CARRIER-$CURDATE"
 export MUXEDNAMESHRT="KT-SGS4-$MREV-$PLATFORM-$CARRIER*"
