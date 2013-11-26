@@ -60,6 +60,9 @@
 #include <linux/exportfs.h>
 #include <linux/mount.h>
 #include <linux/vfs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#include <linux/aio.h>
+#endif
 #include <linux/parser.h>
 #include <linux/uio.h>
 #include <linux/writeback.h>
@@ -1402,12 +1405,17 @@ static inline unsigned long exfat_hash(loff_t i_pos)
 static struct inode *exfat_iget(struct super_block *sb, loff_t i_pos) {
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	struct exfat_inode_info *info;
-	struct hlist_node *node;
 	struct hlist_head *head = sbi->inode_hashtable + exfat_hash(i_pos);
 	struct inode *inode = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)
+	struct hlist_node *node;
 
 	spin_lock(&sbi->inode_hash_lock);
 	hlist_for_each_entry(info, node, head, i_hash_fat) {
+#else
+	spin_lock(&sbi->inode_hash_lock);
+	hlist_for_each_entry(info, head, i_hash_fat) {
+#endif
 		CHECK_ERR(info->vfs_inode.i_sb != sb);
 
 		if (i_pos != info->i_pos)
@@ -1679,7 +1687,7 @@ static int exfat_statfs(struct dentry *dentry, struct kstatfs *buf)
 		info.FreeClusters = info.NumClusters - info.UsedClusters;
 
 		if (p_fs->dev_ejected)
-			return -EIO;
+			printk("[EXFAT] statfs on device is ejected\n");
 	}
 
 	buf->f_type = sb->s_magic;

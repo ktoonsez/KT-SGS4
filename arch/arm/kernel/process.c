@@ -256,10 +256,6 @@ void cpu_idle(void)
 		tick_nohz_idle_enter();
 		rcu_idle_enter();
 		while (!need_resched()) {
-#ifdef CONFIG_HOTPLUG_CPU
-			if (cpu_is_offline(smp_processor_id()))
-				cpu_die();
-#endif
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 			could_cswap();
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
@@ -291,6 +287,10 @@ void cpu_idle(void)
 		tick_nohz_idle_exit();
 		idle_notifier_call_chain(IDLE_END);
 		schedule_preempt_disabled();
+#ifdef CONFIG_HOTPLUG_CPU
+		if (cpu_is_offline(smp_processor_id()))
+			cpu_die();
+#endif
 	}
 }
 

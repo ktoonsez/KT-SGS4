@@ -40,6 +40,8 @@
 #include <mach/sec_debug.h>
 #endif
 
+#include <trace/events/exception.h>
+
 static const char *handler[]= { "prefetch abort", "data abort", "address exception", "interrupt" };
 
 #ifdef CONFIG_LGE_CRASH_HANDLER

@@ -53,6 +53,8 @@
 #define GPIO_MCU_NRST		PM8921_GPIO_PM_TO_SYS(27)
 #define GPIO_MCU_CHG			69
 #ifdef CONFIG_SEC_FPGA
+#define GPIO_FPGA_I2C_SCL               44
+#define GPIO_FPGA_I2C_SDA               45
 #define GPIO_FPGA_CRESET_B              31
 #define GPIO_FPGA_CDONE                 38
 #define GPIO_FPGA_SPI_EN                43
