@@ -137,6 +137,11 @@
 #include <linux/leds-max77693.h>
 #endif
 
+#ifdef CONFIG_IRDA_MC96
+#include <linux/ir_remote_con.h>
+#include <linux/regulator/consumer.h>
+#endif
+
 #ifdef CONFIG_PROC_AVC
 #include <linux/proc_avc.h>
 #endif
