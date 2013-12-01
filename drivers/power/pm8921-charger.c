@@ -2855,14 +2855,16 @@ static void unplug_check_worker(struct work_struct *work)
 		pr_err("Failed to read PBL_ACCESS1 rc=%d\n", rc);
 		return;
 	}
-	
+
 	chip->active_path = active_path;
+	active_chg_plugged_in = is_active_chg_plugged_in(chip, active_path);
 	pr_debug("active_path = 0x%x, active_chg_plugged_in = %d\n",
 			active_path, active_chg_plugged_in);
 	if (active_path & USB_ACTIVE_BIT) {
 		pr_debug("USB charger active\n");
 
 		pm_chg_iusbmax_get(chip, &usb_ma);
+
 		if (usb_ma <= 100) {
 			pr_debug(
 				"Unenumerated or suspended usb_ma = %d skip\n",

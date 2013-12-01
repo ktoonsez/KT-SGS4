@@ -334,18 +334,6 @@ struct msm_gpiomux_config vcap_configs[] = {
 };
 #endif
 
-static struct gpiomux_setting gpio_i2c_config = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_NONE,
-};
-
-static struct gpiomux_setting gpio_i2c_config_sus = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_KEEPER,
-};
-
 static struct gpiomux_setting gpio_nc_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -486,7 +474,7 @@ static struct gpiomux_setting sx150x_active_cfg = {
 	.pull = GPIOMUX_PULL_NONE,
 };
 
-#if defined(CONFIG_USB_EHCI_MSM_HSIC) || defined(CONFIG_WIFI_NOMODEM)
+#ifdef CONFIG_USB_EHCI_MSM_HSIC
 static struct gpiomux_setting cyts_sleep_sus_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_6MA,
@@ -545,9 +533,7 @@ static struct msm_gpiomux_config cyts_gpio_alt_config[] __initdata = {
 		},
 	},
 };
-#endif
 
-#if defined(CONFIG_USB_EHCI_MSM_HSIC)
 static struct gpiomux_setting hsic_act_cfg = {
 	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_8MA,
@@ -629,12 +615,7 @@ static struct gpiomux_setting mhl_suspend_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
-static struct gpiomux_setting mhl_suspend_1_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
-	.dir = GPIOMUX_IN,
-};
+
 static struct gpiomux_setting mhl_active_1_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -652,44 +633,13 @@ static struct gpiomux_setting mhl_active_3_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 	.dir = GPIOMUX_IN,
 };
-#ifdef	CONFIG_WIFIDEMO_NOMHL
-static struct msm_gpiomux_config apq8064_mhl_configs[] __initdata = {
+
+static struct msm_gpiomux_config msm8960_mhl_configs[] __initdata = {
 	{
 		.gpio = GPIO_MHL_INT,
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &mhl_active_3_cfg,
-			[GPIOMUX_SUSPENDED] = &mhl_suspend_1_cfg,
-		},
-	},
-	{
-		.gpio = GPIO_MHL_RST,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &mhl_active_1_cfg,
 			[GPIOMUX_SUSPENDED] = &mhl_suspend_cfg,
-		},
-	},
-	{
-		.gpio = GPIO_MHL_SDA,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &mhl_active_3_cfg,
-			[GPIOMUX_SUSPENDED] = &mhl_suspend_cfg,
-		},
-	},
-	{
-		.gpio = GPIO_MHL_SCL,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &mhl_active_3_cfg,
-			[GPIOMUX_SUSPENDED] = &mhl_suspend_cfg,
-		},
-	},
-};
-#else
-static struct msm_gpiomux_config apq8064_mhl_configs[] __initdata = {
-	{
-		.gpio = GPIO_MHL_INT,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &mhl_active_3_cfg,
-			[GPIOMUX_SUSPENDED] = &mhl_suspend_1_cfg,
 		},
 	},
 	{
@@ -714,7 +664,6 @@ static struct msm_gpiomux_config apq8064_mhl_configs[] __initdata = {
 		},
 	},
 };
-#endif	/*CONFIG_WIFIDEMO_NOMHL*/
 #endif
 static struct msm_gpiomux_config apq8064_hdmi_configs[] __initdata = {
 	/*{
@@ -842,18 +791,19 @@ static struct msm_gpiomux_config apq8064_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi7_func1_cfg,
 		},
 	},
+};
+
+static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
 	{
-		.gpio      = 21,		/* GSBI1 QUP I2C_CLK */
+		.gpio      = 20,
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_sus,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_config,
+			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
 		},
 	},
 	{
-		.gpio      = 20,		/* GSBI1 QUP I2C_DATA */
+		.gpio      = 21,
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_sus,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_config,
+			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
 		},
 	},
 	{
@@ -930,38 +880,38 @@ static struct msm_gpiomux_config apq8064_audio_codec_configs[] __initdata = {
 
 static struct gpiomux_setting ap2mdm_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_4MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct gpiomux_setting mdm2ap_status_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct gpiomux_setting mdm2ap_errfatal_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
+	.drv = GPIOMUX_DRV_16MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct gpiomux_setting mdm2ap_pblrdy = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
+	.drv = GPIOMUX_DRV_16MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
 
 static struct gpiomux_setting ap2mdm_soft_reset_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_4MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
 static struct gpiomux_setting ap2mdm_wakeup = {
 	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_4MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
@@ -1879,6 +1829,9 @@ void __init apq8064_init_gpiomux(void)
 				ARRAY_SIZE(apq8064_gsbi_configs));
 	}
 
+	msm_gpiomux_install(apq8064_nc_configs,
+			ARRAY_SIZE(apq8064_nc_configs));
+
 	msm_gpiomux_install(sensorhub_configs,
 			ARRAY_SIZE(sensorhub_configs));
 	msm_gpiomux_install(apq8064_slimbus_config,
@@ -1962,8 +1915,8 @@ void __init apq8064_init_gpiomux(void)
 				ARRAY_SIZE(msm8064_sd_det_config));
 
 #if defined(CONFIG_VIDEO_MHL_V2)
-	msm_gpiomux_install(apq8064_mhl_configs,
-		ARRAY_SIZE(apq8064_mhl_configs));
+	msm_gpiomux_install(msm8960_mhl_configs,
+		ARRAY_SIZE(msm8960_mhl_configs));
 #endif
 
 #if defined(CONFIG_LEDS_AN30259A)
