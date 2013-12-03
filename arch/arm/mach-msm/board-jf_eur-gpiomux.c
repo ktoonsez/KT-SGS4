@@ -335,9 +335,15 @@ struct msm_gpiomux_config vcap_configs[] = {
 #endif
 
 static struct gpiomux_setting gpio_nc_config = {
-	.func = GPIOMUX_FUNC_GPIO,
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting gpio_nc_config_sus = {
+	.func = GPIOMUX_FUNC_1,
 	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
+	.pull = GPIOMUX_PULL_KEEPER,
 };
 
 static struct gpiomux_setting mbhc_hs_detect = {
@@ -615,7 +621,12 @@ static struct gpiomux_setting mhl_suspend_cfg = {
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
-
+static struct gpiomux_setting mhl_suspend_1_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_IN,
+};
 static struct gpiomux_setting mhl_active_1_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -639,7 +650,7 @@ static struct msm_gpiomux_config msm8960_mhl_configs[] __initdata = {
 		.gpio = GPIO_MHL_INT,
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &mhl_active_3_cfg,
-			[GPIOMUX_SUSPENDED] = &mhl_suspend_cfg,
+			[GPIOMUX_SUSPENDED] = &mhl_suspend_1_cfg,
 		},
 	},
 	{
@@ -791,26 +802,18 @@ static struct msm_gpiomux_config apq8064_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi7_func1_cfg,
 		},
 	},
-};
-
-static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
 	{
-		.gpio      = 20,
+		.gpio      = 21,		/* GSBI1 QUP I2C_CLK */
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
+			[GPIOMUX_SUSPENDED] = &gpio_nc_config_sus,
+			[GPIOMUX_ACTIVE] = &gpio_nc_config,
 		},
 	},
 	{
-		.gpio      = 21,
+		.gpio      = 20,		/* GSBI1 QUP I2C_DATA */
 		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
-		},
-	},
-	{
-		.gpio = 70,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &gpio_nc_config,
-			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
+			[GPIOMUX_SUSPENDED] = &gpio_nc_config_sus,
+			[GPIOMUX_ACTIVE] = &gpio_nc_config,
 		},
 	},	
 };
@@ -1828,9 +1831,6 @@ void __init apq8064_init_gpiomux(void)
 		msm_gpiomux_install(apq8064_gsbi_configs,
 				ARRAY_SIZE(apq8064_gsbi_configs));
 	}
-
-	msm_gpiomux_install(apq8064_nc_configs,
-			ARRAY_SIZE(apq8064_nc_configs));
 
 	msm_gpiomux_install(sensorhub_configs,
 			ARRAY_SIZE(sensorhub_configs));
