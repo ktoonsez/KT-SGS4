@@ -48,8 +48,7 @@ int verify_iovec(struct msghdr *m, struct iovec *iov, struct sockaddr_storage *a
 			if (err < 0)
 				return err;
 		}
-		if (m->msg_name)
-			m->msg_name = address;
+		m->msg_name = address;
 	} else {
 		m->msg_name = NULL;
 	}
