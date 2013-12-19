@@ -65,7 +65,6 @@ static unsigned int min_sampling_rate;
 static unsigned int stored_sampling_rate = 45000;
 static unsigned int Lcpu_down_block_cycles = 0;
 static unsigned int Lcpu_up_block_cycles = 0;
-static unsigned int Lcpu_raise_block_cycles = 0;
 static bool boostpulse_relayf = false;
 static int boost_hold_cycles_cnt = 0;
 static bool screen_is_on = true;
@@ -1182,8 +1181,6 @@ boostcomplete:
 				hotplug_flag_off = true;
 				break;
 			}
-			else
-				Lcpu_hotplug_block_cycles = 0;
 		}
 		//pr_alert("LOAD CHECK: %d-%d-%d-%d-%d-%d-%d\n", max_load, hotplug_cpu_single_up[1], hotplug_cpu_single_up[2], hotplug_cpu_single_up[3], hotplug_cpu_enable_up[1], hotplug_cpu_enable_up[2], hotplug_cpu_enable_up[3]);
 	
@@ -1202,40 +1199,31 @@ boostcomplete:
 				Lcpu_up_block_cycles++;
 			}
 		}
-		else
-			Lcpu_up_block_cycles = 0;
 	}
 
 	/* Check for frequency increase */
 	if (max_load > dbs_tuners_ins.up_threshold) {
-		if (Lcpu_raise_block_cycles > dbs_tuners_ins.cpu_down_block_cycles)
-		{
-			this_dbs_info->down_skip = 0;
+		this_dbs_info->down_skip = 0;
 
-			/* if we are already at full speed then break out early */
-			if (this_dbs_info->requested_freq == policy->max)
-				return;
+		/* if we are already at full speed then break out early */
+		if (this_dbs_info->requested_freq == policy->max)
+			return;
 
-			freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
+		freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
 
-			/* max freq cannot be less than 100. But who knows.... */
-			if (unlikely(freq_target == 0))
-				freq_target = 5;
+		/* max freq cannot be less than 100. But who knows.... */
+		if (unlikely(freq_target == 0))
+			freq_target = 5;
 
-			this_dbs_info->requested_freq += freq_target;
-			if (this_dbs_info->requested_freq > policy->max)
-				this_dbs_info->requested_freq = policy->max;
+		this_dbs_info->requested_freq += freq_target;
+		if (this_dbs_info->requested_freq > policy->max)
+			this_dbs_info->requested_freq = policy->max;
 
-			__cpufreq_driver_target(policy, this_dbs_info->requested_freq, CPUFREQ_RELATION_H);
-			if (dbs_tuners_ins.sync_extra_cores && policy->cpu == 0)
-				setExtraCores(this_dbs_info->requested_freq);
-			Lcpu_raise_block_cycles = 0;
-		}
-		Lcpu_raise_block_cycles++;
+		__cpufreq_driver_target(policy, this_dbs_info->requested_freq, CPUFREQ_RELATION_H);
+		if (dbs_tuners_ins.sync_extra_cores && policy->cpu == 0)
+			setExtraCores(this_dbs_info->requested_freq);
 		return;
 	}
-	else
-		Lcpu_raise_block_cycles = 0;
 	
 	if (policy->cpu == 0 && hotplug_flag_off && !dbs_tuners_ins.disable_hotplugging && !disable_hotplugging_chrg_override && disable_hotplug_bt_active == false) {
 		if (num_online_cpus() > 1)
