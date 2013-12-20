@@ -208,7 +208,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 
 	/* In "performance" mode the clock speed always stays
 	   the same */
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE || boost_level != -1)
+	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
 		return;
 
 	device->ftbl->power_stats(device, &stats);
