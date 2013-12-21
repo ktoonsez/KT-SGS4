@@ -2234,12 +2234,11 @@ struct platform_device msm_gss = {
 
 static struct fs_driver_data gfx3d_fs_data = {
 	.clks = (struct fs_clk_data[]){
-		{ .name = "core_clk", .reset_rate = 1800000 },
+		{ .name = "core_clk", .reset_rate = 27000000 },
 		{ .name = "iface_clk" },
 		{ .name = "bus_clk" },
 		{ 0 }
 	},
-	.reset_delay_us = 10,
 	.bus_port0 = MSM_BUS_MASTER_GRAPHICS_3D,
 	.bus_port1 = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 };
@@ -2646,8 +2645,8 @@ static struct msm_rpm_log_platform_data msm_rpm_log_pdata = {
 		[MSM_RPM_LOG_PAGE_BUFFER]  = 0x000000A0,
 	},
 	.phys_size = SZ_8K,
-	.log_len = 4096,		  /* log's buffer length in bytes */
-	.log_len_mask = (4096 >> 2) - 1,  /* length mask in units of u32 */
+	.log_len = 6144,		  /* log's buffer length in bytes */
+	.log_len_mask = (6144 >> 2) - 1,  /* length mask in units of u32 */
 };
 
 struct platform_device apq8064_rpm_log_device = {
@@ -2829,7 +2828,7 @@ struct msm_mpm_device_data apq8064_mpm_dev_data __initdata = {
 #define MDM2AP_STATUS			49
 #define AP2MDM_STATUS			48
 #define AP2MDM_SOFT_RESET		27
-#define I2S_AP2MDM_SOFT_RESET		0
+#define I2S_AP2MDM_SOFT_RESET	0
 #define AP2MDM_WAKEUP			35
 #define I2S_AP2MDM_WAKEUP		44
 #ifdef CONFIG_MSM_HSIC_GPIO_REV06
