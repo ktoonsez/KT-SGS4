@@ -27,6 +27,8 @@
 
 #define KGSL_NAME "kgsl"
 
+extern int boost_level;
+
 /* The number of memstore arrays limits the number of contexts allowed.
  * If more contexts are needed, update multiple for MEMSTORE_SIZE
  */
