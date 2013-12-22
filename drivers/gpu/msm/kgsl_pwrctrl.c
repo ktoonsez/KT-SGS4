@@ -37,6 +37,7 @@
 struct kgsl_device *Gbldevice;
 unsigned long orig_max;
 unsigned long internal_max = 450000000;
+int boost_level = -1;
 
 #ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
 struct device *stored_dev;
@@ -127,6 +128,10 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 
 	/* Adjust the power level to the current constraints */
 	new_level = _adjust_pwrlevel(pwr, new_level);
+
+	//Assign new_level to boost level if it is not -1
+	if (boost_level != -1)
+		new_level = boost_level;
 
 	if (new_level == pwr->active_pwrlevel)
 		return;
@@ -377,9 +382,25 @@ static int _get_nearest_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
 {
 	int i;
 
-	for (i = 0; i < pwr->num_pwrlevels - 1; i++) {
-		if (abs(pwr->pwrlevels[i].gpu_freq - clock) < 5000000)
+	for (i = pwr->num_pwrlevels - 1; i >= 0; i--) {
+		if (abs(pwr->pwrlevels[i].gpu_freq - clock) < 5000000 || (i == 0 && clock >= pwr->pwrlevels[i].gpu_freq))
 			return i;
+	}
+
+	return -ERANGE;
+}
+
+static int _get_exact_pwrlevel(struct kgsl_pwrctrl *pwr, unsigned int clock)
+{
+	int i;
+
+	for (i = pwr->num_pwrlevels - 1; i >= 0; i--) {
+		//pr_alert("BOOST GPUs: %d\n", pwr->pwrlevels[i].gpu_freq);
+		if (pwr->pwrlevels[i].gpu_freq == clock || (i == 0 && clock >= pwr->pwrlevels[i].gpu_freq))
+		{
+			//pr_alert("BOOST GPUs CHOOSE: %d %d\n", pwr->pwrlevels[i].gpu_freq, i);
+			return i;
+		}
 	}
 
 	return -ERANGE;
@@ -411,6 +432,29 @@ done:
 	mutex_unlock(&Gbldevice->mutex);
 	
 }
+
+void boost_the_gpu(unsigned int freq, bool getfreq)
+{
+	struct kgsl_pwrctrl *pwr;
+	if (getfreq)
+	{
+		freq = freq * 1000000;
+		if (freq > 320000000 && freq != internal_max)
+			freq = internal_max;
+		pwr = &Gbldevice->pwrctrl;
+		//mutex_lock(&Gbldevice->mutex);
+		boost_level = _get_exact_pwrlevel(pwr, freq);
+		//if (boost_level >= 0)
+		//{
+		//	pwr->thermal_pwrlevel = boost_level;
+		//	kgsl_pwrctrl_pwrlevel_change(Gbldevice, pwr->thermal_pwrlevel);
+		//}
+		//mutex_unlock(&Gbldevice->mutex);
+	}
+	else
+		boost_level = -1;
+}
+
 
 extern void SetGPUpll_config(u32 loc, unsigned long freq);
 extern void SetMAXGPUFreq(unsigned long freq);
@@ -463,7 +507,7 @@ static int kgsl_pwrctrl_max_gpuclk_store(struct device *dev,
 		//SetMAXGPUFreq(val);
 		SetGPUpll_config(0x2E, val);
 	}
-
+	//pwr->pwrlevels[0].gpu_freq = val;
 	internal_max = val;
 		
 	mutex_lock(&device->mutex);
