@@ -292,7 +292,7 @@ static void max77693_haptic_power_onoff(int onoff)
 			printk(KERN_ERR"enable l8 failed, rc=%d\n", ret);
 			return;
 		}
-		//printk(KERN_DEBUG"haptic power_on is finished.\n");
+		printk(KERN_DEBUG"haptic power_on is finished.\n");
 	} else {
 		if (regulator_is_enabled(reg_l8)) {
 			ret = regulator_disable(reg_l8);
@@ -302,7 +302,7 @@ static void max77693_haptic_power_onoff(int onoff)
 				return;
 			}
 		}
-		//printk(KERN_DEBUG"haptic power_off is finished.\n");
+		printk(KERN_DEBUG"haptic power_off is finished.\n");
 	}
 }
 #endif
@@ -3355,13 +3355,13 @@ static struct msm_rpmrs_platform_data msm_rpmrs_data __initdata = {
 		[MSM_RPMRS_VDD_MEM_RET_LOW]	= 750000,
 		[MSM_RPMRS_VDD_MEM_RET_HIGH]	= 750000,
 		[MSM_RPMRS_VDD_MEM_ACTIVE]	= 1050000,
-		[MSM_RPMRS_VDD_MEM_MAX]		= 1250000,
+		[MSM_RPMRS_VDD_MEM_MAX]		= 1150000,
 	},
 	.vdd_dig_levels = {
 		[MSM_RPMRS_VDD_DIG_RET_LOW]	= 500000,
 		[MSM_RPMRS_VDD_DIG_RET_HIGH]	= 750000,
 		[MSM_RPMRS_VDD_DIG_ACTIVE]	= 950000,
-		[MSM_RPMRS_VDD_DIG_MAX]		= 1250000,
+		[MSM_RPMRS_VDD_DIG_MAX]		= 1150000,
 	},
 	.vdd_mask = 0x7FFFFF,
 	.rpmrs_target_id = {

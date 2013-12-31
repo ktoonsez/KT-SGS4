@@ -11,17 +11,6 @@
  */
 #include <linux/battery/sec_battery.h>
 
-//KT Specifics
-unsigned int gbatt_lvl_low = 0;
-unsigned int gbatt_lvl_high = 0;
-unsigned int gmhz_lvl_low = 0;
-unsigned int gmhz_lvl_high = 0;
-unsigned int gbatt_soc = 0;
-unsigned int gbatt_chg = 0;
-unsigned int gdisable_chrg = 0;
-extern unsigned int set_battery_max_level(unsigned int value);
-static unsigned int Lscreen_off_scaling_mhz_orig = 0;
-
 static struct device_attribute sec_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_reset_soc),
 	SEC_BATTERY_ATTR(batt_read_raw_soc),
@@ -811,12 +800,12 @@ static bool sec_bat_temperature(
 			battery->pdata->temp_low_threshold_normal;
 	}
 
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s: HT(%d), HR(%d), LT(%d), LR(%d)\n",
 		__func__, battery->temp_high_threshold,
 		battery->temp_high_recovery,
 		battery->temp_low_threshold,
-		battery->temp_low_recovery);*/
+		battery->temp_low_recovery);
 	return ret;
 }
 
@@ -1513,44 +1502,11 @@ void sec_bat_reset_discharge(struct sec_battery_info *battery)
 	discharge_cnt = 0;
 }
 
-void set_batt_mhz_info(unsigned int batt_lvl_low, unsigned int batt_lvl_high, unsigned int mhz_lvl_low, unsigned int mhz_lvl_high, unsigned int disable_chrg)
-{
-	gbatt_lvl_low = batt_lvl_low;
-	gbatt_lvl_high = batt_lvl_high;
-	gmhz_lvl_low = mhz_lvl_low;
-	gmhz_lvl_high = mhz_lvl_high;
-	gdisable_chrg = disable_chrg;
-}
-
-unsigned int get_batt_level(void)
-{
-	//Exit if user disables battery control while plugged in
-	if (gdisable_chrg == 1 && (gbatt_chg > 1))
-		return Lscreen_off_scaling_mhz_orig;
-
-	if (gbatt_lvl_low > 0 && gmhz_lvl_low > 0)
-	{
-		if (gbatt_soc <= gbatt_lvl_low)
-			return gmhz_lvl_low;
-
-	}
-	if (gbatt_lvl_high > 0 && gmhz_lvl_high > 0)
-	{
-		if (gbatt_soc <= gbatt_lvl_high)
-			return gmhz_lvl_high;
-	}
-	if ((gbatt_lvl_low > 0 && gbatt_soc > gbatt_lvl_low) || (gmhz_lvl_high > 0 && gbatt_soc > gbatt_lvl_high))
-		return Lscreen_off_scaling_mhz_orig;
-	else
-		return 0;
-}
-
 static void sec_bat_get_battery_info(
 		struct sec_battery_info *battery)
 {
 	union power_supply_propval value;
-	unsigned int mhz_lvl = 0;
-	
+
 	psy_do_property("sec-fuelgauge", get,
 			POWER_SUPPLY_PROP_VOLTAGE_NOW, value);
 	battery->voltage_now = value.intval;
@@ -1586,13 +1542,6 @@ static void sec_bat_get_battery_info(
 			POWER_SUPPLY_PROP_CURRENT_NOW, value);
 	battery->current_now = value.intval;
 	battery->current_avg = sec_bat_get_current_average(battery);
-	
-	//KT battery Mhz settings
-	gbatt_soc = battery->capacity;
-	gbatt_chg = battery->cable_type;
-	mhz_lvl = get_batt_level();
-	if (mhz_lvl > 0)
-		Lscreen_off_scaling_mhz_orig = set_battery_max_level(mhz_lvl);
 
 	switch (battery->pdata->thermal_source) {
 	case SEC_BATTERY_THERMAL_SOURCE_FG:
@@ -1634,7 +1583,7 @@ static void sec_bat_get_battery_info(
 		break;
 	}
 
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s:Vnow(%dmV),Inow(%dmA),SOC(%d%%),Tbat(%d)\n", __func__,
 		battery->voltage_now, battery->current_now,
 		battery->capacity, battery->temperature);
@@ -1643,7 +1592,7 @@ static void sec_bat_get_battery_info(
 		battery->present ? "Connected" : "Disconnected",
 		battery->voltage_avg, battery->voltage_ocv,
 		battery->temper_amb,
-		battery->current_avg, battery->current_adc);*/
+		battery->current_avg, battery->current_adc);
 };
 
 static void sec_bat_polling_work(struct work_struct *work)
@@ -1882,13 +1831,13 @@ static void sec_bat_monitor_work(
 	sec_bat_fullcharged_check(battery);
 
 continue_monitor:
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s: Status(%s), mode(%s), Health(%s), Cable(%d), siop_level(%d)\n",
 		__func__,
 		sec_bat_status_str[battery->status],
 		sec_bat_charging_mode_str[battery->charging_mode],
 		sec_bat_health_str[battery->health],
-		battery->cable_type, battery->siop_level);*/
+		battery->cable_type, battery->siop_level);
 
 	power_supply_changed(&battery->psy_bat);
 

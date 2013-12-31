@@ -58,9 +58,9 @@
 #define jc_readw(g, b, v) jc_read(__LINE__, 2, g, b, v, true)
 #define jc_readl(g, b, v) jc_read(__LINE__, 4, g, b, v, true)
 
-#define jc_writeb(g, b, v) jc_write(__LINE__, 1, g, b, v, false)
-#define jc_writew(g, b, v) jc_write(__LINE__, 2, g, b, v, false)
-#define jc_writel(g, b, v) jc_write(__LINE__, 4, g, b, v, false)
+#define jc_writeb(g, b, v) jc_write(__LINE__, 1, g, b, v, true)
+#define jc_writew(g, b, v) jc_write(__LINE__, 2, g, b, v, true)
+#define jc_writel(g, b, v) jc_write(__LINE__, 4, g, b, v, true)
 
 #define jc_readb2(g, b, v) jc_read(__LINE__, 1, g, b, v, false)
 #define jc_readw2(g, b, v) jc_read(__LINE__, 2, g, b, v, false)
@@ -3081,16 +3081,6 @@ void sensor_native_control(void __user *arg)
 
 	case EXT_CAM_SCENEMODE:
 		jc_set_scene_mode(ctrl_info.value_1);
-		break;
-
-	case EXT_CAM_START_GOLF_SHOT:
-		cam_info("Golf shot start, 1/1000 shutter speed");
-		jc_writeb(0x03, 0x0B, 0x18);
-		break;
-
-	case EXT_CAM_STOP_GOLF_SHOT:
-		cam_info("Golf shot stop, return normal shutter speed");
-		jc_writeb(0x03, 0x0B, 0x08);
 		break;
 
 	default:

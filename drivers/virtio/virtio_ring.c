@@ -132,13 +132,6 @@ static int vring_add_indirect(struct vring_virtqueue *vq,
 	unsigned head;
 	int i;
 
-	/*
-	 * We require lowmem mappings for the descriptors because
-	 * otherwise virt_to_phys will give us bogus addresses in the
-	 * virtqueue.
-	 */
-	gfp &= ~(__GFP_HIGHMEM | __GFP_HIGH);
-
 	desc = kmalloc((out + in) * sizeof(struct vring_desc), gfp);
 	if (!desc)
 		return -ENOMEM;
@@ -511,45 +504,15 @@ static bool vring_enable_cb(struct virtqueue *_vq)
 	 * either clear the flags bit or point the event index at the next
 	 * entry. Always do both to keep code simple. */
 	vq->vring.avail->flags &= ~VRING_AVAIL_F_NO_INTERRUPT;
-	vring_used_event(&vq->vring) = last_used_idx = vq->last_used_idx;
-	END_USE(vq);
-	return last_used_idx;
-}
-EXPORT_SYMBOL_GPL(virtqueue_enable_cb_prepare);
-
-/**
- * virtqueue_poll - query pending used buffers
- * @vq: the struct virtqueue we're talking about.
- * @last_used_idx: virtqueue state (from call to virtqueue_enable_cb_prepare).
- *
- * Returns "true" if there are pending used buffers in the queue.
- *
- * This does not need to be serialized.
- */
-bool virtqueue_poll(struct virtqueue *_vq, unsigned last_used_idx)
-{
-	struct vring_virtqueue *vq = to_vvq(_vq);
-
+	vring_used_event(&vq->vring) = vq->last_used_idx;
 	virtio_mb(vq);
-	return (u16)last_used_idx != vq->vring.used->idx;
-}
-EXPORT_SYMBOL_GPL(virtqueue_poll);
+	if (unlikely(more_used(vq))) {
+		END_USE(vq);
+		return false;
+	}
 
-/**
- * virtqueue_enable_cb - restart callbacks after disable_cb.
- * @vq: the struct virtqueue we're talking about.
- *
- * This re-enables callbacks; it returns "false" if there are pending
- * buffers in the queue, to detect a possible race between the driver
- * checking for more work, and enabling callbacks.
- *
- * Caller must ensure we don't call this with other virtqueue
- * operations at the same time (except where noted).
- */
-bool virtqueue_enable_cb(struct virtqueue *_vq)
-{
-	unsigned last_used_idx = virtqueue_enable_cb_prepare(_vq);
-	return !virtqueue_poll(_vq, last_used_idx);
+	END_USE(vq);
+	return true;
 }
 
 /**

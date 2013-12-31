@@ -2129,11 +2129,6 @@ static int _hardware_dequeue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 	if (mReq->zptr) {
 		if ((TD_STATUS_ACTIVE & mReq->zptr->token) != 0)
 			return -EBUSY;
-#ifdef CONFIG_MACH_JF_ATT
-#ifdef CONFIG_USB_MON
-		udelay(10);
-#endif
-#endif
 
 		/* The controller may access this dTD one more time.
 		 * Defer freeing this to next zero length dTD completion.
@@ -2147,12 +2142,6 @@ static int _hardware_dequeue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 		mEp->last_zdma = mReq->zdma;
 
 		mReq->zptr = NULL;
-	} else {
-#ifdef CONFIG_MACH_JF_ATT
-#ifdef CONFIG_USB_MON
-		udelay(10);
-#endif
-#endif
 	}
 
 	mReq->req.status = 0;

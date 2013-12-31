@@ -271,7 +271,7 @@ static void notification_available_cb(struct urb *urb)
 					dev->readbuf,
 					DEFAULT_READ_URB_LENGTH,
 					resp_avail_cb, dev);
- 
+
 		status = usb_submit_urb(dev->readurb, GFP_ATOMIC);
 		if (status) {
 			dev_err(&dev->intf->dev,
@@ -280,7 +280,6 @@ static void notification_available_cb(struct urb *urb)
 			usb_autopm_put_interface_async(dev->intf);
 			goto resubmit_int_urb;
 		}
-
 		return;
 	case USB_CDC_NOTIFY_NETWORK_CONNECTION:
 		dev_dbg(&dev->intf->dev, "%s network\n", ctrl->wValue ?

@@ -39,6 +39,7 @@ struct module;
  */
 struct irq_desc {
 	struct irq_data		irq_data;
+	struct timer_rand_state *timer_rand_state;
 	unsigned int __percpu	*kstat_irqs;
 	irq_flow_handler_t	handle_irq;
 #ifdef CONFIG_IRQ_PREFLOW_FASTEOI

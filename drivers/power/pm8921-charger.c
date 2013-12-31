@@ -34,13 +34,9 @@
 #include <mach/msm_xo.h>
 #include <mach/msm_hsusb.h>
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
-#include <linux/fastchg.h>
-#define USB_FASTCHG_LOAD 1000 /* uA */
-#endif 
-
 #define CHG_BUCK_CLOCK_CTRL	0x14
 #define CHG_BUCK_CLOCK_CTRL_8038	0xD
+
 #define PBL_ACCESS1		0x04
 #define PBL_ACCESS2		0x05
 #define SYS_CONFIG_1		0x06
@@ -1414,8 +1410,7 @@ static char *pm_power_supplied_to[] = {
 	"battery",
 };
 
-static int USB_WALL_THRESHOLD_MA = 500;
-
+#define USB_WALL_THRESHOLD_MA	500
 static int pm_power_get_property_mains(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  union power_supply_propval *val)
@@ -1441,12 +1436,6 @@ static int pm_power_get_property_mains(struct power_supply *psy,
 			return 0;
 		}
 
-		/* USB with max current greater than 500 mA connected */
-		if (force_fast_charge == 1)
-			USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-		else
-			USB_WALL_THRESHOLD_MA = 500;
-		pr_alert("KTPM8921-1-%d-%d",usb_target_ma,USB_WALL_THRESHOLD_MA);
 		type = the_chip->usb_type;
 		if (type == POWER_SUPPLY_TYPE_USB_DCP ||
 			type == POWER_SUPPLY_TYPE_USB_ACA ||
@@ -1520,14 +1509,9 @@ static int pm_power_set_property_usb(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  const union power_supply_propval *val)
 {
+	/* Check if called before init */
 	if (!the_chip)
 		return -EINVAL;
-
-	if (force_fast_charge == 1)
-		USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-	else
-		USB_WALL_THRESHOLD_MA = 500;
-	pr_alert("KTPM8921-2-%d", USB_WALL_THRESHOLD_MA);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_SCOPE:
@@ -1571,12 +1555,6 @@ static int pm_power_get_property_usb(struct power_supply *psy,
 	/* Check if called before init */
 	if (!the_chip)
 		return -EINVAL;
-
-	if (force_fast_charge == 1)
-		USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-	else
-		USB_WALL_THRESHOLD_MA = 500;
-	pr_alert("KTPM8921-3-%d",USB_WALL_THRESHOLD_MA);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
@@ -2031,15 +2009,6 @@ void pm8921_charger_vbus_draw(unsigned int mA)
 	int set_usb_now_ma;
 
 	pr_debug("Enter charge=%d\n", mA);
-
-	if (force_fast_charge == 1)
-	{
-		USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-		mA = USB_FASTCHG_LOAD;
-	}
-	else
-		USB_WALL_THRESHOLD_MA = 500;
-	pr_alert("KTPM8921-4-%d-%d",USB_WALL_THRESHOLD_MA, mA);
 
 	/*
 	 * Reject VBUS requests if USB connection is the only available
@@ -2622,12 +2591,6 @@ static void vin_collapse_check_worker(struct work_struct *work)
 	struct pm8921_chg_chip *chip = container_of(dwork,
 			struct pm8921_chg_chip, vin_collapse_check_work);
 
-	if (force_fast_charge == 1)
-		USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-	else
-		USB_WALL_THRESHOLD_MA = 500;
-	pr_alert("KTPM8921-5-%d", USB_WALL_THRESHOLD_MA);
-
 	/*
 	 * AICL only for wall-chargers. If the charger appears to be plugged
 	 * back in now, the corresponding unplug must have been because of we
@@ -2843,12 +2806,6 @@ static void unplug_check_worker(struct work_struct *work)
 	int rc, ibat, active_chg_plugged_in, usb_ma;
 	int chg_gone = 0;
 	bool ramp = false;
-
-	if (force_fast_charge == 1)
-		USB_WALL_THRESHOLD_MA = USB_FASTCHG_LOAD;
-	else
-		USB_WALL_THRESHOLD_MA = 500;
-	pr_alert("KTPM8921-6-%d", USB_WALL_THRESHOLD_MA);
 
 	rc = pm8xxx_readb(chip->dev->parent, PBL_ACCESS1, &active_path);
 	if (rc) {

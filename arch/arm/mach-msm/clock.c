@@ -38,7 +38,7 @@ int find_vdd_level(struct clk *clk, unsigned long rate)
 	int level;
 
 	for (level = 0; level < clk->num_fmax; level++)
-		if (rate <= clk->fmax[level] || (level == 0 && rate >= clk->fmax[level]))
+		if (rate <= clk->fmax[level])
 			break;
 
 	if (level == clk->num_fmax) {

@@ -200,30 +200,6 @@ static void cpu_power_off(void *data)
 		;
 }
 
-static int irq_enabled;
-static int status;
-
-int resout_irq_control(int enable)
-{
-	if (!irq_enabled)
-		return -1;
-
-	if (enable ^ status) {
-		if (enable) {
-			enable_irq(pmic_reset_irq);
-			status = 1;
-			pr_info("%s : %d\n", __func__, status);
-		} else {
-			disable_irq_nosync(pmic_reset_irq);
-			status = 0;
-			pr_info("%s : %d\n", __func__, status);
-		}
-	} else
-		return -1;
-
-	return 0;
-}
-
 static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 {
 	pr_warn("%s PMIC Initiated shutdown\n", __func__);
@@ -367,7 +343,7 @@ void msm_restart(char mode, const char *cmd)
 		set_kernel_crash_magic_number();
 reset:
 #endif /* CONFIG_LGE_CRASH_HANDLER */
-#if 1
+#ifdef CONFIG_SEC_DEBUG
 	else {
 		printk(KERN_NOTICE "%s : clear reset flag\r\n", __func__);
 		__raw_writel(0x12345678, restart_reason);
@@ -409,7 +385,7 @@ static int __init msm_pmic_restart_init(void)
 
 #ifdef CONFIG_MACH_JF_VZW
 	return 0;
-#elif defined(CONFIG_SEC_DEBUG)
+#else
 	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
 		return 0;
 #endif
@@ -420,8 +396,6 @@ static int __init msm_pmic_restart_init(void)
 					"restart_from_pmic", NULL);
 		if (rc < 0)
 			pr_err("pmic restart irq fail rc = %d\n", rc);
-		irq_enabled = 1;
-		status = 1;
 	} else {
 		pr_warn("no pmic restart interrupt specified\n");
 	}

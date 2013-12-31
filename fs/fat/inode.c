@@ -242,72 +242,6 @@ static const struct address_space_operations fat_aops = {
 	.bmap		= _fat_bmap
 };
 
-#if defined(CONFIG_VMWARE_MVP)
-int _fat_fallocate(struct inode *inode, loff_t len)
-{
-	struct super_block *sb = inode->i_sb;
-	struct msdos_sb_info *sbi = MSDOS_SB(sb);
-	int err;
-	sector_t nblocks, iblock;
-	unsigned short offset;
-
-	if (!S_ISREG(inode->i_mode)) {
-		printk(KERN_ERR "_fat_fallocate: supported only for regular files\n");
-		return -EOPNOTSUPP;
-	}
-
-	if (IS_IMMUTABLE(inode)) {
-		return -EPERM;
-	}
-
-	mutex_lock(&inode->i_mutex);
-
-	/* file is already big enough */
-	if (len <= i_size_read(inode)) {
-		mutex_unlock(&inode->i_mutex);
-		return 0;
-	}
-
-	nblocks = (len + sb->s_blocksize - 1 ) >> sb->s_blocksize_bits;
-	iblock = (MSDOS_I(inode)->mmu_private + sb->s_blocksize - 1) >> sb->s_blocksize_bits;
-
-	/* validate new size */
-	err = inode_newsize_ok(inode, len);
-	if (err) {
-		mutex_unlock(&inode->i_mutex);
-		return err;
-	}
-
-	/* check for available blocks on last cluster */
-	offset = (unsigned long)iblock & (sbi->sec_per_clus - 1);
-	if (offset) {
-		iblock += min((unsigned long) (sbi->sec_per_clus - offset),
-				(unsigned long) (nblocks - iblock));
-	}
-
-	/* now allocate new clusters */
-	while (iblock < nblocks) {
-		err = fat_add_cluster(inode);
-		if (err) {
-			break;
-		}
-
-		iblock += min((unsigned long) sbi->sec_per_clus,
-				(unsigned long) (nblocks - iblock));
-	}
-
-	/* update inode informations */
-	len = min(len, (loff_t)(iblock << sb->s_blocksize_bits));
-	i_size_write(inode, len);
-	MSDOS_I(inode)->mmu_private = len;
-	inode->i_mtime = inode->i_ctime = CURRENT_TIME_SEC;
-	mark_inode_dirty(inode);
-
-	mutex_unlock(&inode->i_mutex);
-
-	return err;
-}
-#endif
 /*
  * New FAT inode stuff. We do the following:
  *	a) i_ino is constant and has nothing with on-disk location.
@@ -1303,19 +1237,6 @@ static int fat_read_root(struct inode *inode)
 	return 0;
 }
 
-static unsigned long calc_fat_clusters(struct super_block *sb)
-{
-	struct msdos_sb_info *sbi = MSDOS_SB(sb);
-
-	/* Divide first to avoid overflow */
-	if (sbi->fat_bits != 12) {
-		unsigned long ent_per_sec = sb->s_blocksize * 8 / sbi->fat_bits;
-		return ent_per_sec * sbi->fat_length;
-	}
-
-	return sbi->fat_length * sb->s_blocksize * 8 / sbi->fat_bits;
-}
-
 /*
  * Read the super block of an MS-DOS FS.
  */
@@ -1521,7 +1442,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
 		sbi->fat_bits = (total_clusters > MAX_FAT12) ? 16 : 12;
 
 	/* check that FAT table does not overflow */
-	fat_clusters = calc_fat_clusters(sb);
+	fat_clusters = sbi->fat_length * sb->s_blocksize * 8 / sbi->fat_bits;
 	total_clusters = min(total_clusters, fat_clusters - FAT_START_ENT);
 	if (total_clusters > MAX_FAT(sb)) {
 		if (!silent)

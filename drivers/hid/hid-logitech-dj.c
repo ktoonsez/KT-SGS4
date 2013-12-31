@@ -243,12 +243,6 @@ static void logi_dj_recv_add_djhid_device(struct dj_receiver_dev *djrcv_dev,
 		return;
 	}
 
-	if (djrcv_dev->paired_dj_devices[dj_report->device_index]) {
-		/* The device is already known. No need to reallocate it. */
-		dbg_hid("%s: device is already known\n", __func__);
-		return;
-	}
-
 	dj_hiddev = hid_allocate_device();
 	if (IS_ERR(dj_hiddev)) {
 		dev_err(&djrcv_hdev->dev, "%s: hid_allocate_device failed\n",
@@ -460,7 +454,7 @@ static int logi_dj_recv_send_report(struct dj_receiver_dev *djrcv_dev,
 	struct hid_report *report;
 	struct hid_report_enum *output_report_enum;
 	u8 *data = (u8 *)(&dj_report->device_index);
-	unsigned int i;
+	int i;
 
 	output_report_enum = &hdev->report_enum[HID_OUTPUT_REPORT];
 	report = output_report_enum->report_id_hash[REPORT_ID_DJ_SHORT];
@@ -470,7 +464,7 @@ static int logi_dj_recv_send_report(struct dj_receiver_dev *djrcv_dev,
 		return -ENODEV;
 	}
 
-	for (i = 0; i < DJREPORT_SHORT_LENGTH - 1; i++)
+	for (i = 0; i < report->field[0]->report_count; i++)
 		report->field[0]->value[i] = data[i];
 
 	usbhid_submit_report(hdev, report, USB_DIR_OUT);
@@ -488,7 +482,6 @@ static int logi_dj_recv_query_paired_devices(struct dj_receiver_dev *djrcv_dev)
 	dj_report.report_type = REPORT_TYPE_CMD_GET_PAIRED_DEVICES;
 	return logi_dj_recv_send_report(djrcv_dev, &dj_report);
 }
-
 
 
 static int logi_dj_recv_switch_to_dj_mode(struct dj_receiver_dev *djrcv_dev,
@@ -787,12 +780,6 @@ static int logi_dj_probe(struct hid_device *hdev,
 	if (retval) {
 		dev_err(&hdev->dev,
 			"%s:parse of interface 2 failed\n", __func__);
-		goto hid_parse_fail;
-	}
-
-	if (!hid_validate_values(hdev, HID_OUTPUT_REPORT, REPORT_ID_DJ_SHORT,
-				 0, DJREPORT_SHORT_LENGTH - 1)) {
-		retval = -ENODEV;
 		goto hid_parse_fail;
 	}
 

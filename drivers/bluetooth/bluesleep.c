@@ -80,10 +80,6 @@
 
 #define BT_BLUEDROID_SUPPORT 1
 
-extern void set_bluetooth_state(unsigned int val);
-extern void set_bluetooth_state_kt(bool val);
-static bool bt_conn_state = false;
-
 struct bluesleep_info {
 	unsigned host_wake;
 	unsigned ext_wake;
@@ -210,23 +206,6 @@ static void hsuart_power(int on)
  */
 int bluesleep_can_sleep(void)
 {
-	int ext_wake = gpio_get_value(bsi->ext_wake);
-	int host_wake = gpio_get_value(bsi->host_wake);
-	if ((ext_wake == 1 || host_wake == 1) && bt_conn_state == false)
-	{
-		set_bluetooth_state(1);
-		set_bluetooth_state_kt(true);
-		bt_conn_state = true;
-		pr_alert("KT BLUETOOTH IN USE");
-	}
-	else if (ext_wake == 0 && host_wake == 0 && bt_conn_state == true)
-	{
-		set_bluetooth_state(0);
-		set_bluetooth_state_kt(false);
-		bt_conn_state = false;
-		pr_alert("KT BLUETOOTH NOT IN USE");
-	}
-
 	/* check if WAKE_BT_GPIO and BT_WAKE_GPIO are both deasserted */
 	return (!gpio_get_value(bsi->host_wake) &&
 		(bsi->uport != NULL));

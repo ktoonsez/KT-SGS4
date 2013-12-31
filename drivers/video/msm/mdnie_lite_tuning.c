@@ -90,9 +90,8 @@ struct mdnie_lite_tun_type mdnie_tun_state = {
 const char background_name[MAX_BACKGROUND_MODE][16] = {
 	"STANDARD",
 	"DYNAMIC",
-	"NATURAL",
 	"MOVIE",
-	"AUTO",
+	"NATURAL",
 };
 
 const char scenario_name[MAX_mDNIe_MODE][16] = {
@@ -101,11 +100,11 @@ const char scenario_name[MAX_mDNIe_MODE][16] = {
 	"VIDEO_WARM_MODE",
 	"VIDEO_COLD_MODE",
 	"CAMERA_MODE",
-	"NAVI_MODE",
+	"NAVI",
 	"GALLERY_MODE",
 	"VT_MODE",
-	"BROWSER_MODE",
-	"eBOOK_MODE",
+	"BROWSER",
+	"eBOOK",
 #if defined(CONFIG_TDMB)
 	"DMB_MODE",
 	"DMB_WARM_MODE",

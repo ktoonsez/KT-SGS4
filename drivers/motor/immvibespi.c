@@ -67,8 +67,6 @@ static int32_t vibe_set_pwm_freq(int nForce)
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
 #if defined(CONFIG_MACH_JF_DCM)
 		g_nforce_32 = ((nForce * g_nlra_gp_clk_pwm_mul) >> 8) + 22;
-#elif defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
-		g_nforce_32 = ((nForce * g_nlra_gp_clk_pwm_mul) >> 8) + 1;
 #else
 		g_nforce_32 = ((nForce * g_nlra_gp_clk_pwm_mul) >> 8) + 10;
 #endif
@@ -139,7 +137,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpDisable(u_int8_t nActuatorIndex)
 			gpio_set_value(vibrator_drvdata.vib_pwm_gpio, \
 			    VIBRATION_OFF);
 		}
-		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
+		printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
 		max77693_vibtonz_en(0);
 #endif
@@ -162,7 +160,7 @@ static int32_t ImmVibeSPI_ForceOut_AmpEnable(u_int8_t nActuatorIndex)
 			vib_pwm_gpio, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, \
 			GPIO_CFG_2MA), 1);
 		}
-		//printk(KERN_DEBUG "tspdrv: %s\n", __func__);
+		printk(KERN_DEBUG "tspdrv: %s\n", __func__);
 #if defined(CONFIG_MOTOR_DRV_MAX77693)
 		max77693_vibtonz_en(1);
 #endif
