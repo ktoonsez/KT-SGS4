@@ -1507,19 +1507,18 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_mt_sync(rmi4_data->input_dev);
 #endif
 
-			if (!rmi4_data->finger[finger].state)
-				dev_info(&rmi4_data->i2c_client->dev, "[%d][P] 0x%02x\n",
-					finger, finger_status);
-			else
+			//dev_info(&rmi4_data->i2c_client->dev, "[%d][P] 0x%02x\n",
+			//	finger, finger_status);
+			if (rmi4_data->finger[finger].state)
 				rmi4_data->finger[finger].mcount++;
 
 			touch_count++;
 		}
 
 		if (rmi4_data->finger[finger].state && !finger_status) {
-			dev_info(&rmi4_data->i2c_client->dev, "[%d][R] 0x%02x M[%d] V[%x]\n",
-				finger, finger_status, rmi4_data->finger[finger].mcount,
-				rmi4_data->fw_version_of_ic);
+			//dev_info(&rmi4_data->i2c_client->dev, "[%d][R] 0x%02x M[%d] V[%x]\n",
+			//	finger, finger_status, rmi4_data->finger[finger].mcount,
+			//	rmi4_data->fw_version_of_ic);
 
 			rmi4_data->finger[finger].mcount = 0;
 		}
