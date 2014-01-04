@@ -85,6 +85,8 @@ extern void kt_is_active_benabled_touchkey(bool val);
 //extern void kt_is_active_benabled_power(bool val);
 extern unsigned int get_cable_state(void);
 extern void ktoonservative_is_activechrg(bool val);
+extern int get_cable_stateW(void);
+extern void ktoonservative_is_activechrgW(bool val);
 
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
@@ -805,7 +807,7 @@ static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b,
 
 static ssize_t store_disable_hotplugging_chrg(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
-	unsigned int input, c_state;
+	unsigned int input, c_state, c_stateW;
 	int ret, cpu;
 	ret = sscanf(buf, "%u", &input);
 
@@ -814,7 +816,12 @@ static ssize_t store_disable_hotplugging_chrg(struct kobject *a, struct attribut
 
 	dbs_tuners_ins.disable_hotplugging_chrg = input;
 	c_state = get_cable_state();
-	send_cable_state_kt(c_state);
+	c_stateW = get_cable_stateW();
+
+	if (c_state != 0 || c_stateW != 0)
+		send_cable_state_kt(1);
+	else
+		send_cable_state_kt(0);
 		
 	return count;
 }
@@ -1441,6 +1448,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		ktoonservative_is_activepk(true);
 		ktoonservative_is_activehk(true);
 		ktoonservative_is_activechrg(true);
+		ktoonservative_is_activechrgW(true);
 		if (dbs_tuners_ins.boost_2nd_core_on_button == 1 || dbs_tuners_ins.boost_3rd_core_on_button == 1 || dbs_tuners_ins.boost_4th_core_on_button == 1)
     		{
       			//kt_is_active_benabled_gpio(true);
@@ -1516,6 +1524,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		ktoonservative_is_activepk(false);
 		ktoonservative_is_activehk(false);
 		ktoonservative_is_activechrg(false);
+		ktoonservative_is_activechrgW(false);
     		//kt_is_active_benabled_gpio(false);
     		kt_is_active_benabled_touchkey(false);
     		//kt_is_active_benabled_power(false);
