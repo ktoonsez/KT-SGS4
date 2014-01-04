@@ -191,14 +191,14 @@ clear_retry:
 				ret);
 		return IRQ_NONE;
 	}
-	pr_info("%s: interrupt source(0x%02x)\n", __func__, irq_src);
+	//pr_info("%s: interrupt source(0x%02x)\n", __func__, irq_src);
 
 	if (irq_src & MAX77693_IRQSRC_CHG) {
 		/* CHG_INT */
 		ret = max77693_read_reg(max77693->i2c, MAX77693_CHG_REG_CHG_INT,
 				&irq_reg[CHG_INT]);
-		pr_info("%s: charger interrupt(0x%02x)\n",
-			__func__, irq_reg[CHG_INT]);
+		//pr_info("%s: charger interrupt(0x%02x)\n",
+		//	__func__, irq_reg[CHG_INT]);
 	}
 
 	if (irq_src & MAX77693_IRQSRC_TOP) {
