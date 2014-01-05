@@ -852,7 +852,6 @@ static ssize_t store_disable_hotplugging_media(struct kobject *a, struct attribu
 		input = 0;
 
 	dbs_tuners_ins.disable_hotplugging_media = input;
-	set_music_playing_statekt(input);
 		
 	return count;
 }
