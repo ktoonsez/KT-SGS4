@@ -46,8 +46,9 @@ static struct device_type slim_ctrl_type;
 static struct delayed_work music_is_playing;
 static bool is_music_playing = false;
 static bool is_music_playing_func_sent = false;
+static bool is_music_playing_func_sentkt = false;
 extern bool set_music_playing_state(bool val);
-extern void set_music_playing_statekt(bool state);
+extern bool set_music_playing_statekt(bool state);
 static bool ktoonservative_is_active = false;
 
 static const struct slim_device_id *slim_match(const struct slim_device_id *id,
@@ -171,7 +172,7 @@ static void music_is_playing_fn(struct work_struct *work)
 	{
 		is_music_playing_func_sent = set_music_playing_state(is_music_playing);
 		if (ktoonservative_is_active)
-			set_music_playing_statekt(is_music_playing);
+			is_music_playing_func_sentkt = set_music_playing_statekt(is_music_playing);
 	}
 }
 
@@ -2847,10 +2848,14 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 			if (is_music_playing_func_sent)
 			{
 				set_music_playing_state(is_music_playing);
+			}
+			if (is_music_playing_func_sentkt)
+			{
 				if (ktoonservative_is_active)
 					set_music_playing_statekt(is_music_playing);
 			}
 			is_music_playing_func_sent = false;
+			is_music_playing_func_sentkt = false;
 			//pr_alert("MUSIC STOPPED - KTOONSEZ");
 		}
 		if (slc->state < SLIM_CH_DEFINED) {
