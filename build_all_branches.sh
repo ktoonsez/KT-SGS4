@@ -143,6 +143,20 @@ echo "Make Mrproper"
 make mrproper
 ./build_intl.sh
 
+echo "Switch to Touchjizz GE 4.4"
+git checkout twge4.4
+
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
+./build_att.sh
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
+./build_intl.sh
+
 echo "Switch to AOSP 4.4"
 git checkout aosp4.4
 
