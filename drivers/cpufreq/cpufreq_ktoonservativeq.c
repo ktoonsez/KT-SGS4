@@ -299,9 +299,10 @@ void send_cable_state_kt(unsigned int state)
 		disable_hotplugging_chrg_override = false;
 }
 
-void set_music_playing_statekt(bool state)
+bool set_music_playing_statekt(bool state)
 {
 	int cpu;
+	bool ret = false;
 	if (state && dbs_tuners_ins.disable_hotplugging_media)
 	{
 		disable_hotplugging_media_override = true;
@@ -309,9 +310,12 @@ void set_music_playing_statekt(bool state)
 			hotplug_cpu_single_up[cpu] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
+		ret = true;
 	}
 	else
 		disable_hotplugging_media_override = false;
+	
+	return ret;
 }
 
 /************************** sysfs interface ************************/
