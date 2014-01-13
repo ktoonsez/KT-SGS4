@@ -156,6 +156,11 @@ make clean
 echo "Make Mrproper"
 make mrproper
 ./build_intl.sh
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
+./build_vzw.sh
 
 echo "Switch to AOSP 4.4"
 git checkout aosp4.4
