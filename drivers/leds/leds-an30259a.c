@@ -153,6 +153,7 @@ u8 led_step_speed1 = 1;	//Set bitwise value for fade effect steps1
 u8 led_step_speed2 = 1;	//Set bitwise value for fade effect steps2
 u8 led_step_speed3 = 1;	//Set bitwise value for fade effect steps3
 u8 led_step_speed4 = 1;	//Set bitwise value for fade effect steps4
+u8 led_step_bit_shift = 4;	//Set bitwise value for fade effect steps4
 
 /*path : /sys/class/sec/led/led_pattern*/
 /*path : /sys/class/sec/led/led_blink*/
@@ -167,6 +168,7 @@ u8 led_step_speed4 = 1;	//Set bitwise value for fade effect steps4
 /*path : /sys/class/sec/led/led_step_speed2*/
 /*path : /sys/class/sec/led/led_step_speed3*/
 /*path : /sys/class/sec/led/led_step_speed4*/
+/*path : /sys/class/sec/led/led_step_bit_shift*/
 #endif
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
@@ -273,8 +275,8 @@ static void leds_set_slope_mode(struct i2c_client *client,
 							dutymax << 4 | dutymid;
 	data->shadow_reg[AN30259A_REG_LED1CNT2 + led * 4] =
 							delay << 4 | dutymin;
-	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << 4 | dt1;
-	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << 4 | dt3;
+	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << led_step_bit_shift | dt1;
+	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << led_step_bit_shift | dt3;
 	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 4 | slptt1;
 }
 
@@ -484,7 +486,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		leds_on(led, true, true, brightness);
 
 	if (led_enable_fade == 1) {
-		leds_set_slope_mode(client, led, 0, 15, 7, 0,
+		leds_set_slope_mode(client, led, 0, 30, 15, 0,
 			(delay_on_time + AN30259A_TIME_UNIT - 1) /
 			AN30259A_TIME_UNIT,
 			(delay_off_time + AN30259A_TIME_UNIT - 1) /
@@ -726,7 +728,7 @@ static ssize_t store_an30259a_led_step_speed1(struct device *dev, struct device_
 	unsigned int val = 0;
 
 	retval = sscanf(buf, "%d", &val);
-	if (retval != 0 && val >= 1 && val <= 10) {
+	if (retval != 0 && val >= 1 && val <= 20) {
 		led_step_speed1 = (u8)val;
 	}
 	return count;
@@ -744,7 +746,7 @@ static ssize_t store_an30259a_led_step_speed2(struct device *dev, struct device_
 	unsigned int val = 0;
 
 	retval = sscanf(buf, "%d", &val);
-	if (retval != 0 && val >= 1 && val <= 10) {
+	if (retval != 0 && val >= 1 && val <= 20) {
 		led_step_speed2 = (u8)val;
 	}
 	return count;
@@ -762,7 +764,7 @@ static ssize_t store_an30259a_led_step_speed3(struct device *dev, struct device_
 	unsigned int val = 0;
 
 	retval = sscanf(buf, "%d", &val);
-	if (retval != 0 && val >= 1 && val <= 10) {
+	if (retval != 0 && val >= 1 && val <= 20) {
 		led_step_speed3 = (u8)val;
 	}
 	return count;
@@ -780,8 +782,26 @@ static ssize_t store_an30259a_led_step_speed4(struct device *dev, struct device_
 	unsigned int val = 0;
 
 	retval = sscanf(buf, "%d", &val);
-	if (retval != 0 && val >= 1 && val <= 10) {
+	if (retval != 0 && val >= 1 && val <= 20) {
 		led_step_speed4 = (u8)val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_bit_shift(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_bit_shift);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_bit_shift(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 15) {
+		led_step_bit_shift = (u8)val;
 	}
 	return count;
 }
@@ -983,6 +1003,8 @@ static DEVICE_ATTR(led_step_speed3, 0664, show_an30259a_led_step_speed3, \
 				store_an30259a_led_step_speed3);
 static DEVICE_ATTR(led_step_speed4, 0664, show_an30259a_led_step_speed4, \
 				store_an30259a_led_step_speed4);
+static DEVICE_ATTR(led_step_bit_shift, 0664, show_an30259a_led_step_bit_shift, \
+				store_an30259a_led_step_bit_shift);
 
 static DEVICE_ATTR(led_br_lev, 0664, NULL, \
 					store_an30259a_led_br_lev);
@@ -1016,6 +1038,7 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_step_speed2.attr,
 	&dev_attr_led_step_speed3.attr,
 	&dev_attr_led_step_speed4.attr,
+	&dev_attr_led_step_bit_shift.attr,
 	&dev_attr_led_intensity.attr,
 	&dev_attr_led_br_lev.attr,
 	&dev_attr_led_lowpower.attr,
