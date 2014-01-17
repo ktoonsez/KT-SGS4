@@ -40,8 +40,6 @@
 #include <mach/sec_debug.h>
 #endif
 
-#include <trace/events/exception.h>
-
 static const char *handler[]= {
 	"prefetch abort",
 	"data abort",
