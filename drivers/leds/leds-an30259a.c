@@ -460,17 +460,6 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		brightness = (brightness * led_intensity) / LED_MAX_CURRENT;
 	}
 
-	if (led_time_on)
-	{
-		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
-		delay_on_time = led_time_on;
-	}
-	if (led_time_off)
-	{
-		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
-		delay_off_time = led_time_off;
-	}
-	
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
 
@@ -484,6 +473,17 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		return;
 	} else
 		leds_on(led, true, true, brightness);
+
+	if (led_time_on)
+	{
+		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
+		delay_on_time = led_time_on;
+	}
+	if (led_time_off)
+	{
+		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
+		delay_off_time = led_time_off;
+	}
 
 	if (led_enable_fade == 1) {
 		leds_set_slope_mode(client, led, 0, 30, 15, 0,
