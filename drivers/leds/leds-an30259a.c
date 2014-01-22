@@ -145,7 +145,8 @@ struct i2c_client *b_client;
 extern struct class *sec_class;
 struct device *led_dev;
 int led_enable_fade = 0;
-u8 led_intensity;
+int led_enable_fade_charging = 0;
+u8 led_intensity = 0;
 
 unsigned int led_time_on = 0;		//If greater than ZERO override the ROMs LED ON LENGTH in ms
 unsigned int led_time_off = 0;		//If greater than ZERO override the ROMs LED OFF LENGTH in ms
@@ -343,8 +344,10 @@ static void an30259a_start_led_pattern(int mode)
 	u8 led_b_brightness;
 	struct i2c_client *client;
 	struct work_struct *reset = 0;
+	unsigned int delay_on_time = 500;
+	unsigned int delay_off_time = 2000;
 	client = b_client;
-
+	
 	if (mode > POWERING)
 		return;
 	/* Set all LEDs Off */
@@ -376,8 +379,22 @@ static void an30259a_start_led_pattern(int mode)
 		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
 		pr_info("LED Battery Charging Pattern on\n");
-		leds_on(LED_R, true, false,
-					led_r_brightness);
+		if (led_enable_fade_charging == 1) {
+			if (led_time_on)
+				delay_on_time = led_time_on;
+			if (led_time_off)
+				delay_off_time = led_time_off;
+			leds_on(LED_R, true, true,
+						led_r_brightness);
+			leds_set_slope_mode(client, LED_R, 0, 30, 15, 0,
+				(delay_on_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				(delay_off_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				led_step_speed1, led_step_speed2, led_step_speed3, led_step_speed4);
+		}
+		else
+			leds_on(LED_R, true, false, led_r_brightness);
 		break;
 
 	case CHARGING_ERR:
@@ -460,6 +477,14 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		brightness = (brightness * led_intensity) / LED_MAX_CURRENT;
 	}
 
+	if (led_enable_fade_charging == 1)
+	{
+		if (led_time_on)
+			delay_on_time = led_time_on;
+		if (led_time_off)
+			delay_off_time = led_time_off;
+	}
+	
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
 
@@ -641,6 +666,39 @@ static ssize_t store_an30259a_led_fade(struct device *dev,
 	led_enable_fade = enabled;
 
 	printk(KERN_DEBUG "led_fade is called\n");
+
+	return count;
+}
+
+static ssize_t show_an30259a_led_fade_charging(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int ret;
+	 
+	ret = sprintf(buf, "%d\n", led_enable_fade_charging);
+	pr_info("[LED] %s: led_fade_charging=%d\n", __func__, led_enable_fade_charging);
+
+	return ret;
+}
+
+static ssize_t store_an30259a_led_fade_charging(struct device *dev,
+				struct device_attribute *devattr,
+				const char *buf, size_t count)
+{
+	int retval;
+	int enabled = 0;
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	retval = sscanf(buf, "%d", &enabled);
+
+	if (retval == 0) {
+		dev_err(&data->client->dev, "fail to get led_fade_charging value.\n");
+		return count;
+	}
+
+	led_enable_fade_charging = enabled;
+
+	printk(KERN_DEBUG "led_fade_charging is called\n");
 
 	return count;
 }
@@ -988,6 +1046,8 @@ static DEVICE_ATTR(led_blink, 0664, NULL, \
 					store_an30259a_led_blink);
 static DEVICE_ATTR(led_fade, 0664, show_an30259a_led_fade, \
 				store_an30259a_led_fade);
+static DEVICE_ATTR(led_fade_charging, 0664, show_an30259a_led_fade_charging, \
+				store_an30259a_led_fade_charging);
 static DEVICE_ATTR(led_intensity, 0664, show_an30259a_led_intensity, \
 				store_an30259a_led_intensity);
 
@@ -1032,6 +1092,7 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_pattern.attr,
 	&dev_attr_led_blink.attr,
 	&dev_attr_led_fade.attr,
+	&dev_attr_led_fade_charging.attr,
 	&dev_attr_led_time_on.attr,
 	&dev_attr_led_time_off.attr,
 	&dev_attr_led_step_speed1.attr,
