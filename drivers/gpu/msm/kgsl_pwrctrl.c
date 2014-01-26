@@ -126,8 +126,8 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 	/* Adjust the power level to the current constraints */
 	new_level = _adjust_pwrlevel(pwr, new_level);
 
-	//Assign new_level to boost level if it is not -1
-	if (boost_level != -1)
+	//Assign new_level to boost level if it is not -1 and less than new level
+	if (boost_level != -1 && boost_level < new_level)
 		new_level = boost_level;
 
 	if (new_level == pwr->active_pwrlevel)
