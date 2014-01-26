@@ -124,6 +124,8 @@ static void z180_cmdwindow_write(struct kgsl_device *device,
 	| (MMU_CONFIG << MH_MMU_CONFIG__TC_R_CLNT_BEHAVIOR__SHIFT)   \
 	| (MMU_CONFIG << MH_MMU_CONFIG__PA_W_CLNT_BEHAVIOR__SHIFT))
 
+#define KGSL_LOG_LEVEL_DEFAULT 3
+
 static const struct kgsl_functable z180_functable;
 
 static struct z180_device device_2d0 = {
@@ -149,6 +151,12 @@ static struct z180_device device_2d0 = {
 		},
 		.iomemname = KGSL_2D0_REG_MEMORY,
 		.ftbl = &z180_functable,
+		.cmd_log = KGSL_LOG_LEVEL_DEFAULT,
+		.ctxt_log = KGSL_LOG_LEVEL_DEFAULT,
+		.drv_log = KGSL_LOG_LEVEL_DEFAULT,
+		.mem_log = KGSL_LOG_LEVEL_DEFAULT,
+		.pwr_log = KGSL_LOG_LEVEL_DEFAULT,
+		.pm_dump_enable = 0,
 	},
 	.cmdwin_lock = __SPIN_LOCK_INITIALIZER(device_2d1.cmdwin_lock),
 };
@@ -216,8 +224,7 @@ static irqreturn_t z180_irq_handler(struct kgsl_device *device)
 		}
 	}
 
-	if ((device->pwrctrl.nap_allowed == true) &&
-		(device->requested_state == KGSL_STATE_NONE)) {
+	if (device->requested_state == KGSL_STATE_NONE) {
 		kgsl_pwrctrl_request_state(device, KGSL_STATE_NAP);
 		queue_work(device->work_queue, &device->idle_check_ws);
 	}
@@ -354,7 +361,13 @@ static int room_in_rb(struct z180_device *device)
 	return ts_diff < Z180_PACKET_COUNT;
 }
 
-static int z180_idle(struct kgsl_device *device)
+/**
+ * z180_idle() - Idle the 2D device
+ * @device: Pointer to the KGSL device struct for the Z180
+ *
+ * wait until the z180 submission queue is idle
+ */
+int z180_idle(struct kgsl_device *device)
 {
 	int status = 0;
 	struct z180_device *z180_dev = Z180_DEVICE(device);
@@ -374,10 +387,8 @@ static int z180_idle(struct kgsl_device *device)
 int
 z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 			struct kgsl_context *context,
-			struct kgsl_ibdesc *ibdesc,
-			unsigned int numibs,
-			uint32_t *timestamp,
-			unsigned int ctrl)
+			struct kgsl_cmdbatch *cmdbatch,
+			uint32_t *timestamp)
 {
 	long result = 0;
 	unsigned int ofs        = PACKETSIZE_STATESTREAM * sizeof(unsigned int);
@@ -390,6 +401,22 @@ z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 	struct kgsl_pagetable *pagetable = dev_priv->process_priv->pagetable;
 	struct z180_device *z180_dev = Z180_DEVICE(device);
 	unsigned int sizedwords;
+	unsigned int numibs;
+	struct kgsl_ibdesc *ibdesc;
+
+	mutex_lock(&device->mutex);
+
+	result = kgsl_active_count_get(device);
+	if (result)
+		goto error_active_count;
+
+	if (cmdbatch == NULL) {
+		result = EINVAL;
+		goto error;
+	}
+
+	ibdesc = cmdbatch->ibdesc;
+	numibs = cmdbatch->ibcount;
 
 	if (device->state & KGSL_STATE_HUNG) {
 		result = -EINVAL;
@@ -431,7 +458,7 @@ z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 		context->id, cmd, sizedwords);
 	/* context switch */
 	if ((context->id != (int)z180_dev->ringbuffer.prevctx) ||
-	    (ctrl & KGSL_CONTEXT_CTX_SWITCH)) {
+	    (cmdbatch->flags & KGSL_CONTEXT_CTX_SWITCH)) {
 		KGSL_CMD_INFO(device, "context switch %d -> %d\n",
 			context->id, z180_dev->ringbuffer.prevctx);
 		kgsl_mmu_setstate(&device->mmu, pagetable,
@@ -439,10 +466,13 @@ z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 		cnt = PACKETSIZE_STATESTREAM;
 		ofs = 0;
 	}
-	kgsl_setstate(&device->mmu,
+
+	result = kgsl_setstate(&device->mmu,
 			KGSL_MEMSTORE_GLOBAL,
 			kgsl_mmu_pt_get_flags(device->mmu.hwpagetable,
 			device->id));
+	if (result < 0)
+		goto error;
 
 	result = wait_event_interruptible_timeout(device->wait_queue,
 				  room_in_rb(z180_dev),
@@ -467,10 +497,10 @@ z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 	addmarker(&z180_dev->ringbuffer, z180_dev->current_timestamp);
 
 	/* monkey patch the IB so that it jumps back to the ringbuffer */
-	kgsl_sharedmem_writel(&entry->memdesc,
+	kgsl_sharedmem_writel(device, &entry->memdesc,
 		      ((sizedwords + 1) * sizeof(unsigned int)),
 		      rb_gpuaddr(z180_dev, z180_dev->current_timestamp));
-	kgsl_sharedmem_writel(&entry->memdesc,
+	kgsl_sharedmem_writel(device, &entry->memdesc,
 			      ((sizedwords + 2) * sizeof(unsigned int)),
 			      nextcnt);
 
@@ -483,9 +513,12 @@ z180_cmdstream_issueibcmds(struct kgsl_device_private *dev_priv,
 	z180_cmdwindow_write(device, ADDR_VGV3_CONTROL, cmd);
 	z180_cmdwindow_write(device, ADDR_VGV3_CONTROL, 0);
 error:
+	kgsl_trace_issueibcmds(device, context->id, cmdbatch,
+		*timestamp, cmdbatch->flags, result, 0);
 
-	kgsl_trace_issueibcmds(device, context->id, ibdesc, numibs,
-		*timestamp, ctrl, result, 0);
+	kgsl_active_count_put(device);
+error_active_count:
+	mutex_unlock(&device->mutex);
 
 	return (int)result;
 }
@@ -597,8 +630,12 @@ error_clk_off:
 
 static int z180_stop(struct kgsl_device *device)
 {
+	int ret;
+
 	device->ftbl->irqctrl(device, 0);
-	z180_idle(device);
+	ret = z180_idle(device);
+	if (ret)
+		return ret;
 
 	del_timer_sync(&device->idle_timer);
 
@@ -664,7 +701,7 @@ static int z180_getproperty(struct kgsl_device *device,
 	return status;
 }
 
-static unsigned int z180_isidle(struct kgsl_device *device)
+static bool z180_isidle(struct kgsl_device *device)
 {
 	struct z180_device *z180_dev = Z180_DEVICE(device);
 
@@ -710,7 +747,7 @@ static void _z180_regwrite_simple(struct kgsl_device *device,
 	BUG_ON(offsetwords*sizeof(uint32_t) >= device->reg_len);
 
 	reg = (unsigned int *)(device->reg_virt + (offsetwords << 2));
-	kgsl_cffdump_regwrite(device->id, offsetwords << 2, value);
+	kgsl_cffdump_regwrite(device, offsetwords << 2, value);
 	/*ensure previous writes post before this one,
 	 * i.e. act like normal writel() */
 	wmb();
@@ -825,13 +862,17 @@ static int z180_waittimestamp(struct kgsl_device *device,
 {
 	int status = -EINVAL;
 
-	/* Don't wait forever, set a max (10 sec) value for now */
+	/* Don't wait forever, set a max of Z180_IDLE_TIMEOUT */
 	if (msecs == -1)
-		msecs = 10 * MSEC_PER_SEC;
+		msecs = Z180_IDLE_TIMEOUT;
 
-	mutex_unlock(&device->mutex);
-	status = z180_wait(device, context, timestamp, msecs);
-	mutex_lock(&device->mutex);
+	status = kgsl_active_count_get(device);
+	if (!status) {
+		mutex_unlock(&device->mutex);
+		status = z180_wait(device, context, timestamp, msecs);
+		mutex_lock(&device->mutex);
+		kgsl_active_count_put(device);
+	}
 
 	return status;
 }
@@ -861,20 +902,55 @@ static int z180_wait(struct kgsl_device *device,
 	return status;
 }
 
-static void
-z180_drawctxt_destroy(struct kgsl_device *device,
-			  struct kgsl_context *context)
+struct kgsl_context *
+z180_drawctxt_create(struct kgsl_device_private *dev_priv,
+			uint32_t *flags)
 {
-	struct z180_device *z180_dev = Z180_DEVICE(device);
+	int ret;
+	struct kgsl_context *context = kzalloc(sizeof(*context), GFP_KERNEL);
+	if (context == NULL)
+		return ERR_PTR(-ENOMEM);
+	ret = kgsl_context_init(dev_priv, context);
+	if (ret != 0) {
+		kfree(context);
+		return ERR_PTR(ret);
+	}
+	return context;
+}
+
+static int
+z180_drawctxt_detach(struct kgsl_context *context)
+{
+	int ret;
+	struct kgsl_device *device;
+	struct z180_device *z180_dev;
+
+	device = context->device;
+	z180_dev = Z180_DEVICE(device);
+
+	ret = kgsl_active_count_get(device);
+	if (ret)
+		return ret;
 
 	z180_idle(device);
 
 	if (z180_dev->ringbuffer.prevctx == context->id) {
 		z180_dev->ringbuffer.prevctx = Z180_INVALID_CONTEXT;
 		device->mmu.hwpagetable = device->mmu.defaultpagetable;
+
+		/* Ignore the result - we are going down anyway */
 		kgsl_setstate(&device->mmu, KGSL_MEMSTORE_GLOBAL,
 				KGSL_MMUFLAGS_PTUPDATE);
 	}
+
+	kgsl_active_count_put(device);
+	return 0;
+}
+
+static void
+z180_drawctxt_destroy(struct kgsl_context *context)
+{
+	kfree(context);
 }
 
 static void z180_power_stats(struct kgsl_device *device,
@@ -942,8 +1018,10 @@ static const struct kgsl_functable z180_functable = {
 	.irqctrl = z180_irqctrl,
 	.gpuid = z180_gpuid,
 	.irq_handler = z180_irq_handler,
+	.drain = z180_idle, /* drain == idle for the z180 */
 	/* Optional functions */
-	.drawctxt_create = NULL,
+	.drawctxt_create = z180_drawctxt_create,
+	.drawctxt_detach = z180_drawctxt_detach,
 	.drawctxt_destroy = z180_drawctxt_destroy,
 	.ioctl = NULL,
 	.postmortem_dump = z180_dump,

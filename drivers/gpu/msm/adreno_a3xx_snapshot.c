@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,8 +35,8 @@ static void _rbbm_debug_bus_read(struct kgsl_device *device,
 	unsigned int block_id, unsigned int index, unsigned int *val)
 {
 	unsigned int block = (block_id << 8) | 1 << 16;
-	adreno_regwrite(device, A3XX_RBBM_DEBUG_BUS_CTL, block | index);
-	adreno_regread(device, A3XX_RBBM_DEBUG_BUS_DATA_STATUS, val);
+	kgsl_regwrite(device, A3XX_RBBM_DEBUG_BUS_CTL, block | index);
+	kgsl_regread(device, A3XX_RBBM_DEBUG_BUS_DATA_STATUS, val);
 }
 
 /**
@@ -108,9 +108,9 @@ static int a3xx_snapshot_vpc_memory(struct kgsl_device *device, void *snapshot,
 	for (bank = 0; bank < VPC_MEMORY_BANKS; bank++) {
 		for (addr = 0; addr < VPC_MEMORY_SIZE; addr++) {
 			unsigned int val = bank | (addr << 4);
-			adreno_regwrite(device,
+			kgsl_regwrite(device,
 				A3XX_VPC_VPC_DEBUG_RAM_SEL, val);
-			adreno_regread(device,
+			kgsl_regread(device,
 				A3XX_VPC_VPC_DEBUG_RAM_READ, &data[i++]);
 		}
 	}
@@ -134,9 +134,9 @@ static int a3xx_snapshot_cp_meq(struct kgsl_device *device, void *snapshot,
 	header->type = SNAPSHOT_DEBUG_CP_MEQ;
 	header->size = CP_MEQ_SIZE;
 
-	adreno_regwrite(device, A3XX_CP_MEQ_ADDR, 0x0);
+	kgsl_regwrite(device, A3XX_CP_MEQ_ADDR, 0x0);
 	for (i = 0; i < CP_MEQ_SIZE; i++)
-		adreno_regread(device, A3XX_CP_MEQ_DATA, &data[i]);
+		kgsl_regread(device, A3XX_CP_MEQ_DATA, &data[i]);
 
 	return DEBUG_SECTION_SZ(CP_MEQ_SIZE);
 }
@@ -164,9 +164,9 @@ static int a3xx_snapshot_cp_pm4_ram(struct kgsl_device *device, void *snapshot,
 	 * maintain always changing hardcoded constants
 	 */
 
-	adreno_regwrite(device, REG_CP_ME_RAM_RADDR, 0x0);
+	kgsl_regwrite(device, REG_CP_ME_RAM_RADDR, 0x0);
 	for (i = 0; i < size; i++)
-		adreno_regread(device, REG_CP_ME_RAM_DATA, &data[i]);
+		kgsl_regread(device, REG_CP_ME_RAM_DATA, &data[i]);
 
 	return DEBUG_SECTION_SZ(size);
 }
@@ -195,7 +195,7 @@ static int a3xx_snapshot_cp_pfp_ram(struct kgsl_device *device, void *snapshot,
 	 */
 	kgsl_regwrite(device, A3XX_CP_PFP_UCODE_ADDR, 0x0);
 	for (i = 0; i < size; i++)
-		adreno_regread(device, A3XX_CP_PFP_UCODE_DATA, &data[i]);
+		kgsl_regread(device, A3XX_CP_PFP_UCODE_DATA, &data[i]);
 
 	return DEBUG_SECTION_SZ(size);
 }
@@ -214,7 +214,8 @@ static int a3xx_snapshot_cp_roq(struct kgsl_device *device, void *snapshot,
 	int i, size;
 
 	/* The size of the ROQ buffer is core dependent */
-	size = adreno_is_a330(adreno_dev) ?
+	size = (adreno_is_a330(adreno_dev) ||
+		adreno_is_a305b(adreno_dev)) ?
 		A330_CP_ROQ_SIZE : A320_CP_ROQ_SIZE;
 
 	if (remain < DEBUG_SECTION_SZ(size)) {
@@ -225,9 +226,9 @@ static int a3xx_snapshot_cp_roq(struct kgsl_device *device, void *snapshot,
 	header->type = SNAPSHOT_DEBUG_CP_ROQ;
 	header->size = size;
 
-	adreno_regwrite(device, A3XX_CP_ROQ_ADDR, 0x0);
+	kgsl_regwrite(device, A3XX_CP_ROQ_ADDR, 0x0);
 	for (i = 0; i < size; i++)
-		adreno_regread(device, A3XX_CP_ROQ_DATA, &data[i]);
+		kgsl_regread(device, A3XX_CP_ROQ_DATA, &data[i]);
 
 	return DEBUG_SECTION_SZ(size);
 }
@@ -252,75 +253,92 @@ static int a330_snapshot_cp_merciu(struct kgsl_device *device, void *snapshot,
 	header->type = SNAPSHOT_DEBUG_CP_MERCIU;
 	header->size = size;
 
-	adreno_regwrite(device, A3XX_CP_MERCIU_ADDR, 0x0);
+	kgsl_regwrite(device, A3XX_CP_MERCIU_ADDR, 0x0);
 
 	for (i = 0; i < A330_CP_MERCIU_QUEUE_SIZE; i++) {
-		adreno_regread(device, A3XX_CP_MERCIU_DATA,
+		kgsl_regread(device, A3XX_CP_MERCIU_DATA,
 			&data[(i * 2)]);
-		adreno_regread(device, A3XX_CP_MERCIU_DATA2,
+		kgsl_regread(device, A3XX_CP_MERCIU_DATA2,
 			&data[(i * 2) + 1]);
 	}
 
 	return DEBUG_SECTION_SZ(size);
 }
 
-#define DEBUGFS_BLOCK_SIZE 0x40
+struct debugbus_block {
+	unsigned int block_id;
+	unsigned int dwords;
+};
 
 static int a3xx_snapshot_debugbus_block(struct kgsl_device *device,
 	void *snapshot, int remain, void *priv)
 {
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+
 	struct kgsl_snapshot_debugbus *header = snapshot;
-	unsigned int id = (unsigned int) priv;
+	struct debugbus_block *block = priv;
 	unsigned int val;
 	int i;
 	unsigned int *data = snapshot + sizeof(*header);
-	int size =
-		(DEBUGFS_BLOCK_SIZE * sizeof(unsigned int)) + sizeof(*header);
+	unsigned int dwords;
+	int size;
+
+	/*
+	 * For A305 and A320 all debug bus regions are the same size (0x40). For
+	 * A330, they can be different sizes - most are still 0x40, but some
+	 * like CP are larger
+	 */
+
+	dwords = (adreno_is_a330(adreno_dev) ||
+		adreno_is_a305b(adreno_dev)) ?
+		block->dwords : 0x40;
+
+	size = (dwords * sizeof(unsigned int)) + sizeof(*header);
 
 	if (remain < size) {
 		SNAPSHOT_ERR_NOMEM(device, "DEBUGBUS");
 		return 0;
 	}
 
-	val = (id << 8) | (1 << 16);
+	val = (block->block_id << 8) | (1 << 16);
 
-	header->id = id;
-	header->count = DEBUGFS_BLOCK_SIZE;
+	header->id = block->block_id;
+	header->count = dwords;
 
-	for (i = 0; i < DEBUGFS_BLOCK_SIZE; i++)
-		_rbbm_debug_bus_read(device, id, i, &data[i]);
+	for (i = 0; i < dwords; i++)
+		_rbbm_debug_bus_read(device, block->block_id, i, &data[i]);
 
 	return size;
 }
 
-static unsigned int debugbus_blocks[] = {
-	RBBM_BLOCK_ID_CP,
-	RBBM_BLOCK_ID_RBBM,
-	RBBM_BLOCK_ID_VBIF,
-	RBBM_BLOCK_ID_HLSQ,
-	RBBM_BLOCK_ID_UCHE,
-	RBBM_BLOCK_ID_PC,
-	RBBM_BLOCK_ID_VFD,
-	RBBM_BLOCK_ID_VPC,
-	RBBM_BLOCK_ID_TSE,
-	RBBM_BLOCK_ID_RAS,
-	RBBM_BLOCK_ID_VSC,
-	RBBM_BLOCK_ID_SP_0,
-	RBBM_BLOCK_ID_SP_1,
-	RBBM_BLOCK_ID_SP_2,
-	RBBM_BLOCK_ID_SP_3,
-	RBBM_BLOCK_ID_TPL1_0,
-	RBBM_BLOCK_ID_TPL1_1,
-	RBBM_BLOCK_ID_TPL1_2,
-	RBBM_BLOCK_ID_TPL1_3,
-	RBBM_BLOCK_ID_RB_0,
-	RBBM_BLOCK_ID_RB_1,
-	RBBM_BLOCK_ID_RB_2,
-	RBBM_BLOCK_ID_RB_3,
-	RBBM_BLOCK_ID_MARB_0,
-	RBBM_BLOCK_ID_MARB_1,
-	RBBM_BLOCK_ID_MARB_2,
-	RBBM_BLOCK_ID_MARB_3,
+static struct debugbus_block debugbus_blocks[] = {
+	{ RBBM_BLOCK_ID_CP, 0x52, },
+	{ RBBM_BLOCK_ID_RBBM, 0x40, },
+	{ RBBM_BLOCK_ID_VBIF, 0x40, },
+	{ RBBM_BLOCK_ID_HLSQ, 0x40, },
+	{ RBBM_BLOCK_ID_UCHE, 0x40, },
+	{ RBBM_BLOCK_ID_PC, 0x40, },
+	{ RBBM_BLOCK_ID_VFD, 0x40, },
+	{ RBBM_BLOCK_ID_VPC, 0x40, },
+	{ RBBM_BLOCK_ID_TSE, 0x40, },
+	{ RBBM_BLOCK_ID_RAS, 0x40, },
+	{ RBBM_BLOCK_ID_VSC, 0x40, },
+	{ RBBM_BLOCK_ID_SP_0, 0x40, },
+	{ RBBM_BLOCK_ID_SP_1, 0x40, },
+	{ RBBM_BLOCK_ID_SP_2, 0x40, },
+	{ RBBM_BLOCK_ID_SP_3, 0x40, },
+	{ RBBM_BLOCK_ID_TPL1_0, 0x40, },
+	{ RBBM_BLOCK_ID_TPL1_1, 0x40, },
+	{ RBBM_BLOCK_ID_TPL1_2, 0x40, },
+	{ RBBM_BLOCK_ID_TPL1_3, 0x40, },
+	{ RBBM_BLOCK_ID_RB_0, 0x40, },
+	{ RBBM_BLOCK_ID_RB_1, 0x40, },
+	{ RBBM_BLOCK_ID_RB_2, 0x40, },
+	{ RBBM_BLOCK_ID_RB_3, 0x40, },
+	{ RBBM_BLOCK_ID_MARB_0, 0x40, },
+	{ RBBM_BLOCK_ID_MARB_1, 0x40, },
+	{ RBBM_BLOCK_ID_MARB_2, 0x40, },
+	{ RBBM_BLOCK_ID_MARB_3, 0x40, },
 };
 
 static void *a3xx_snapshot_debugbus(struct kgsl_device *device,
@@ -332,7 +350,7 @@ static void *a3xx_snapshot_debugbus(struct kgsl_device *device,
 		snapshot = kgsl_snapshot_add_section(device,
 			KGSL_SNAPSHOT_SECTION_DEBUGBUS, snapshot, remain,
 			a3xx_snapshot_debugbus_block,
-			(void *) debugbus_blocks[i]);
+			(void *) &debugbus_blocks[i]);
 	}
 
 	return snapshot;
@@ -423,17 +441,18 @@ void *a3xx_snapshot(struct adreno_device *adreno_dev, void *snapshot,
 	struct kgsl_device *device = &adreno_dev->dev;
 	struct kgsl_snapshot_registers_list list;
 	struct kgsl_snapshot_registers regs[5];
+	int size;
 
 	list.registers = regs;
 	list.count = 0;
 
 	/* Disable Clock gating temporarily for the debug bus to work */
-	adreno_regwrite(device, A3XX_RBBM_CLOCK_CTL, 0x00);
+	kgsl_regwrite(device, A3XX_RBBM_CLOCK_CTL, 0x00);
 
 	/* Store relevant registers in list to snapshot */
 	_snapshot_a3xx_regs(regs, &list);
 	_snapshot_hlsq_regs(regs, &list, adreno_dev);
-	if (adreno_is_a330(adreno_dev))
+	if (adreno_is_a330(adreno_dev) || adreno_is_a305b(adreno_dev))
 		_snapshot_a330_regs(regs, &list);
 
 	/* Master set of (non debug) registers */
@@ -441,10 +460,15 @@ void *a3xx_snapshot(struct adreno_device *adreno_dev, void *snapshot,
 		KGSL_SNAPSHOT_SECTION_REGS, snapshot, remain,
 		kgsl_snapshot_dump_regs, &list);
 
-	/* CP_STATE_DEBUG indexed registers */
+	/*
+	 * CP_STATE_DEBUG indexed registers - 20 on 305 and 320 and 46 on A330
+	 */
+	size = (adreno_is_a330(adreno_dev) ||
+		adreno_is_a305b(adreno_dev)) ? 0x2E : 0x14;
+
 	snapshot = kgsl_snapshot_indexed_registers(device, snapshot,
 			remain, REG_CP_STATE_DEBUG_INDEX,
-			REG_CP_STATE_DEBUG_DATA, 0x0, 0x14);
+			REG_CP_STATE_DEBUG_DATA, 0x0, size);
 
 	/* CP_ME indexed registers */
 	snapshot = kgsl_snapshot_indexed_registers(device, snapshot,
@@ -485,7 +509,8 @@ void *a3xx_snapshot(struct adreno_device *adreno_dev, void *snapshot,
 			KGSL_SNAPSHOT_SECTION_DEBUG, snapshot, remain,
 			a3xx_snapshot_cp_roq, NULL);
 
-	if (adreno_is_a330(adreno_dev)) {
+	if (adreno_is_a330(adreno_dev) ||
+		adreno_is_a305b(adreno_dev)) {
 		snapshot = kgsl_snapshot_add_section(device,
 			KGSL_SNAPSHOT_SECTION_DEBUG, snapshot, remain,
 			a330_snapshot_cp_merciu, NULL);
@@ -494,7 +519,7 @@ void *a3xx_snapshot(struct adreno_device *adreno_dev, void *snapshot,
 	snapshot = a3xx_snapshot_debugbus(device, snapshot, remain);
 
 	/* Enable Clock gating */
-	adreno_regwrite(device, A3XX_RBBM_CLOCK_CTL,
+	kgsl_regwrite(device, A3XX_RBBM_CLOCK_CTL,
 		adreno_a3xx_rbbm_clock_ctl_default(adreno_dev));
 
 	return snapshot;
