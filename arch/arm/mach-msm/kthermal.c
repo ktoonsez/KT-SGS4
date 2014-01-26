@@ -133,6 +133,11 @@ reschedule:
 			msecs_to_jiffies(kmsm_thermal_info.poll_speed));
 }
 
+bool are_we_tthrottling(void)
+{
+	return kmsm_thermal_info.isthrottling;
+}
+
 static ssize_t show_isthrottling(struct kobject *kobj,
 				     struct attribute *attr, char *buf)
 {
