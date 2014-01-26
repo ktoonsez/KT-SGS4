@@ -38,6 +38,7 @@ struct kgsl_device *Gbldevice;
 unsigned long orig_max;
 unsigned long internal_max = 450000000;
 int boost_level = -1;
+extern bool are_we_tthrottling(void);
 
 #ifdef CONFIG_MSM_KGSL_KERNEL_API_ENABLE
 struct device *stored_dev;
@@ -200,7 +201,7 @@ static int kgsl_pwrctrl_thermal_pwrlevel_store(struct device *dev,
 	pwr = &device->pwrctrl;
 
 	ret = sscanf(buf, "%d", &level);
-	if (ret != 1)
+	if (ret != 1 || (!are_we_tthrottling() && level != 0))
 		return count;
 
 	if (level < 0)
