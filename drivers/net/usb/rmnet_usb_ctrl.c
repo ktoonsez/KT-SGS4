@@ -736,7 +736,7 @@ ctrl_read:
 	kfree(list_elem);
 	DBG("%s: Returning %d bytes to %s\n", __func__, bytes_to_read,
 			dev->name);
-	DUMP_BUFFER("Read: ", bytes_to_read, buf);
+	//DUMP_BUFFER(temp, bytes_to_read, buf);
 
 	return bytes_to_read;
 }
@@ -794,7 +794,7 @@ static ssize_t rmnet_ctl_write(struct file *file, const char __user * buf,
 		kfree(cpkt);
 		return status;
 	}
-	DUMP_BUFFER("Write: ", size, buf);
+	//DUMP_BUFFER("Write: ", size, buf);
 
 	status = rmnet_usb_ctrl_write(dev, cpkt, size);
 	if (status == size)
@@ -1134,7 +1134,7 @@ int rmnet_usb_ctrl_init(int no_rmnet_devs, int no_rmnet_insts_per_dev)
 {
 	struct rmnet_ctrl_dev	*dev;
 	int			i, n;
-	int			status;
+	int			status = 0;
 
 	num_devs = no_rmnet_devs;
 	insts_per_dev = no_rmnet_insts_per_dev;

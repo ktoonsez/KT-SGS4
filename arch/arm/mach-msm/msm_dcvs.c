@@ -28,6 +28,7 @@
 #include <asm/page.h>
 #include <mach/msm_dcvs.h>
 #include <trace/events/mpdcvs_trace.h>
+#include <linux/cpufreq.h>
 
 #define CORE_HANDLE_OFFSET (0xA0)
 #define __err(f, ...) pr_err("MSM_DCVS: %s: " f, __func__, __VA_ARGS__)
@@ -146,7 +147,7 @@ static struct dcvs_core core_list[CORES_MAX];
 
 static struct kobject *cores_kobj;
 
-#define DCVS_MAX_NUM_FREQS 15
+#define DCVS_MAX_NUM_FREQS FREQ_TABLE_SIZE
 static struct msm_dcvs_freq_entry cpu_freq_tbl[DCVS_MAX_NUM_FREQS];
 static unsigned num_cpu_freqs;
 static struct msm_dcvs_platform_data *dcvs_pdata;
@@ -996,6 +997,11 @@ static struct dcvs_core *msm_dcvs_get_core(int offset)
 	/* if the handle is still not set bug */
 	BUG_ON(core_list[offset].dcvs_core_id == -1);
 	return &core_list[offset];
+}
+
+void reset_num_cpu_freqs(void)
+{
+  num_cpu_freqs  = 0;
 }
 
 void msm_dcvs_register_cpu_freq(uint32_t freq, uint32_t voltage)

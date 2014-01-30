@@ -43,6 +43,14 @@ static DEFINE_IDR(ctrl_idr);
 static struct device_type slim_dev_type;
 static struct device_type slim_ctrl_type;
 
+static struct delayed_work music_is_playing;
+static bool is_music_playing = false;
+static bool is_music_playing_func_sent = false;
+static bool is_music_playing_func_sentkt = false;
+extern bool set_music_playing_state(bool val);
+extern bool set_music_playing_statekt(bool state);
+static bool ktoonservative_is_active = false;
+
 static const struct slim_device_id *slim_match(const struct slim_device_id *id,
 					const struct slim_device *slim_dev)
 {
@@ -152,6 +160,22 @@ struct device slimbus_dev = {
 	.init_name = "slimbus",
 };
 
+void ktoonservative_is_active_media(bool val)
+{
+	ktoonservative_is_active = val;
+}
+
+static void music_is_playing_fn(struct work_struct *work)
+{
+	//pr_alert("MUSIC PLAYING (FUNC) - KTOONSEZ - %d", is_music_playing);
+	if (is_music_playing)
+	{
+		is_music_playing_func_sent = set_music_playing_state(is_music_playing);
+		if (ktoonservative_is_active)
+			is_music_playing_func_sentkt = set_music_playing_statekt(is_music_playing);
+	}
+}
+
 static void __exit slimbus_exit(void)
 {
 	device_unregister(&slimbus_dev);
@@ -169,6 +193,8 @@ static int __init slimbus_init(void)
 	if (retval)
 		bus_unregister(&slimbus_type);
 
+	INIT_DELAYED_WORK(&music_is_playing, music_is_playing_fn);
+	
 	return retval;
 }
 postcore_initcall(slimbus_init);
@@ -2887,6 +2913,31 @@ int slim_control_ch(struct slim_device *sb, u16 chanh,
 		slc = &ctrl->chans[chan];
 		pr_info("-slimdebug-chan:%d,ctrl:%d,def:%d, ref:%d", slc->chan,
 			chctrl, slc->def, slc->ref); /* slimbus debug patch */
+		//MEDIA ON
+		if (chctrl == 0 && slc->def == 1 && slc->ref == 3)
+		{
+			//pr_alert("MUSIC PLAYING (TRIG) - KTOONSEZ - %d", is_music_playing);
+			if (!is_music_playing)
+				schedule_delayed_work_on(0, &music_is_playing, msecs_to_jiffies(10000));
+			is_music_playing = true;
+		}
+		//MEDIA OFF
+		if (chctrl == 2 && slc->def == 1 && slc->ref == 2)
+		{
+			is_music_playing = false;
+			if (is_music_playing_func_sent)
+			{
+				set_music_playing_state(is_music_playing);
+			}
+			if (is_music_playing_func_sentkt)
+			{
+				if (ktoonservative_is_active)
+					set_music_playing_statekt(is_music_playing);
+			}
+			is_music_playing_func_sent = false;
+			is_music_playing_func_sentkt = false;
+			//pr_alert("MUSIC STOPPED - KTOONSEZ");
+		}
 		if (slc->state < SLIM_CH_DEFINED) {
 			ret = -ENOTCONN;
 			break;

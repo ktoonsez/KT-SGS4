@@ -31,6 +31,23 @@
 #define PON_CNTL_1 0x1C
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
+
+extern void screen_is_on_relay_kt(bool state);
+extern void boostpulse_relay_kt(void);
+//extern void set_screen_on_off_mhz(bool onoff);
+static bool ktoonservative_is_activef = false;
+static bool screen_state = true;
+
+void ktoonservative_is_activepk(bool val)
+{
+	ktoonservative_is_activef = val;
+}
+
+void set_screen_on_off_flag(bool onoff)
+{
+	screen_state = onoff;
+}
+
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
  * @key_press_irq: key press irq number
@@ -48,7 +65,15 @@ struct pmic8xxx_pwrkey {
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
-
+	//if (!screen_state && pwrkey->powerkey_state == 0)
+	//	set_screen_on_off_mhz(true);
+	if (ktoonservative_is_activef && pwrkey->powerkey_state == 0)
+	{
+		screen_is_on_relay_kt(true);
+		boostpulse_relay_kt();
+		pr_alert("KT_RELAY_CALL  FROM POWER KEY\n");
+	}
+	pwrkey->powerkey_state = 1;
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
 		return IRQ_HANDLED;

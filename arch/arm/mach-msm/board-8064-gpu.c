@@ -138,13 +138,13 @@ static struct msm_bus_vectors grp3d_max_vectors[] = {
 		.src = MSM_BUS_MASTER_GRAPHICS_3D,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(4264),
+		.ib = KGSL_CONVERT_TO_MBPS(4816),
 	},
 	{
 		.src = MSM_BUS_MASTER_GRAPHICS_3D_PORT1,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
 		.ab = 0,
-		.ib = KGSL_CONVERT_TO_MBPS(4264),
+		.ib = KGSL_CONVERT_TO_MBPS(4816),
 	},
 };
 
@@ -271,6 +271,11 @@ struct platform_device device_kgsl_3d0 = {
 		.platform_data = &kgsl_3d0_pdata,
 	},
 };
+
+void SetMAXGPUFreq(unsigned long freq)
+{
+	kgsl_3d0_pdata.pwrlevel[0].gpu_freq = freq;
+}
 
 void __init apq8064_init_gpu(void)
 {

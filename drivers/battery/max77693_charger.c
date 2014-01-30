@@ -27,6 +27,16 @@
 #define SIOP_INPUT_LIMIT_CURRENT 1200
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#define USB_FASTCHG_LOAD 1000 /* uA */
+#endif 
+
+extern void send_cable_state(unsigned int state);
+extern void send_cable_state_kt(unsigned int state);
+int gwc_w_state = 0;
+bool ktoonservative_is_active_chrgW = false;
+
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
 
@@ -705,9 +715,13 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = max77693_get_health_state(charger);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		if (force_fast_charge == 1)
+			charger->charging_current_max = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current_max;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
+		if (force_fast_charge == 1)
+			charger->charging_current = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -747,6 +761,9 @@ static int sec_chg_set_property(struct power_supply *psy,
 	const int wpc_charging_current = charger->pdata->charging_current[
 		POWER_SUPPLY_TYPE_WIRELESS].input_current_limit;
 
+	/* check and unlock */
+	check_charger_unlock_state(charger);
+	
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
 		charger->status = val->intval;
@@ -784,6 +801,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				}
 			}
 		} else {
+			pr_alert("KTMAX77693-4-%d-%d-%d",charger->charging_current,charger->siop_level,charger->charging_current_max);
 			charger->is_charging = true;
 			/* decrease the charging current according to siop level */
 			set_charging_current =
@@ -791,18 +809,20 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (set_charging_current > 0 &&
 					set_charging_current < usb_charging_current)
 				set_charging_current = usb_charging_current;
+			if (force_fast_charge == 1)
+			{
+				set_charging_current = USB_FASTCHG_LOAD * charger->siop_level / 100;
+				charger->charging_current = USB_FASTCHG_LOAD;
+				charger->charging_current_max = USB_FASTCHG_LOAD;
+			}
+
 			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS)
 				set_charging_current_max = wpc_charging_current;
 			else
 				set_charging_current_max =
-					charger->charging_current_max;
+						charger->charging_current_max;
 
-			if (charger->siop_level < 100 &&
-					val->intval == POWER_SUPPLY_TYPE_MAINS) {
-				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
-				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
-					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
-			}
+			pr_alert("KTMAX77693-5-%d-%d",set_charging_current,set_charging_current_max);
 		}
 		max77693_set_charger_state(charger, charger->is_charging);
 		/* if battery full, only disable charging  */
@@ -810,6 +830,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				(charger->status == POWER_SUPPLY_STATUS_DISCHARGING) ||
 				(value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)) {
 			/* current setting */
+			pr_alert("KTMAX77693-1-%d",set_charging_current);
 			max77693_set_charge_current(charger,
 				set_charging_current);
 			/* if battery is removed, disable input current and reenable input current
@@ -828,41 +849,38 @@ static int sec_chg_set_property(struct power_supply *psy,
 		break;
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		charger->charging_current_max = val->intval;
+		if (force_fast_charge == 1)
+			charger->charging_current_max = USB_FASTCHG_LOAD;
+		else
+			charger->charging_current_max = val->intval;
+		pr_alert("KTMAX77693-6-%d",charger->charging_current_max);
 		break;
 	/*  val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		charger->charging_current = val->intval;
+		if (force_fast_charge == 1)
+			charger->charging_current = USB_FASTCHG_LOAD;
+		else
+			charger->charging_current = val->intval;
+		pr_alert("KTMAX77693-7-%d",charger->charging_current);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
 			/* decrease the charging current according to siop level */
-			int current_now =
+			int current_now;
+			if (force_fast_charge == 1)
+				charger->charging_current = USB_FASTCHG_LOAD;
+			current_now = 
 				charger->charging_current * val->intval / 100;
-
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
-
-			/* do forced set charging current */
-			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
-				if (charger->siop_level < 100 )
-					set_charging_current_max =
-						SIOP_INPUT_LIMIT_CURRENT;
-				else
-					set_charging_current_max =
-						charger->charging_current_max;
-
-				if (charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
-					current_now = SIOP_CHARGING_LIMIT_CURRENT;
-				max77693_set_input_current(charger,
-						set_charging_current_max);
-			}
+			pr_alert("KTMAX77693-2-%d",current_now);
 			max77693_set_charge_current(charger, current_now);
 		}
 		break;
 	case POWER_SUPPLY_PROP_POWER_NOW:
+			pr_alert("KTMAX77693-3-%d",val->intval);
 		max77693_set_charge_current(charger,
 				val->intval);
 		max77693_set_input_current(charger,
@@ -1081,7 +1099,10 @@ static void wpc_detect_work(struct work_struct *work)
 				POWER_SUPPLY_PROP_ONLINE, value);
 		pr_info("%s: wpc activated, set V_INT as PN\n",
 				__func__);
-	} else if (wc_w_state == 0) {
+		send_cable_state(10);
+		if (ktoonservative_is_active_chrgW)
+			send_cable_state_kt(10);
+	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
 		max77693_read_reg(chg_data->max77693->i2c,
@@ -1103,12 +1124,26 @@ static void wpc_detect_work(struct work_struct *work)
 					POWER_SUPPLY_PROP_ONLINE, value);
 			pr_info("%s: wpc deactivated, set V_INT as PD\n",
 					__func__);
+			send_cable_state(0);
+			if (ktoonservative_is_active_chrgW)
+				send_cable_state_kt(0);
 		}
 	}
 	pr_info("%s: w(%d to %d)\n", __func__,
 			chg_data->wc_w_state, wc_w_state);
 
 	chg_data->wc_w_state = wc_w_state;
+	gwc_w_state = wc_w_state;
+}
+
+int get_cable_stateW(void)
+{
+	return gwc_w_state;
+}
+
+void ktoonservative_is_activechrgW(bool val)
+{
+	ktoonservative_is_active_chrgW = val;
 }
 
 static irqreturn_t wpc_charger_irq(int irq, void *data)
