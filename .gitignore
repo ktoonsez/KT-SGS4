@@ -1,0 +1,138 @@
+#
+# NOTE! Don't add files that are generated in specific
+# subdirectories here. Add them in the ".gitignore" file
+# in that subdirectory instead.
+#
+# NOTE! Please use 'git ls-files -i --exclude-standard'
+# command after changing this file, to see if there are
+# any tracked files which get ignored after the change.
+#
+# Normal rules
+#
+.*
+*.o
+*.o.*
+*.a
+*.s
+*.ko
+*.so
+*.so.dbg
+*.mod.c
+*.i
+*.lst
+*.symtypes
+*.order
+modules.builtin
+*.elf
+*.bin
+*.gz
+*.bz2
+*.lzma
+*.lzo
+*.patch
+*.gcno
+*.tar
+*.zip
+*.log
+*.rej
+*.orig
+*zImage
+*boot.img
+*ramdisk
+*Image
+vmlinux.lds
+vmlinux
+initramfs_data.cpio
+gen_init_cpio
+mk_elfconfig
+modpost
+drivers/tty/vt/consolemap_deftbl.c
+drivers/tty/vt/defkeymap.c
+kernel/timeconst.h
+lib/crc32table.h
+lib/gen_crc32table
+scripts/basic/fixdep
+scripts/conmakehash
+scripts/kallsyms
+scripts/kconfig/conf
+scripts/kconfig/lex.zconf.c
+scripts/kconfig/zconf.hash.c
+scripts/kconfig/zconf.tab.c
+scripts/mod/elfconfig.h
+scripts/genksyms/genksyms
+arch/arm/boot/compressed/piggy.gzip
+kernel/config_data.h
+scripts/recordmcount
+kernel/usr/*
+Package/*
+firmware/*
+arch/arm/include/generated*
+
+arch/arm/boot/compressed/lib1funcs.S
+firmware/tsp_melfas/CORE.fw
+firmware/tsp_melfas/CORE.fw.gen.S
+firmware/tsp_melfas/PRIV.fw
+firmware/tsp_melfas/PRIV.fw.gen.S
+firmware/tsp_melfas/PUBL.fw
+firmware/tsp_melfas/PUBL.fw.gen.S
+scripts/bin2c
+scripts/genksyms/*
+scripts/kconfig/*
+scripts/selinux/*
+security/selinux/*
+
+#
+# Top-level generic files
+#
+/tags
+/TAGS
+/linux
+/vmlinux
+/vmlinuz
+/System.map
+/Module.markers
+/Module.symvers
+
+#
+# git files that we don't want to ignore even it they are dot-files
+#
+!.gitignore
+!.mailmap
+
+#
+# Generated include files
+#
+include/asm
+include/asm-arm
+include/config
+include/linux/autoconf.h
+include/linux/compile.h
+include/linux/version.h
+include/linux/utsrelease.h
+include/linux/bounds.h
+include/generated
+
+# stgit generated dirs
+patches-*
+
+# quilt's files
+patches
+series
+
+# cscope files
+cscope.*
+ncscope.*
+
+# gnu global files
+GPATH
+GRTAGS
+GSYMS
+GTAGS
+
+# files for XZ compression
+arch/arm/boot/compressed/ashldi3.S
+arch/arm/boot/compressed/piggy.xzkern
+
+*.orig
+*~
+\#*#
