@@ -136,6 +136,9 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq)
 			return 0;
 	}
 #endif
+	if (kthermal_limit > 0 && new_freq > kthermal_limit)
+		new_freq = kthermal_limit;
+	//pr_alert("KT SET CPU FREQ %u-%u-%u\n", new_freq, policy->cur, policy->cpu);
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
@@ -169,6 +172,8 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		ret = -EFAULT;
 		goto done;
 	}
+	if (kthermal_limit > 0 && target_freq > kthermal_limit)
+		target_freq = kthermal_limit;
 
 	table = cpufreq_frequency_get_table(policy->cpu);
 	if (cpufreq_frequency_table_target(policy, table, target_freq, relation,
@@ -178,9 +183,9 @@ static int msm_cpufreq_target(struct cpufreq_policy *policy,
 		goto done;
 	}
 
-	pr_debug("CPU[%d] target %d relation %d (%d-%d) selected %d\n",
-		policy->cpu, target_freq, relation,
-		policy->min, policy->max, table[index].frequency);
+	//pr_debug("KT CPU[%d] target %d relation %d (%d-%d) selected %d\n",
+	//	policy->cpu, target_freq, relation,
+	//	policy->min, policy->max, table[index].frequency);
 
 	ret = set_cpu_freq(policy, table[index].frequency);
 

@@ -380,16 +380,43 @@ enum vdd_dig_levels {
 	VDD_DIG_NUM
 };
 
+static int vdd_uv[] = {
+	[VDD_DIG_NONE]    =       0,
+	[VDD_DIG_LOW]     =  945000,
+	[VDD_DIG_NOMINAL] = 1050000,
+	[VDD_DIG_HIGH]    = 1150000
+};
+
+ssize_t get_gpu_vdd_levels_str(char *buf)
+{
+	int i, len = 0;
+	
+	if (buf)
+	{
+		for (i = 1; i <= 3; i++)
+		{
+			len += sprintf(buf + len, "%d\n", vdd_uv[i]);
+		}
+	}
+	return len;
+}
+
+void set_gpu_vdd_levels(int uv_tbl[])
+{
+	int i;
+	for (i = 1; i <= 3; i++)
+	{
+		vdd_uv[i] = uv_tbl[i - 1];
+	}
+}
+
 static int set_vdd_dig_8960(struct clk_vdd_class *vdd_class, int level)
 {
-	static const int vdd_uv[] = {
-		[VDD_DIG_NONE]    =       0,
-		[VDD_DIG_LOW]     =  945000,
-		[VDD_DIG_NOMINAL] = 1050000,
-		[VDD_DIG_HIGH]    = 1150000
-	};
-	return rpm_vreg_set_voltage(RPM_VREG_ID_PM8921_S3, RPM_VREG_VOTER3,
-				    vdd_uv[level], 1150000, 1);
+	int ret;
+	ret = rpm_vreg_set_voltage(RPM_VREG_ID_PM8921_S3, RPM_VREG_VOTER3,
+				    vdd_uv[level], vdd_uv[VDD_DIG_HIGH], 1);
+	//pr_alert("GPU VOLTAGE - %d - %d", vdd_uv[level], ret);
+	return ret;
 }
 
 static DEFINE_VDD_CLASS(vdd_dig, set_vdd_dig_8960, VDD_DIG_NUM);
@@ -6338,7 +6365,7 @@ static struct pll_config pll4_config_393 __initdata = {
 	.main_output_mask = BIT(23),
 };
 
-static struct pll_config_regs pll15_regs __initdata = {
+static struct pll_config_regs pll15_regs = {
 	.l_reg = MM_PLL3_L_VAL_REG,
 	.m_reg = MM_PLL3_M_VAL_REG,
 	.n_reg = MM_PLL3_N_VAL_REG,
@@ -6346,7 +6373,7 @@ static struct pll_config_regs pll15_regs __initdata = {
 	.mode_reg = MM_PLL3_MODE_REG,
 };
 
-static struct pll_config pll15_config __initdata = {
+static struct pll_config pll15_config = {
 	.l = (0x24 | BVAL(31, 7, 0x620)),
 	.m = 0x1,
 	.n = 0x9,
@@ -6605,6 +6632,21 @@ static void __init reg_init(void)
 	}
 }
 
+extern void configure_pllOC(struct pll_config *config,
+		struct pll_config_regs *regs, u32 ena_fsm_mode);
+
+void __ref SetGPUpll_config(u32 loc, unsigned long freq)
+{
+		/* Program PLL15 to 900MHZ */
+		pll15_config.l = loc | BVAL(31, 7, 0x620);
+		pll15_config.m = 0x1;
+		pll15_config.n = 0x3;
+		configure_pllOC(&pll15_config, &pll15_regs, 0);
+		//fmax_gfx3d_8064ab[VDD_DIG_HIGH] = freq;
+		//gfx3d_clk.c.fmax = fmax_gfx3d_8064ab;
+		//gfx3d_clk.freq_tbl[ARRAY_SIZE(clk_tbl_gfx3d)-1].freq_hz = freq;
+		pr_alert("SET GPU OC-%d-%ld", loc, freq / 1000000);
+}
 struct clock_init_data msm8960_clock_init_data __initdata;
 static void __init msm8960_clock_pre_init(void)
 {

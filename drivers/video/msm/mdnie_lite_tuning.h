@@ -92,11 +92,9 @@ enum Lcd_mDNIe_Negative {
 };
 
 enum Background_Mode {
-	DYNAMIC_MODE = 0,
-	STANDARD_MODE,
-#if !defined(CONFIG_SUPPORT_DISPLAY_OCTA_TFT)
+	STANDARD_MODE = 0,
+	DYNAMIC_MODE,
 	NATURAL_MODE,
-#endif
 	MOVIE_MODE,
 	AUTO_MODE,
 	MAX_BACKGROUND_MODE,

@@ -17,10 +17,15 @@
 #include <mach/rpm-regulator.h>
 #include <mach/msm_bus_board.h>
 #include <mach/msm_bus.h>
+#include <linux/cpufreq.h>
 
 #include "mach/socinfo.h"
 #include "acpuclock.h"
 #include "acpuclock-krait.h"
+
+//KT Specifics
+// enable_oc
+static unsigned int isenable_oc = 0;
 
 static struct hfpll_data hfpll_data __initdata = {
 	.mode_offset = 0x00,
@@ -37,7 +42,7 @@ static struct hfpll_data hfpll_data __initdata = {
 	.vdd[HFPLL_VDD_NONE] =       0,
 	.vdd[HFPLL_VDD_LOW]  =  945000,
 	.vdd[HFPLL_VDD_NOM]  = 1050000,
-	.vdd[HFPLL_VDD_HIGH] = 1150000,
+	.vdd[HFPLL_VDD_HIGH] = MAX_VDD_MEM_DIG,
 };
 
 static struct scalable scalable[] __initdata = {
@@ -47,9 +52,9 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x4501,
-		.vreg[VREG_CORE] = { "krait0", 1300000 },
-		.vreg[VREG_MEM]  = { "krait0_mem", 1150000 },
-		.vreg[VREG_DIG]  = { "krait0_dig", 1150000 },
+		.vreg[VREG_CORE] = { "krait0", MAX_VDD_SC },
+		.vreg[VREG_MEM]  = { "krait0_mem", MAX_VDD_MEM_DIG },
+		.vreg[VREG_DIG]  = { "krait0_dig", MAX_VDD_MEM_DIG },
 		.vreg[VREG_HFPLL_A] = { "krait0_hfpll", 1800000 },
 	},
 	[CPU1] = {
@@ -58,9 +63,9 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x5501,
-		.vreg[VREG_CORE] = { "krait1", 1300000 },
-		.vreg[VREG_MEM]  = { "krait1_mem", 1150000 },
-		.vreg[VREG_DIG]  = { "krait1_dig", 1150000 },
+		.vreg[VREG_CORE] = { "krait1", MAX_VDD_SC },
+		.vreg[VREG_MEM]  = { "krait1_mem", MAX_VDD_MEM_DIG },
+		.vreg[VREG_DIG]  = { "krait1_dig", MAX_VDD_MEM_DIG },
 		.vreg[VREG_HFPLL_A] = { "krait1_hfpll", 1800000 },
 	},
 	[CPU2] = {
@@ -69,9 +74,9 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x6501,
-		.vreg[VREG_CORE] = { "krait2", 1300000 },
-		.vreg[VREG_MEM]  = { "krait2_mem", 1150000 },
-		.vreg[VREG_DIG]  = { "krait2_dig", 1150000 },
+		.vreg[VREG_CORE] = { "krait2", MAX_VDD_SC },
+		.vreg[VREG_MEM]  = { "krait2_mem", MAX_VDD_MEM_DIG },
+		.vreg[VREG_DIG]  = { "krait2_dig", MAX_VDD_MEM_DIG },
 		.vreg[VREG_HFPLL_A] = { "krait2_hfpll", 1800000 },
 	},
 	[CPU3] = {
@@ -80,9 +85,9 @@ static struct scalable scalable[] __initdata = {
 		.aux_clk_sel = 3,
 		.sec_clk_sel = 2,
 		.l2cpmr_iaddr = 0x7501,
-		.vreg[VREG_CORE] = { "krait3", 1300000 },
-		.vreg[VREG_MEM]  = { "krait3_mem", 1150000 },
-		.vreg[VREG_DIG]  = { "krait3_dig", 1150000 },
+		.vreg[VREG_CORE] = { "krait3", MAX_VDD_SC },
+		.vreg[VREG_MEM]  = { "krait3_mem", MAX_VDD_MEM_DIG },
+		.vreg[VREG_DIG]  = { "krait3_dig", MAX_VDD_MEM_DIG },
 		.vreg[VREG_HFPLL_A] = { "krait3_hfpll", 1800000 },
 	},
 	[L2] = {
@@ -106,6 +111,7 @@ static struct msm_bus_paths bw_level_tbl[] __initdata = {
 	[3] = BW_MBPS(2128), /* At least 266 MHz on bus. */
 	[4] = BW_MBPS(3200), /* At least 400 MHz on bus. */
 	[5] = BW_MBPS(4264), /* At least 533 MHz on bus. */
+	[6] = BW_MBPS(4600), /* At least 600 MHz on bus. */
 };
 
 static struct msm_bus_scale_pdata bus_scale_data __initdata = {
@@ -132,6 +138,8 @@ static struct l2_level l2_freq_tbl[] __initdata = {
 	[13] = { { 1080000, HFPLL, 1, 0x28 }, 1150000, 1150000, 5 },
 	[14] = { { 1134000, HFPLL, 1, 0x2A }, 1150000, 1150000, 5 },
 	[15] = { { 1188000, HFPLL, 1, 0x2C }, 1150000, 1150000, 5 },
+	[16] = { { 1242000, HFPLL, 1, 0x2E }, MAX_VDD_MEM_DIG, MAX_VDD_MEM_DIG, 6 },
+	[17] = { { 1296000, HFPLL, 1, 0x30 }, MAX_VDD_MEM_DIG, MAX_VDD_MEM_DIG, 6 },
 	{ }
 };
 
@@ -460,7 +468,7 @@ static struct acpu_level tbl_PVS5_1700MHz[] __initdata = {
 };
 
 static struct acpu_level tbl_PVS6_1700MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   875000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   875000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   875000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   875000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   875000 },
@@ -478,7 +486,10 @@ static struct acpu_level tbl_PVS6_1700MHz[] __initdata = {
 };
 
 static struct acpu_level tbl_PVS0_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   950000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   950000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   950000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   950000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   950000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   950000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   950000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   950000 },
@@ -493,11 +504,22 @@ static struct acpu_level tbl_PVS0_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1175000 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1225000 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1287500 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1312500 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1337500 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1362500 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1387500 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1412500 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1437500 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1450000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1475000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS1_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   925000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   925000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   925000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   925000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   925000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   925000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   925000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   925000 },
@@ -512,11 +534,22 @@ static struct acpu_level tbl_PVS1_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1137500 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1187500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1250000 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1275000 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1300000 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1325000 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1350000 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1375000 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1400000 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1425000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1450000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS2_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   900000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   900000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   900000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   900000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   900000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   900000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   900000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   900000 },
@@ -531,11 +564,22 @@ static struct acpu_level tbl_PVS2_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1112500 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1162500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1212500 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1237500 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1262500 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1287500 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1312500 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1337500 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1362500 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1387500 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1425000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS3_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   900000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   900000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   900000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   900000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   900000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   900000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   900000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   900000 },
@@ -550,11 +594,22 @@ static struct acpu_level tbl_PVS3_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1087500 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1137500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1175000 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1200000 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1225000 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1250000 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1275000 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1300000 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1325000 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1350000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1400000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS4_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   875000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   875000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   875000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   875000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   875000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   875000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   875000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   875000 },
@@ -569,11 +624,22 @@ static struct acpu_level tbl_PVS4_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1075000 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1112500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1150000 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1175000 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1200000 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1225000 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1250000 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1275000 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1300000 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1325000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1370000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS5_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   875000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   875000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   875000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   875000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   875000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   875000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   875000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   875000 },
@@ -588,11 +654,22 @@ static struct acpu_level tbl_PVS5_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1050000 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1087500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1125000 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1150000 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1175000 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1200000 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1225000 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1250000 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1275000 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1300000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1350000 },
 	{ 0, { 0 } }
 };
 
 static struct acpu_level tbl_PVS6_2000MHz[] __initdata = {
-	{ 1, {   384000, PLL_8, 0, 0x00 }, L2(0),   875000 },
+	{ 1, {    81000, HFPLL, 2, 0x06 }, L2(0),   875000 },
+	{ 1, {   135000, HFPLL, 2, 0x0A }, L2(0),   875000 },
+	{ 1, {   189000, HFPLL, 2, 0x0E }, L2(0),   875000 },
+	{ 1, {   378000, PLL_8, 0, 0x00 }, L2(0),   875000 },
 	{ 1, {   486000, HFPLL, 2, 0x24 }, L2(5),   875000 },
 	{ 1, {   594000, HFPLL, 1, 0x16 }, L2(5),   875000 },
 	{ 1, {   702000, HFPLL, 1, 0x1A }, L2(5),   875000 },
@@ -607,6 +684,14 @@ static struct acpu_level tbl_PVS6_2000MHz[] __initdata = {
 	{ 1, {  1674000, HFPLL, 1, 0x3E }, L2(15), 1025000 },
 	{ 1, {  1782000, HFPLL, 1, 0x42 }, L2(15), 1062500 },
 	{ 1, {  1890000, HFPLL, 1, 0x46 }, L2(15), 1100000 },
+	{ 1, {  1944000, HFPLL, 1, 0x48 }, L2(15), 1125000 },
+	{ 1, {  1998000, HFPLL, 1, 0x4A }, L2(16), 1150000 },
+	{ 1, {  2052000, HFPLL, 1, 0x4C }, L2(16), 1175000 },
+	{ 1, {  2106000, HFPLL, 1, 0x4E }, L2(17), 1200000 },
+	{ 1, {  2160000, HFPLL, 1, 0x50 }, L2(17), 1225000 },
+	{ 1, {  2214000, HFPLL, 1, 0x52 }, L2(17), 1250000 },
+	{ 1, {  2268000, HFPLL, 1, 0x54 }, L2(17), 1275000 },
+	{ 1, {  2322000, HFPLL, 1, 0x56 }, L2(17), 1325000 },
 	{ 0, { 0 } }
 };
 
@@ -625,12 +710,12 @@ static struct pvs_table pvs_tables[NUM_SPEED_BINS][NUM_PVS] __initdata = {
 	[1][6] = { tbl_PVS6_1700MHz, sizeof(tbl_PVS6_1700MHz),     25000 },
 
 	[2][0] = { tbl_PVS0_2000MHz, sizeof(tbl_PVS0_2000MHz),     0 },
-	[2][1] = { tbl_PVS1_2000MHz, sizeof(tbl_PVS1_2000MHz),     25000 },
-	[2][2] = { tbl_PVS2_2000MHz, sizeof(tbl_PVS2_2000MHz),     25000 },
-	[2][3] = { tbl_PVS3_2000MHz, sizeof(tbl_PVS3_2000MHz),     25000 },
-	[2][4] = { tbl_PVS4_2000MHz, sizeof(tbl_PVS4_2000MHz),     25000 },
-	[2][5] = { tbl_PVS5_2000MHz, sizeof(tbl_PVS5_2000MHz),     25000 },
-	[2][6] = { tbl_PVS6_2000MHz, sizeof(tbl_PVS6_2000MHz),     25000 },
+	[2][1] = { tbl_PVS1_2000MHz, sizeof(tbl_PVS1_2000MHz),     0 },
+	[2][2] = { tbl_PVS2_2000MHz, sizeof(tbl_PVS2_2000MHz),     0 },
+	[2][3] = { tbl_PVS3_2000MHz, sizeof(tbl_PVS3_2000MHz),     0 },
+	[2][4] = { tbl_PVS4_2000MHz, sizeof(tbl_PVS4_2000MHz),     0 },
+	[2][5] = { tbl_PVS5_2000MHz, sizeof(tbl_PVS5_2000MHz),     0 },
+	[2][6] = { tbl_PVS6_2000MHz, sizeof(tbl_PVS6_2000MHz),     0 },
 
 	[14][0] = { tbl_PVS0_1512MHz, sizeof(tbl_PVS0_1512MHz),     0 },
 	[14][1] = { tbl_PVS1_1512MHz, sizeof(tbl_PVS1_1512MHz),     25000 },
@@ -650,7 +735,69 @@ static struct acpuclk_krait_params acpuclk_8064_params __initdata = {
 	.l2_freq_tbl_size = sizeof(l2_freq_tbl),
 	.bus_scale = &bus_scale_data,
 	.pte_efuse_phys = 0x007000C0,
-	.stby_khz = 384000,
+	.stby_khz = 378000,
+};
+
+unsigned int get_enable_oc(void)
+{
+	return isenable_oc;
+}
+
+static ssize_t show_enable_oc(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", isenable_oc);
+}
+
+static ssize_t store_enable_oc(struct kobject *kobj,
+			struct attribute *attr, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	isenable_oc = value;
+	return count;
+}
+
+void set_mtp_type(unsigned int val);
+unsigned int get_mtp_type(void);
+
+static ssize_t show_enable_google_mtp(struct kobject *kobj,
+				     struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", get_mtp_type());
+}
+
+static ssize_t store_enable_google_mtp(struct kobject *kobj,
+			struct attribute *attr, const char *buf, size_t count)
+{
+	unsigned int ret = -EINVAL;
+	unsigned int value = 0;
+
+	ret = sscanf(buf, "%u", &value);
+	if (ret != 1)
+		return -EINVAL;
+
+	set_mtp_type(value);
+	return count;
+}
+
+static struct global_attr enable_oc_attr = __ATTR(enable_oc, 0666, show_enable_oc, store_enable_oc);
+static struct global_attr enable_google_mtp_attr = __ATTR(enable_google_mtp, 0666, show_enable_google_mtp, store_enable_google_mtp);
+
+static struct attribute *acpuclock8064_attributes[] = {
+	&enable_oc_attr.attr,
+	&enable_google_mtp_attr.attr,
+	NULL,
+};
+
+static struct attribute_group acpuclock8064_attr_group = {
+	.attrs = acpuclock8064_attributes,
+	.name = "ktoonsez",
 };
 
 static int __init acpuclk_8064_probe(struct platform_device *pdev)
@@ -673,6 +820,10 @@ static struct platform_driver acpuclk_8064_driver = {
 
 static int __init acpuclk_8064_init(void)
 {
+	int rc;
+	rc = sysfs_create_group(cpufreq_global_kobject,
+				&acpuclock8064_attr_group);
+
 	return platform_driver_probe(&acpuclk_8064_driver,
 				     acpuclk_8064_probe);
 }
