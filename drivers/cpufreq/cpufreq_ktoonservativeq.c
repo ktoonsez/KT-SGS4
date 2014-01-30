@@ -1608,6 +1608,8 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		
 		apenable_auto_hotplug(prev_apenable);
 		
+		boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, false);
+		
 		dbs_timer_exit(this_dbs_info);
 
 		mutex_lock(&dbs_mutex);
