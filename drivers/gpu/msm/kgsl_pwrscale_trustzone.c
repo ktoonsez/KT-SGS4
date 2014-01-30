@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -116,8 +116,12 @@ static ssize_t tz_governor_store(struct kgsl_device *device,
 	else if (!strncmp(str, "performance", 11))
 		priv->governor = TZ_GOVERNOR_PERFORMANCE;
 
-	if (priv->governor == TZ_GOVERNOR_PERFORMANCE)
+	if (priv->governor == TZ_GOVERNOR_PERFORMANCE) {
 		kgsl_pwrctrl_pwrlevel_change(device, pwr->max_pwrlevel);
+		pwr->default_pwrlevel = pwr->max_pwrlevel;
+	} else {
+		pwr->default_pwrlevel = pwr->init_pwrlevel;
+	}
 
 	mutex_unlock(&device->mutex);
 	return count;
@@ -230,18 +234,25 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 		priv->no_switch_cnt = 0;
 	}
 
-	idle = priv->bin.total_time - priv->bin.busy_time;
+	/* If there is an extended block of busy processing,
+	 * increase frequency.  Otherwise run the normal algorithm.
+	 */
+	if (priv->bin.busy_time > CEILING) {
+		val = -1;
+	} else {
+		idle = priv->bin.total_time - priv->bin.busy_time;
+		idle = (idle > 0) ? idle : 0;
+#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
+		if (priv->governor == TZ_GOVERNOR_SIMPLE)
+			val = simple_governor(device, idle);
+		else
+			val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+#else
+		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
+#endif
+	}
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
-	idle = (idle > 0) ? idle : 0;
-#ifdef CONFIG_MSM_KGSL_SIMPLE_GOV
-	if (priv->governor == TZ_GOVERNOR_SIMPLE)
-		val = simple_governor(device, idle);
-	else
-		val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-#else
-	val = __secure_tz_entry(TZ_UPDATE_ID, idle, device->id);
-#endif
 	if (val) {
 		kgsl_pwrctrl_pwrlevel_change(device,
 					     pwr->active_pwrlevel + val);
