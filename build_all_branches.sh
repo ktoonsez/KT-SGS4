@@ -162,6 +162,14 @@ echo "Make Mrproper"
 make mrproper
 ./build_vzw.sh
 
+echo "Switch to Touchjizz 4.2-jactive"
+git checkout tw-active
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
+./build_intlja.sh
+
 echo "Switch to AOSP 4.4"
 git checkout aosp4.4
 
