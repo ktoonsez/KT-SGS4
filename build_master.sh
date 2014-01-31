@@ -18,8 +18,8 @@ export ARCH=arm
 # export CROSS_COMPILE=/home/ktoonsez/kernel/siyah/arm-2011.03/bin/arm-none-eabi-
 # export CROSS_COMPILE=/home/ktoonsez/android/system/prebuilt/linux-x86/toolchain/arm-eabi-4.4.3/bin/arm-eabi-
 # export CROSS_COMPILE=/home/ktoonsez/aokp4.2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
-# export CROSS_COMPILE=$PARENT_DIR/linaro4.7/bin/arm-eabi-
-export CROSS_COMPILE=/home/ktoonsez/cm/prebuilts/gcc/linux-x86/arm/arm-eabi-4.7/bin/arm-eabi-
+export CROSS_COMPILE=$PARENT_DIR/linaro4.7/bin/arm-eabi-
+# export CROSS_COMPILE=/home/ktoonsez/cm/prebuilts/gcc/linux-x86/arm/arm-eabi-4.7/bin/arm-eabi-
 
 time_start=$(date +%s.%N)
 
