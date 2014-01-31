@@ -74,10 +74,10 @@
 #define LED_IMAX_SHIFT			6
 #define AN30259A_CTN_RW_FLG		0x80
 
-#define LED_R_CURRENT		0x28
-#define LED_G_CURRENT		0x28
-#define LED_B_CURRENT		0x28
-#define LED_MAX_CURRENT		0xFF
+#define LED_R_CURRENT			0x28	// 40 decimal
+#define LED_G_CURRENT			0x28
+#define LED_B_CURRENT			0x28
+#define LED_MAX_CURRENT			0xFF
 #define LED_OFF				0x00
 
 #define	MAX_NUM_LEDS	3
@@ -142,13 +142,34 @@ struct i2c_client *b_client;
 #define LED_DEEP_DEBUG
 
 #ifdef SEC_LED_SPECIFIC
+extern struct class *sec_class;
 struct device *led_dev;
+int led_enable_fade = 0;
+int led_enable_fade_charging = 0;
+u8 led_intensity = 0;
+
+unsigned int led_time_on = 0;		//If greater than ZERO override the ROMs LED ON LENGTH in ms
+unsigned int led_time_off = 0;		//If greater than ZERO override the ROMs LED OFF LENGTH in ms
+u8 led_step_speed1 = 1;	//Set bitwise value for fade effect steps1
+u8 led_step_speed2 = 1;	//Set bitwise value for fade effect steps2
+u8 led_step_speed3 = 1;	//Set bitwise value for fade effect steps3
+u8 led_step_speed4 = 1;	//Set bitwise value for fade effect steps4
+u8 led_step_bit_shift = 4;	//Set bitwise value for fade effect steps4
+
 /*path : /sys/class/sec/led/led_pattern*/
 /*path : /sys/class/sec/led/led_blink*/
-/*path : /sys/class/sec/led/led_brightness*/
 /*path : /sys/class/leds/led_r/brightness*/
 /*path : /sys/class/leds/led_g/brightness*/
 /*path : /sys/class/leds/led_b/brightness*/
+/*path : /sys/class/sec/led/led_fade*/
+/*path : /sys/class/sec/led/led_intensity*/
+/*path : /sys/class/sec/led/led_time_on*/
+/*path : /sys/class/sec/led/led_time_off*/
+/*path : /sys/class/sec/led/led_step_speed1*/
+/*path : /sys/class/sec/led/led_step_speed2*/
+/*path : /sys/class/sec/led/led_step_speed3*/
+/*path : /sys/class/sec/led/led_step_speed4*/
+/*path : /sys/class/sec/led/led_step_bit_shift*/
 #endif
 
 static void leds_on(enum an30259a_led_enum led, bool on, bool slopemode,
@@ -255,8 +276,8 @@ static void leds_set_slope_mode(struct i2c_client *client,
 							dutymax << 4 | dutymid;
 	data->shadow_reg[AN30259A_REG_LED1CNT2 + led * 4] =
 							delay << 4 | dutymin;
-	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << 4 | dt1;
-	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << 4 | dt3;
+	data->shadow_reg[AN30259A_REG_LED1CNT3 + led * 4] = dt2 << led_step_bit_shift | dt1;
+	data->shadow_reg[AN30259A_REG_LED1CNT4 + led * 4] = dt4 << led_step_bit_shift | dt3;
 	data->shadow_reg[AN30259A_REG_LED1SLP + led] = slptt2 << 4 | slptt1;
 }
 
@@ -318,10 +339,15 @@ static void an30259a_reset_register_work(struct work_struct *work)
 static void an30259a_start_led_pattern(int mode)
 {
 	int retval;
+	u8 led_r_brightness;
+	u8 led_g_brightness;
+	u8 led_b_brightness;
 	struct i2c_client *client;
 	struct work_struct *reset = 0;
+	unsigned int delay_on_time = 500;
+	unsigned int delay_off_time = 2000;
 	client = b_client;
-
+	
 	if (mode > POWERING)
 		return;
 	/* Set all LEDs Off */
@@ -331,23 +357,50 @@ static void an30259a_start_led_pattern(int mode)
 
 	/* Set to low power consumption mode */
 	if (LED_LOWPOWER_MODE == 1)
-		LED_DYNAMIC_CURRENT = 0x8;
+		LED_DYNAMIC_CURRENT = 0x9;
+	else if (led_enable_fade)
+		LED_DYNAMIC_CURRENT = 0x1;
 	else
 		LED_DYNAMIC_CURRENT = 0x1;
+
+	if (led_intensity == 0) {	// then use stock values
+		led_r_brightness = LED_R_CURRENT;
+		led_g_brightness = LED_G_CURRENT;
+		led_b_brightness = LED_B_CURRENT;
+	}
+	else {	// otherwise brightness adapts to led_intensity
+		led_r_brightness = led_intensity / LED_DYNAMIC_CURRENT;
+		led_g_brightness = led_intensity / LED_DYNAMIC_CURRENT;
+		led_b_brightness = led_intensity / LED_DYNAMIC_CURRENT;
+	}
 
 	switch (mode) {
 	/* leds_set_slope_mode(client, LED_SEL, DELAY,  MAX, MID, MIN,
 		SLPTT1, SLPTT2, DT1, DT2, DT3, DT4) */
 	case CHARGING:
 		pr_info("LED Battery Charging Pattern on\n");
-		leds_on(LED_R, true, false,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
+		if (led_enable_fade_charging == 1) {
+			if (led_time_on)
+				delay_on_time = led_time_on;
+			if (led_time_off)
+				delay_off_time = led_time_off;
+			leds_on(LED_R, true, true,
+						led_r_brightness);
+			leds_set_slope_mode(client, LED_R, 0, 30, 15, 0,
+				(delay_on_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				(delay_off_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				led_step_speed1, led_step_speed2, led_step_speed3, led_step_speed4);
+		}
+		else
+			leds_on(LED_R, true, false, led_r_brightness);
 		break;
 
 	case CHARGING_ERR:
 		pr_info("LED Battery Charging error Pattern on\n");
 		leds_on(LED_R, true, true,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
+					led_r_brightness);
 		leds_set_slope_mode(client, LED_R,
 				1, 15, 15, 0, 1, 1, 0, 0, 0, 0);
 		break;
@@ -355,7 +408,7 @@ static void an30259a_start_led_pattern(int mode)
 	case MISSED_NOTI:
 		pr_info("LED Missed Notifications Pattern on\n");
 		leds_on(LED_B, true, true,
-					LED_B_CURRENT / LED_DYNAMIC_CURRENT);
+					led_b_brightness);
 		leds_set_slope_mode(client, LED_B,
 					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
 		break;
@@ -363,7 +416,7 @@ static void an30259a_start_led_pattern(int mode)
 	case LOW_BATTERY:
 		pr_info("LED Low Battery Pattern on\n");
 		leds_on(LED_R, true, true,
-					LED_R_CURRENT / LED_DYNAMIC_CURRENT);
+					led_r_brightness);
 		leds_set_slope_mode(client, LED_R,
 					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
 		break;
@@ -371,7 +424,7 @@ static void an30259a_start_led_pattern(int mode)
 	case FULLY_CHARGED:
 		pr_info("LED full Charged battery Pattern on\n");
 		leds_on(LED_G, true, false,
-					LED_G_CURRENT / LED_DYNAMIC_CURRENT);
+					led_g_brightness);
 		break;
 
 	case POWERING:
@@ -417,8 +470,21 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 		LED_DYNAMIC_CURRENT = LED_B_CURRENT;
 
 	/* In user case, LED current is restricted */
-	brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	if (led_intensity == 0 || led_intensity == 40) {	// if stock intesity is used (see LED_x_CURRENT = 0x28)
+		brightness = (brightness * LED_DYNAMIC_CURRENT) / LED_MAX_CURRENT;
+	}
+	else if (led_intensity != 0) {	// adapt current to led_intensity
+		brightness = (brightness * led_intensity) / LED_MAX_CURRENT;
+	}
 
+	if (led_enable_fade_charging == 1)
+	{
+		if (led_time_on)
+			delay_on_time = led_time_on;
+		if (led_time_off)
+			delay_off_time = led_time_off;
+	}
+	
 	if (delay_on_time > SLPTT_MAX_VALUE)
 		delay_on_time = SLPTT_MAX_VALUE;
 
@@ -433,12 +499,33 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 	} else
 		leds_on(led, true, true, brightness);
 
-	leds_set_slope_mode(client, led, 0, 15, 15, 0,
-				(delay_on_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				(delay_off_time + AN30259A_TIME_UNIT - 1) /
-				AN30259A_TIME_UNIT,
-				0, 0, 0, 0);
+	if (led_time_on)
+	{
+		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
+		delay_on_time = led_time_on;
+	}
+	if (led_time_off)
+	{
+		pr_alert("LED OVER-RIDE - DELAY_ON_Orig=%d, DELAY_OFF_Orig=%d, DELAY_ON_New=%d, DELAY_OFF_New=%d", delay_on_time, delay_off_time, led_time_on, led_time_off);
+		delay_off_time = led_time_off;
+	}
+
+	if (led_enable_fade == 1) {
+		leds_set_slope_mode(client, led, 0, 30, 15, 0,
+			(delay_on_time + AN30259A_TIME_UNIT - 1) /
+			AN30259A_TIME_UNIT,
+			(delay_off_time + AN30259A_TIME_UNIT - 1) /
+			AN30259A_TIME_UNIT,
+			led_step_speed1, led_step_speed2, led_step_speed3, led_step_speed4);
+	}
+	else {
+		leds_set_slope_mode(client, led, 0, 15, 15, 0,
+			(delay_on_time + AN30259A_TIME_UNIT - 1) /
+			AN30259A_TIME_UNIT,
+			(delay_off_time + AN30259A_TIME_UNIT - 1) /
+			AN30259A_TIME_UNIT,
+			0, 0, 0, 0);
+	}
 }
 
 static ssize_t store_an30259a_led_lowpower(struct device *dev,
@@ -550,6 +637,232 @@ static ssize_t store_an30259a_led_blink(struct device *dev,
 	return count;
 }
 
+static ssize_t show_an30259a_led_fade(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int ret;
+	 
+	ret = sprintf(buf, "%d\n", led_enable_fade);
+	pr_info("[LED] %s: led_fade=%d\n", __func__, led_enable_fade);
+
+	return ret;
+}
+
+static ssize_t store_an30259a_led_fade(struct device *dev,
+				struct device_attribute *devattr,
+				const char *buf, size_t count)
+{
+	int retval;
+	int enabled = 0;
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	retval = sscanf(buf, "%d", &enabled);
+
+	if (retval == 0) {
+		dev_err(&data->client->dev, "fail to get led_fade value.\n");
+		return count;
+	}
+
+	led_enable_fade = enabled;
+
+	printk(KERN_DEBUG "led_fade is called\n");
+
+	return count;
+}
+
+static ssize_t show_an30259a_led_fade_charging(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int ret;
+	 
+	ret = sprintf(buf, "%d\n", led_enable_fade_charging);
+	pr_info("[LED] %s: led_fade_charging=%d\n", __func__, led_enable_fade_charging);
+
+	return ret;
+}
+
+static ssize_t store_an30259a_led_fade_charging(struct device *dev,
+				struct device_attribute *devattr,
+				const char *buf, size_t count)
+{
+	int retval;
+	int enabled = 0;
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	retval = sscanf(buf, "%d", &enabled);
+
+	if (retval == 0) {
+		dev_err(&data->client->dev, "fail to get led_fade_charging value.\n");
+		return count;
+	}
+
+	led_enable_fade_charging = enabled;
+
+	printk(KERN_DEBUG "led_fade_charging is called\n");
+
+	return count;
+}
+
+static ssize_t show_an30259a_led_intensity(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int ret;
+	 
+	ret = sprintf(buf, "%d\n", led_intensity);
+	pr_info("[LED] %s: led_intensity=%d\n", __func__, led_intensity);
+
+	return ret;
+}
+
+static ssize_t store_an30259a_led_intensity(struct device *dev,
+				struct device_attribute *devattr,
+				const char *buf, size_t count)
+{
+	int retval;
+	int intensity = 0;
+	struct an30259a_data *data = dev_get_drvdata(dev);
+
+	retval = sscanf(buf, "%d", &intensity);
+
+	if (retval == 0) {
+		dev_err(&data->client->dev, "fail to get led_intensity value.\n");
+		return count;
+	}
+
+	if (intensity > 0 && intensity <= 255) {
+		led_intensity = (u8)intensity;
+	}
+
+	printk(KERN_DEBUG "led_intensity is called\n");
+
+	return count;
+}
+
+static ssize_t show_an30259a_led_time_on(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_time_on);
+	return ret;
+}
+static ssize_t store_an30259a_led_time_on(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 100 && val <= SLPTT_MAX_VALUE) {
+		led_time_on = val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_time_off(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_time_off);
+	return ret;
+}
+static ssize_t store_an30259a_led_time_off(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 100 && val <= SLPTT_MAX_VALUE) {
+		led_time_off = val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_speed1(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_speed1);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_speed1(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 20) {
+		led_step_speed1 = (u8)val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_speed2(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_speed2);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_speed2(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 20) {
+		led_step_speed2 = (u8)val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_speed3(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_speed3);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_speed3(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 20) {
+		led_step_speed3 = (u8)val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_speed4(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_speed4);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_speed4(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 20) {
+		led_step_speed4 = (u8)val;
+	}
+	return count;
+}
+
+static ssize_t show_an30259a_led_step_bit_shift(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", led_step_bit_shift);
+	return ret;
+}
+static ssize_t store_an30259a_led_step_bit_shift(struct device *dev, struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 1 && val <= 15) {
+		led_step_bit_shift = (u8)val;
+	}
+	return count;
+}
 
 static ssize_t store_led_r(struct device *dev,
 	struct device_attribute *devattr, const char *buf, size_t count)
@@ -731,6 +1044,28 @@ static DEVICE_ATTR(led_pattern, 0664, NULL, \
 					store_an30259a_led_pattern);
 static DEVICE_ATTR(led_blink, 0664, NULL, \
 					store_an30259a_led_blink);
+static DEVICE_ATTR(led_fade, 0664, show_an30259a_led_fade, \
+				store_an30259a_led_fade);
+static DEVICE_ATTR(led_fade_charging, 0664, show_an30259a_led_fade_charging, \
+				store_an30259a_led_fade_charging);
+static DEVICE_ATTR(led_intensity, 0664, show_an30259a_led_intensity, \
+				store_an30259a_led_intensity);
+
+static DEVICE_ATTR(led_time_on, 0664, show_an30259a_led_time_on, \
+				store_an30259a_led_time_on);
+static DEVICE_ATTR(led_time_off, 0664, show_an30259a_led_time_off, \
+				store_an30259a_led_time_off);
+static DEVICE_ATTR(led_step_speed1, 0664, show_an30259a_led_step_speed1, \
+				store_an30259a_led_step_speed1);
+static DEVICE_ATTR(led_step_speed2, 0664, show_an30259a_led_step_speed2, \
+				store_an30259a_led_step_speed2);
+static DEVICE_ATTR(led_step_speed3, 0664, show_an30259a_led_step_speed3, \
+				store_an30259a_led_step_speed3);
+static DEVICE_ATTR(led_step_speed4, 0664, show_an30259a_led_step_speed4, \
+				store_an30259a_led_step_speed4);
+static DEVICE_ATTR(led_step_bit_shift, 0664, show_an30259a_led_step_bit_shift, \
+				store_an30259a_led_step_bit_shift);
+
 static DEVICE_ATTR(led_br_lev, 0664, NULL, \
 					store_an30259a_led_br_lev);
 static DEVICE_ATTR(led_lowpower, 0664, NULL, \
@@ -756,6 +1091,16 @@ static struct attribute *sec_led_attributes[] = {
 	&dev_attr_led_b.attr,
 	&dev_attr_led_pattern.attr,
 	&dev_attr_led_blink.attr,
+	&dev_attr_led_fade.attr,
+	&dev_attr_led_fade_charging.attr,
+	&dev_attr_led_time_on.attr,
+	&dev_attr_led_time_off.attr,
+	&dev_attr_led_step_speed1.attr,
+	&dev_attr_led_step_speed2.attr,
+	&dev_attr_led_step_speed3.attr,
+	&dev_attr_led_step_speed4.attr,
+	&dev_attr_led_step_bit_shift.attr,
+	&dev_attr_led_intensity.attr,
 	&dev_attr_led_br_lev.attr,
 	&dev_attr_led_lowpower.attr,
 	NULL,
