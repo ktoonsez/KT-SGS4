@@ -1415,14 +1415,19 @@ void boostpulse_relay_kt(void)
 	if (!boostpulse_relayf)
 	{
 		if (dbs_tuners_ins.touch_boost_gpu > 0 && screen_is_on)
+		{
 			boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, true);
-
-		if (dbs_tuners_ins.touch_boost_2nd_core == 0 && dbs_tuners_ins.touch_boost_3rd_core == 0 && dbs_tuners_ins.touch_boost_4th_core == 0 && dbs_tuners_ins.touch_boost_cpu == 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
-			return;
-		check_boost_cores_up(dbs_tuners_ins.touch_boost_2nd_core, dbs_tuners_ins.touch_boost_3rd_core, dbs_tuners_ins.touch_boost_4th_core);
+			boostpulse_relayf = true;
+			boost_hold_cycles_cnt = 0;
+		}
+		
+		if (dbs_tuners_ins.touch_boost_2nd_core != 0 || dbs_tuners_ins.touch_boost_3rd_core != 0 || dbs_tuners_ins.touch_boost_4th_core != 0 || dbs_tuners_ins.touch_boost_cpu != 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
+		{
+			check_boost_cores_up(dbs_tuners_ins.touch_boost_2nd_core, dbs_tuners_ins.touch_boost_3rd_core, dbs_tuners_ins.touch_boost_4th_core);
+			boostpulse_relayf = true;
+			boost_hold_cycles_cnt = 0;
+		}
 			
-		boostpulse_relayf = true;
-		boost_hold_cycles_cnt = 0;
 		//dbs_tuners_ins.sampling_rate = min_sampling_rate;
 		//pr_info("BOOSTPULSE RELAY KT");
 	}
