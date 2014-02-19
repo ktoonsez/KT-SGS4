@@ -49,7 +49,7 @@ rm $PACKAGEDIR/zImage
 rm arch/arm/boot/zImage
 
 echo "Make the kernel"
-make VARIANT_DEFCONFIG=jf_$CARRIER"_defconfig" SELINUX_DEFCONFIG=jfselinux_defconfig SELINUX_LOG_DEFCONFIG=jfselinux_log_defconfig KT_jf_defconfig
+make VARIANT_DEFCONFIG=jf_$CARRIER"_defconfig" KT_jf_defconfig SELINUX_DEFCONFIG=selinux_defconfig
 
 echo "Modding .config file - "$KTVER
 sed -i 's,CONFIG_LOCALVERSION="-KT-SGS4",CONFIG_LOCALVERSION="'$KTVER'",' .config
