@@ -28,6 +28,23 @@
  */
 
 /*
+ *  linux/fs/vfat/namei.c
+ *
+ *  Written 1992,1993 by Werner Almesberger
+ *
+ *  Windows95/Windows NT compatible extended MSDOS filesystem
+ *    by Gordon Chaffee Copyright (C) 1995.  Send bug reports for the
+ *    VFAT filesystem to <chaffee@cs.berkeley.edu>.  Specify
+ *    what file operation caused you trouble and if you can duplicate
+ *    the problem, send a script that demonstrates it.
+ *
+ *  Short name translation 1999, 2001 by Wolfram Pienkoss <wp@bszh.de>
+ *
+ *  Support Multibyte characters and cleanup by
+ *                              OGAWA Hirofumi <hirofumi@mail.parknet.co.jp>
+ */
+
+/*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
  *
  *  This program is free software; you can redistribute it and/or
@@ -275,6 +292,150 @@ static void __set_sb_clean(struct super_block *sb)
 	sbi->s_dirt = 0;
 #endif
 }
+
+static int __exfat_revalidate(struct dentry *dentry)
+{
+	return 0;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+static int exfat_revalidate(struct dentry *dentry, unsigned int flags)
+#else
+static int exfat_revalidate(struct dentry *dentry, struct nameidata *nd)
+#endif
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+	if (flags & LOOKUP_RCU)
+		return -ECHILD;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
+	if (nd && nd->flags & LOOKUP_RCU)
+		return -ECHILD;
+#endif
+
+	if (dentry->d_inode)
+		return 1;
+	return __exfat_revalidate(dentry);
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+static int exfat_revalidate_ci(struct dentry *dentry, unsigned int flags)
+#else
+static int exfat_revalidate_ci(struct dentry *dentry, struct nameidata *nd)
+#endif
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,00)
+	if (flags & LOOKUP_RCU)
+		return -ECHILD;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
+	unsigned int flags;
+
+	if (nd && nd->flags & LOOKUP_RCU)
+		return -ECHILD;
+
+	flags = nd ? nd->flags : 0;
+#else
+	flags = nd ? nd->flags : 0;
+#endif
+
+	if (dentry->d_inode)
+		return 1;
+
+	if (!flags)
+		return 0;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,00)
+	if (flags & (LOOKUP_CREATE | LOOKUP_RENAME_TARGET))
+		return 0;
+#else
+	if (!(nd->flags & (LOOKUP_CONTINUE | LOOKUP_PARENT))) {
+		if (nd->flags & (LOOKUP_CREATE | LOOKUP_RENAME_TARGET))
+			return 0;
+	}
+#endif
+
+	return __exfat_revalidate(dentry);
+}
+
+static unsigned int __exfat_striptail_len(unsigned int len, const char *name)
+{
+	while (len && name[len - 1] == '.')
+		len--;
+	return len;
+}
+
+static unsigned int exfat_striptail_len(const struct qstr *qstr)
+{
+	return __exfat_striptail_len(qstr->len, qstr->name);
+}
+
+static int exfat_d_hash(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
+{
+	qstr->hash = full_name_hash(qstr->name, exfat_striptail_len(qstr));
+	return 0;
+}
+
+static int exfat_d_hashi(const struct dentry *dentry, const struct inode *inode,
+		struct qstr *qstr)
+{
+	struct nls_table *t = EXFAT_SB(dentry->d_sb)->nls_io;
+	const unsigned char *name;
+	unsigned int len;
+	unsigned long hash;
+
+	name = qstr->name;
+	len = exfat_striptail_len(qstr);
+
+	hash = init_name_hash();
+	while (len--)
+		hash = partial_name_hash(nls_tolower(t, *name++), hash);
+	qstr->hash = end_name_hash(hash);
+
+	return 0;
+}
+
+static int exfat_cmpi(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
+		unsigned int len, const char *str, const struct qstr *name)
+{
+	struct nls_table *t = EXFAT_SB(parent->d_sb)->nls_io;
+	unsigned int alen, blen;
+
+	alen = exfat_striptail_len(name);
+	blen = __exfat_striptail_len(len, str);
+	if (alen == blen) {
+		if (nls_strnicmp(t, name->name, str, alen) == 0)
+			return 0;
+	}
+	return 1;
+}
+
+static int exfat_cmp(const struct dentry *parent, const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
+		unsigned int len, const char *str, const struct qstr *name)
+{
+	unsigned int alen, blen;
+
+	alen = exfat_striptail_len(name);
+	blen = __exfat_striptail_len(len, str);
+	if (alen == blen) {
+		if (strncmp(name->name, str, alen) == 0)
+			return 0;
+	}
+	return 1;
+}
+
+static const struct dentry_operations exfat_ci_dentry_ops = {
+	.d_revalidate   = exfat_revalidate_ci,
+	.d_hash         = exfat_d_hashi,
+	.d_compare      = exfat_cmpi,
+};
+
+static const struct dentry_operations exfat_dentry_ops = {
+	.d_revalidate   = exfat_revalidate,
+	.d_hash         = exfat_d_hash,
+	.d_compare      = exfat_cmp,
+};
 
 static int exfat_readdir(struct file *filp, void *dirent, filldir_t filldir)
 {
@@ -1969,6 +2130,14 @@ static int exfat_read_root(struct inode *inode)
 	return 0;
 }
 
+static void setup_dops(struct super_block *sb)
+{
+	if (EXFAT_SB(sb)->options.casesensitive == 0)
+		sb->s_d_op = &exfat_ci_dentry_ops;
+	else
+		sb->s_d_op = &exfat_dentry_ops;
+}
+
 static int exfat_fill_super(struct super_block *sb, void *data, int silent)
 {
 	struct inode *root_inode = NULL;
@@ -1992,6 +2161,8 @@ static int exfat_fill_super(struct super_block *sb, void *data, int silent)
 	error = parse_options(data, silent, &debug, &sbi->options);
 	if (error)
 		goto out_fail;
+
+	setup_dops(sb);
 
 	error = -EIO;
 	sb_min_blocksize(sb, 512);
