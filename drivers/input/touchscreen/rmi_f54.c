@@ -988,7 +988,7 @@ static ssize_t panel_colors_store(struct device *dev, struct device_attribute *a
 
 	panel_colors = value;
 
-	//panel_load_colors(panel_colors);
+	panel_load_colors(panel_colors);
 
 	return size;
 }

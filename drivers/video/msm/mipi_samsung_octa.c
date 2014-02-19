@@ -700,12 +700,12 @@ static void mipi_samsung_disp_backlight(struct msm_fb_data_type *mfd)
 	if (mfd->resume_state == MIPI_RESUME_STATE) {		
 		if (msd.mpd->backlight_control(mfd->bl_level)) {
 			mipi_samsung_disp_send_cmd(mfd, PANEL_BRIGHT_CTRL, true);
-			pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
+			//pr_info("mipi_samsung_disp_backlight %d\n", mfd->bl_level);
 		}
 		msd.mpd->first_bl_hbm_psre = 0;
 	} else {
 		msd.mpd->first_bl_hbm_psre = 0;
-		pr_info("%s : panel is off state!!\n", __func__);
+		//pr_info("%s : panel is off state!!\n", __func__);
 	}
 	
 	mutex_unlock(&brightness_mutex);
