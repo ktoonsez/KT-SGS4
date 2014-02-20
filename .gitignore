@@ -65,16 +65,15 @@ kernel/config_data.h
 scripts/recordmcount
 kernel/usr/*
 Package/*
-firmware/*
+firmware/*.gen.S
+firmware/*.fw
+firmware/tsp_atmel/*.gen.S
+firmware/tsp_atmel/*.fw
+firmware/tsp_synaptics/*.gen.S
+firmware/tsp_synaptics/*.fw
 arch/arm/include/generated*
 
 arch/arm/boot/compressed/lib1funcs.S
-firmware/tsp_melfas/CORE.fw
-firmware/tsp_melfas/CORE.fw.gen.S
-firmware/tsp_melfas/PRIV.fw
-firmware/tsp_melfas/PRIV.fw.gen.S
-firmware/tsp_melfas/PUBL.fw
-firmware/tsp_melfas/PUBL.fw.gen.S
 scripts/bin2c
 scripts/genksyms/*
 scripts/kconfig/*
