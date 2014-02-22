@@ -1273,18 +1273,16 @@ static bool debug;
 
 /* per port private data */
 
-#define N_IN_URB 4
-#define N_OUT_URB 4
-#define IN_BUFLEN 4096
-#define OUT_BUFLEN 4096
+#define N_IN_URB_PRIV 4
+#define N_OUT_URB_PRIV 4
 
 struct option_port_private {
 	/* Input endpoints and buffer for this port */
-	struct urb *in_urbs[N_IN_URB];
-	u8 *in_buffer[N_IN_URB];
+	struct urb *in_urbs[N_IN_URB_PRIV];
+	u8 *in_buffer[N_IN_URB_PRIV];
 	/* Output endpoints and buffer for this port */
-	struct urb *out_urbs[N_OUT_URB];
-	u8 *out_buffer[N_OUT_URB];
+	struct urb *out_urbs[N_OUT_URB_PRIV];
+	u8 *out_buffer[N_OUT_URB_PRIV];
 	unsigned long out_busy;		/* Bit vector of URBs in use */
 	int opened;
 	struct usb_anchor delayed;
