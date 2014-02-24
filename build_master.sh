@@ -97,13 +97,25 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	time_end=$(date +%s.%N)
 	echo -e "${BLDYLW}Total time elapsed: ${TCTCLR}${TXTGRN}$(echo "($time_end - $time_start) / 60"|bc ) ${TXTYLW}minutes${TXTGRN} ($(echo "$time_end - $time_start"|bc ) ${TXTYLW}seconds) ${TXTCLR}"
 
+	export DLNAME="http://ktoonsez.jonathanjsimon.com/sgs4/$PLATFORM/$MUXEDNAMELONG.zip"
+	
 	FILENAME=../$MUXEDNAMELONG.zip
 	FILESIZE=$(stat -c%s "$FILENAME")
 	echo "Size of $FILENAME = $FILESIZE bytes."
 	rm ../$MREV-$PLATFORM-$CARRIER"-version.txt"
-	exec >>../$MREV-$PLATFORM-$CARRIER"-version.txt" 2>&1
-	echo "$MUXEDNAMELONG,$FILESIZE,http://ktoonsez.jonathanjsimon.com/sgs4/$PLATFORM/$MUXEDNAMELONG.zip"
+	exec 1>>../$MREV-$PLATFORM-$CARRIER"-version.txt" 2>&1
+	echo -n "$MUXEDNAMELONG,$FILESIZE," & curl -s https://www.googleapis.com/urlshortener/v1/url --header 'Content-Type: application/json' --data "{'longUrl': '$DLNAME'}" | grep \"id\" | sed -e 's,^.*id": ",,' -e 's/",.*$//'
+	echo 1>&-
 	
+	SHORTURL=$(grep "http" ../$MREV-$PLATFORM-$CARRIER"-version.txt" | sed s/$MUXEDNAMELONG,$FILESIZE,//g)
+	exec 1>>../url/aurlstats-$CURDATE.sh 2>&1
+	##echo "curl -s 'https://www.googleapis.com/urlshortener/v1/url?shortUrl="$SHORTURL"&projection=FULL' | grep -m2 \"shortUrlClicks\|\\\"longUrl\\\"\""
+	echo "echo "$MREV-$PLATFORM-$CARRIER
+	echo "curl -s 'https://www.googleapis.com/urlshortener/v1/url?shortUrl="$SHORTURL"&projection=FULL' | grep -m1 \"shortUrlClicks\""
+	echo 1>&-
+	chmod 0777 ../url/aurlstats-$CURDATE.sh
+	sed -i 's,http://ktoonsez.jonathanjsimon.com/sgs4/'$PLATFORM'/'$MUXEDNAMESHRT','$SHORTURL',' ../url/SERVERLINKS.txt
+
 	cd $KERNELDIR
 else
 	echo "KERNEL DID NOT BUILD! no zImage exist"
