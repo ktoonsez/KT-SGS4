@@ -162,6 +162,6 @@ echo "Make Mrproper"
 make mrproper
 ./build_intlja.sh
 
-echo "Switch to AOSP 4.4"
-git checkout aosp4.4
+echo "Switch to TWGE 4.4"
+git checkout twge4.4
 
