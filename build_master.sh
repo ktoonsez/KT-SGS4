@@ -113,7 +113,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "curl -s 'https://www.googleapis.com/urlshortener/v1/url?shortUrl="$SHORTURL"&projection=FULL' | grep -m1 \"shortUrlClicks\""
 	echo 1>&-
 	chmod 0777 ../url/aurlstats-$CURDATE.sh
-	sed -i 's,http://ktoonsez.jonathanjsimon.com/sgs4/'$PLATFORM'/'$MUXEDNAMESHRT','$SHORTURL',' ../url/SERVERLINKS.txt
+	sed -i 's,http://ktoonsez.jonathanjsimon.com/sgs4/'$PLATFORM'/'$MUXEDNAMESHRT','"[B]"$CURDATE":[/B] [url]"$SHORTURL'[/url],' ../url/SERVERLINKS.txt
 
 	cd $KERNELDIR
 else
