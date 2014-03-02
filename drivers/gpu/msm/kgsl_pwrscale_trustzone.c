@@ -306,14 +306,7 @@ static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	} else {
 		priv->no_switch_cnt = 0;
 	}
-	
-	/*logit2++;
-	if (logit2 > 10)
-	{
-		pr_alert("GPU SPEED CHECK: %lld %lld\n", priv->bin.busy_time, priv->bin.total_time);
-		logit2 = 0;
-	}*/
-	
+
 	/* If there is an extended block of busy processing,
 	 * increase frequency.  Otherwise run the normal algorithm.
 	 */
