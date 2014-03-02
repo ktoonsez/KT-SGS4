@@ -451,7 +451,7 @@ void clock_debug_print_enabled(void)
 	if (likely(!debug_suspend))
 		return;
 
-	pr_info("Enabled clocks:\n");
+	/*pr_info("Enabled clocks:\n");
 	spin_lock_irqsave(&clk_list_lock, flags);
 	list_for_each_entry(table, &clk_list, node) {
 		for (i = 0; i < table->num_clocks; i++)
@@ -462,6 +462,6 @@ void clock_debug_print_enabled(void)
 	if (cnt)
 		pr_info("Enabled clock count: %d\n", cnt);
 	else
-		pr_info("No clocks enabled.\n");
+		pr_info("No clocks enabled.\n");*/
 
 }
