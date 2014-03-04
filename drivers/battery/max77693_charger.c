@@ -27,11 +27,6 @@
 #define SIOP_INPUT_LIMIT_CURRENT 1200
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
-#include <linux/fastchg.h>
-#define USB_FASTCHG_LOAD 1000 /* uA */
-#endif 
-
 extern void send_cable_state(unsigned int state);
 extern void send_cable_state_kt(unsigned int state);
 int gwc_w_state = 0;
@@ -715,13 +710,9 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = max77693_get_health_state(charger);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (force_fast_charge == 1)
-			charger->charging_current_max = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current_max;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		if (force_fast_charge == 1)
-			charger->charging_current = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -798,7 +789,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 				}
 			}
 		} else {
-			pr_alert("KTMAX77693-4-%d-%d-%d",charger->charging_current,charger->siop_level,charger->charging_current_max);
 			charger->is_charging = true;
 			/* decrease the charging current according to siop level */
 			set_charging_current =
@@ -806,20 +796,18 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (set_charging_current > 0 &&
 					set_charging_current < usb_charging_current)
 				set_charging_current = usb_charging_current;
-			if (force_fast_charge == 1)
-			{
-				set_charging_current = USB_FASTCHG_LOAD * charger->siop_level / 100;
-				charger->charging_current = USB_FASTCHG_LOAD;
-				charger->charging_current_max = USB_FASTCHG_LOAD;
-			}
-
 			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS)
 				set_charging_current_max = wpc_charging_current;
 			else
 				set_charging_current_max =
-						charger->charging_current_max;
+					charger->charging_current_max;
 
-			pr_alert("KTMAX77693-5-%d-%d",set_charging_current,set_charging_current_max);
+			if (charger->siop_level < 100 &&
+					val->intval == POWER_SUPPLY_TYPE_MAINS) {
+				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
+				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
+					set_charging_current = SIOP_CHARGING_LIMIT_CURRENT;
+			}
 		}
 		max77693_set_charger_state(charger, charger->is_charging);
 		/* if battery full, only disable charging  */
@@ -827,7 +815,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 				(charger->status == POWER_SUPPLY_STATUS_DISCHARGING) ||
 				(value.intval == POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)) {
 			/* current setting */
-			pr_alert("KTMAX77693-1-%d",set_charging_current);
 			max77693_set_charge_current(charger,
 				set_charging_current);
 			/* if battery is removed, disable input current and reenable input current
@@ -846,38 +833,41 @@ static int sec_chg_set_property(struct power_supply *psy,
 		break;
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (force_fast_charge == 1)
-			charger->charging_current_max = USB_FASTCHG_LOAD;
-		else
-			charger->charging_current_max = val->intval;
-		pr_alert("KTMAX77693-6-%d",charger->charging_current_max);
+		charger->charging_current_max = val->intval;
 		break;
 	/*  val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		if (force_fast_charge == 1)
-			charger->charging_current = USB_FASTCHG_LOAD;
-		else
-			charger->charging_current = val->intval;
-		pr_alert("KTMAX77693-7-%d",charger->charging_current);
+		charger->charging_current = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
 			/* decrease the charging current according to siop level */
-			int current_now;
-			if (force_fast_charge == 1)
-				charger->charging_current = USB_FASTCHG_LOAD;
-			current_now = 
+			int current_now =
 				charger->charging_current * val->intval / 100;
+
 			if (current_now > 0 &&
 					current_now < usb_charging_current)
 				current_now = usb_charging_current;
-			pr_alert("KTMAX77693-2-%d",current_now);
+
+			/* do forced set charging current */
+			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
+				if (charger->siop_level < 100 )
+					set_charging_current_max =
+						SIOP_INPUT_LIMIT_CURRENT;
+				else
+					set_charging_current_max =
+						charger->charging_current_max;
+
+				if (charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
+					current_now = SIOP_CHARGING_LIMIT_CURRENT;
+				max77693_set_input_current(charger,
+						set_charging_current_max);
+			}
 			max77693_set_charge_current(charger, current_now);
 		}
 		break;
 	case POWER_SUPPLY_PROP_POWER_NOW:
-			pr_alert("KTMAX77693-3-%d",val->intval);
 		max77693_set_charge_current(charger,
 				val->intval);
 		max77693_set_input_current(charger,
@@ -1071,6 +1061,10 @@ static void wpc_detect_work(struct work_struct *work)
 	pr_debug("%s\n", __func__);
 	wake_unlock(&chg_data->wpc_wake_lock);
 
+	reg_data = (0 << WCIN_SHIFT);
+	max77693_update_reg(chg_data->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			WCIN_MASK);
+
 	/* get status of cable*/
 	psy_do_property("battery", get,
 			POWER_SUPPLY_PROP_ONLINE, value);
@@ -1095,7 +1089,7 @@ static void wpc_detect_work(struct work_struct *work)
 		send_cable_state(10);
 		if (ktoonservative_is_active_chrgW)
 			send_cable_state_kt(10);
-	} else if ((chg_data->wc_w_state == 1) && (wc_w_state == 0)) {
+	} else if (wc_w_state == 0) {
 		if (!chg_data->is_charging)
 			max77693_set_charger_state(chg_data, true);
 		max77693_read_reg(chg_data->max77693->i2c,
@@ -1359,7 +1353,9 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	struct max77693_platform_data *pdata = dev_get_platdata(iodev->dev);
 	struct max77693_charger_data *charger;
 	int ret = 0;
+#if defined(CONFIG_CHARGER_MAX77803) || defined(CONFIG_MACH_JF)
 	u8 reg_data;
+#endif
 
 	pr_info("%s: MAX77693 Charger driver probe\n", __func__);
 
@@ -1403,9 +1399,13 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	wake_lock_init(&charger->recovery_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-recovery");
 	INIT_DELAYED_WORK(&charger->recovery_work, max77693_recovery_work);
+
+#if defined(CONFIG_CHARGER_MAX77803) || defined(CONFIG_MACH_JF)
 	wake_lock_init(&charger->wpc_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-wpc");
 	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
+#endif
+
 	ret = power_supply_register(&pdev->dev, &charger->psy_chg);
 	if (ret) {
 		pr_err("%s: Failed to Register psy_chg\n", __func__);
@@ -1428,8 +1428,11 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	charger->wc_w_irq = pdata->irq_base + MAX77693_CHG_IRQ_WCIN_I;
 	ret = request_threaded_irq(charger->wc_w_irq,
 			NULL, wpc_charger_irq,
-			IRQF_TRIGGER_FALLING,
-			"wpc-int", charger);
+#if defined(CONFIG_MACH_JF)
+			IRQF_TRIGGER_FALLING,"wpc-int", charger);
+#else
+			0, "wpc-int", charger);
+#endif
 	if (ret) {
 		pr_err("%s: Failed to Reqeust IRQ\n", __func__);
 		goto err_wc_irq;
@@ -1474,8 +1477,13 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 		pr_err("%s: fail to request bypass IRQ: %d: %d\n",
 				__func__, charger->irq_bypass, ret);
 	return 0;
+
+#if defined(CONFIG_WIRELESS_CHARGING) ||\
+	defined(CONFIG_CHARGER_MAX77803) ||\
+	defined(CONFIG_MACH_JF)
 err_wc_irq:
 	free_irq(charger->pdata->chg_irq, NULL);
+#endif
 err_irq:
 	power_supply_unregister(&charger->psy_chg);
 err_power_supply_register:
