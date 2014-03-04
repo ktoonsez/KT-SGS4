@@ -23,7 +23,7 @@
 #define _LINUX_FASTCHG_H
 
 #define FAST_CHARGE_VERSION "v1.1 by Ktoonsez from Jean-Pierre and Paul Reioux original implementation"
-#define AC_LEVELS  "1000 1450 1900"
+#define AC_LEVELS  "500 1000 1450 1900"
 #define USB_LEVELS "460 700 1000"
 #define ANY_LEVELS "0 to 1900"
 
@@ -35,6 +35,7 @@ extern int force_fast_charge;
 
 extern int ac_charge_level;
 
+#define AC_CHARGE_500 500
 #define AC_CHARGE_1000 1000
 #define AC_CHARGE_1450 1300
 #define AC_CHARGE_1900 1900
