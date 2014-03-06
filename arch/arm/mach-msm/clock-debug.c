@@ -405,38 +405,6 @@ int __init clock_debug_init(void)
 	return 0;
 }
 
-static int clock_debug_print_clock(struct clk_lookup *cl)
-{
-	char *start = "";
-	struct clk *c = cl->clk;
-	int dev = !(cl->dev_id == NULL);
-
-	if (!c || !c->prepare_count)
-		return 0;
-
-	pr_info("\t");
-	do {
-		if (c->vdd_class)
-			pr_cont("%s%s%s%s:%u:%u [%ld, %lu]", start,
-					c->dbg_name,
-					dev ? ":" : "",
-					dev ? cl->dev_id : "",
-					c->prepare_count, c->count, c->rate,
-					c->vdd_class->cur_level);
-		else
-			pr_cont("%s%s%s%s:%u:%u [%ld]", start, c->dbg_name,
-					dev ? ":" : "",
-					dev ? cl->dev_id : "",
-					c->prepare_count, c->count, c->rate);
-		start = " -> ";
-		dev = 0;
-	} while ((c = clk_get_parent(c)));
-
-	pr_cont("\n");
-
-	return 1;
-}
-
 /**
  * clock_debug_print_enabled() - Print names of enabled clocks for suspend debug
  *
@@ -444,10 +412,6 @@ static int clock_debug_print_clock(struct clk_lookup *cl)
  */
 void clock_debug_print_enabled(void)
 {
-	struct clk_table *table;
-	unsigned long flags;
-	int i, cnt = 0;
-
 	if (likely(!debug_suspend))
 		return;
 

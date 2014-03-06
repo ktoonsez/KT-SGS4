@@ -66,7 +66,7 @@ static bool call_in_progress = false;
 static bool ischarging = false;
 static int sensor_wake_options = 0;
 static int sensor_wake_options_debug = 0;
-static bool wakelock_held = false;
+//static bool wakelock_held = false;
 static struct wake_lock wakelock;
 //struct wakeup_source *ws;
 static DEFINE_MUTEX(prx_lock);
