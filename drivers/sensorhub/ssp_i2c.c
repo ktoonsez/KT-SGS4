@@ -17,6 +17,8 @@
 #define LIMIT_DELAY_CNT		200
 extern void set_gps_status(bool stat);
 extern void set_call_in_progress(bool state);
+extern void set_call_in_progress_prox(bool state);
+extern void set_call_in_progress_scrn(bool state);
 
 int waiting_wakeup_mcu(struct ssp_data *data)
 {
@@ -248,9 +250,17 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 
 	//On a call/not on a call hook
 	if (uInst == ADD_SENSOR && uSensorType == PROXIMITY_SENSOR)
+	{
 		set_call_in_progress(true); //pr_alert("KT ON CALL ENABLE: %d-%d\n", uInst, uSensorType);
+		set_call_in_progress_prox(true);
+		set_call_in_progress_scrn(true);
+	}
 	else if (uInst == REMOVE_SENSOR && uSensorType == PROXIMITY_SENSOR)
+	{
 		set_call_in_progress(false); //pr_alert("KT ON CALL DISABLE: %d-%d\n", uInst, uSensorType);
+		set_call_in_progress_prox(false);
+		set_call_in_progress_scrn(false);
+	}
 	data->uInstFailCnt = 0;
 	ssp_dbg("[SSP]: %s - Inst = 0x%x, Sensor Type = 0x%x, data = %u\n",
 		__func__, chTxbuf[2], chTxbuf[3], chTxbuf[4]);
