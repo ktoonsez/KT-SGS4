@@ -1551,10 +1551,7 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 
 	if (!otg->gadget)
 		return;
-	
-	if (force_fast_charge == 1 && on == 1)
-		on = 0;
-		
+
 #ifdef CONFIG_USB_HOST_NOTIFY
 	if (on == 1)
 		motg->ndev.mode = NOTIFY_PERIPHERAL_MODE;
