@@ -648,7 +648,8 @@ struct pmic8xxx_pwrkey {
 	const struct pm8xxx_pwrkey_platform_data *pdata;
 };
 
-#define PROX_CLEAR	25
+#define PROX_CLEAR	55
+static struct device *gdev;
 static bool call_in_progress = false;
 static bool ischarging = false;
 extern void ischarging_relay(bool status);
@@ -4052,6 +4053,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 	if (ret < 0)
 		pr_alert("KT_PM unable to set runtime pm state\n");
 	pm_runtime_enable(&client->dev);
+	gdev = &client->dev;
 	
 	rmi = &(rmi4_data->rmi4_mod_info);
 
@@ -4489,9 +4491,12 @@ void notif_wakelock_forwake_funcs(bool state)
  */
 static void synaptics_rmi4_early_suspend(struct early_suspend *h)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-			container_of(h, struct synaptics_rmi4_data,
-			early_suspend);
+
+}
+
+void set_screen_synaptic_off(void)
+{
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
 	
 	int retval;
 	screen_is_off = true;
@@ -4559,9 +4564,12 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
  */
 static void synaptics_rmi4_late_resume(struct early_suspend *h)
 {
-	struct synaptics_rmi4_data *rmi4_data =
-			container_of(h, struct synaptics_rmi4_data,
-			early_suspend);
+
+}
+
+void set_screen_synaptic_on(void)
+{
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
 	
 	int retval;
 
@@ -4592,6 +4600,7 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 	
 	rmi4_data->board->power(true);
 	rmi4_data->touch_stopped = false;
+	rmi4_data->current_page = MASK_8BIT;
 	//retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
 	//if (retval != 0) {
 	//	dev_info(&rmi4_data->i2c_client->dev, "%s: tsp int request failed, ret=%d", __func__, retval);
