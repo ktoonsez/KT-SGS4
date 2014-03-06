@@ -921,6 +921,52 @@ static ssize_t synaptics_rmi4_f51_enables_store(struct device *dev,
 }
 #endif
 
+static void check_options_while_soff(struct device *dev)
+{
+	if (!wakelock_held && screen_is_off)
+	{
+		if (screen_wake_options_hold_wlock == 1 || (screen_wake_options_hold_wlock >= 3 && screen_wake_options_hold_wlock <= 10))
+		{
+			wakelock_held = true;
+			if (screen_wake_options_hold_wlock == 1)
+				wake_lock(&wakelock);
+			else if (screen_wake_options_hold_wlock == 3)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(30000));
+			else if (screen_wake_options_hold_wlock == 4)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(60000));
+			else if (screen_wake_options_hold_wlock == 5)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(120000));
+			else if (screen_wake_options_hold_wlock == 6)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(300000));
+			else if (screen_wake_options_hold_wlock == 7)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(600000));
+			else if (screen_wake_options_hold_wlock == 8)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(1800000));
+			else if (screen_wake_options_hold_wlock == 9)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(3600000));
+			else if (screen_wake_options_hold_wlock == 10)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(7200000));
+		}
+	}
+	if (screen_wake_options && !screen_wake_options_when_off && screen_is_off)
+	{
+		int retval;
+		struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+		char chTempbuf[2] = { 1, 20};
+		rmi4_data->board->power(true);
+		rmi4_data->touch_stopped = false;
+		if (!rmi4_data->irq_enabled)
+		{
+			enable_irq(rmi4_data->i2c_client->irq);
+			rmi4_data->irq_enabled = true;
+		}
+		send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+		main_prox_data->bProximityRawEnabled = true;
+		enable_irq_wake(rmi4_data->i2c_client->irq);
+		screen_wake_options_when_off = screen_wake_options;
+	}
+}
+
 static ssize_t synaptics_rmi4_screen_wake_options_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -938,6 +984,8 @@ static ssize_t synaptics_rmi4_screen_wake_options_store(struct device *dev,
 	if (retval != 0 && val >= 0 && val <= 6) {
 		screen_wake_options = val;
 	}
+	check_options_while_soff(dev);
+
 	return count;
 }
 
@@ -978,6 +1026,7 @@ static ssize_t synaptics_rmi4_screen_wake_options_hold_wlock_store(struct device
 	if (retval != 0 && val >= 0 && val <= 18) {
 		screen_wake_options_hold_wlock = val;
 	}
+	check_options_while_soff(dev);
 	return count;
 
 }
