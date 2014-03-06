@@ -173,6 +173,7 @@ static int led_debug_enable = 0;
 
 static void an30259a_start_led_pattern(int mode);
 static void an30259a_set_led_blink(enum an30259a_led_enum led, unsigned int delay_on_time, unsigned int delay_off_time, u8 brightness);
+extern void notif_wakelock_forwake_funcs(bool state);
 
 /*path : /sys/class/sec/led/led_pattern*/
 /*path : /sys/class/sec/led/led_blink*/
@@ -466,7 +467,11 @@ static void an30259a_start_led_pattern(int mode)
 			return;
 		}
 	}
-
+	if (mode == LED_OFF || mode == POWERING || mode == CHARGING)
+		notif_wakelock_forwake_funcs(false);
+	else
+		notif_wakelock_forwake_funcs(true);
+		
 	if (mode > POWERING)
 		return;
 	/* Set all LEDs Off */
@@ -594,7 +599,11 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 			return;
 		}
 	}
-			
+	if (brightness == LED_OFF)
+		notif_wakelock_forwake_funcs(false);
+	else
+		notif_wakelock_forwake_funcs(true);
+
 	if (brightness == LED_OFF) {
 		leds_on(led, false, false, brightness);
 		return;
