@@ -35,6 +35,8 @@ extern void set_screen_on_off_flag(bool onoff);
 extern void set_screen_on_off_flaghk(bool onoff);
 extern void screen_is_on_relay_kt(bool state);
 extern void check_prox_value_trig(bool trig);
+extern void set_screen_synaptic_on(void);
+extern void set_screen_synaptic_off(void);
 
 void ktoonservative_is_activebd(bool val)
 {
@@ -927,6 +929,7 @@ static int mipi_panel_power_oled(int enable)
 			return -ENODEV;
 		}
 #endif
+		set_screen_synaptic_on();
 		set_screen_on_off_mhz(true);
 		set_screen_on_off_flag(true);
 		set_screen_on_off_flaghk(true);
@@ -963,6 +966,7 @@ static int mipi_panel_power_oled(int enable)
 			pr_err("disable reg_L30 failed, rc=%d\n", rc);
 			return -ENODEV;
 		}
+		set_screen_synaptic_off();
 		set_screen_on_off_mhz(false);
 		set_screen_on_off_flag(false);
 		set_screen_on_off_flaghk(false);
