@@ -4644,7 +4644,6 @@ void set_screen_synaptic_on(void)
 	
 	rmi4_data->board->power(true);
 	rmi4_data->touch_stopped = false;
-	rmi4_data->current_page = MASK_8BIT;
 	//retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
 	//if (retval != 0) {
 	//	dev_info(&rmi4_data->i2c_client->dev, "%s: tsp int request failed, ret=%d", __func__, retval);
