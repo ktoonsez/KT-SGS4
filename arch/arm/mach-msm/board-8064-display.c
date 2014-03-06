@@ -34,6 +34,7 @@ extern void set_screen_on_off_mhz(bool onoff);
 extern void set_screen_on_off_flag(bool onoff);
 extern void set_screen_on_off_flaghk(bool onoff);
 extern void screen_is_on_relay_kt(bool state);
+extern void check_prox_value_trig(bool trig);
 
 void ktoonservative_is_activebd(bool val)
 {
@@ -886,6 +887,7 @@ static int mipi_panel_power_oled(int enable)
 		set_screen_on_off_mhz(true);
 		set_screen_on_off_flag(true);
 		set_screen_on_off_flaghk(true);
+		check_prox_value_trig(false);
 		if (ktoonservative_is_activef)
 			screen_is_on_relay_kt(true);
 	} else {
@@ -920,6 +922,7 @@ static int mipi_panel_power_oled(int enable)
 		set_screen_on_off_mhz(false);
 		set_screen_on_off_flag(false);
 		set_screen_on_off_flaghk(false);
+		check_prox_value_trig(true);
 		if (ktoonservative_is_activef)
 			screen_is_on_relay_kt(false);
 		//pr_alert("KT_RELAY_CALL  FROM SCREEN\n");
