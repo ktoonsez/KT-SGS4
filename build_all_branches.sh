@@ -74,6 +74,11 @@ echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
+./build_tmo.sh
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
 ./build_intl.sh
 
 
