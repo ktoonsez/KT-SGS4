@@ -637,6 +637,7 @@ static struct synaptics_rmi4_f51_handle *f51;
 
 /********** START KT wake functions **********/
 static void synaptics_rmi4_release_all_finger(struct synaptics_rmi4_data *rmi4_data);
+static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data);
 extern unsigned char get_proximity_rawdata(struct ssp_data *data);
 int send_instruction(struct ssp_data *data, u8 uInst, u8 uSensorType, u8 *uSendBuf, u8 uLength);
 struct ssp_data *main_prox_data;
@@ -2343,12 +2344,12 @@ static int synaptics_rmi4_sensor_report(struct synaptics_rmi4_data *rmi4_data)
 
 		dev_err(&rmi4_data->i2c_client->dev,
 			"Spontaneous reset detected\n");
-		/*retval = synaptics_rmi4_reinit_device(rmi4_data);
+		retval = synaptics_rmi4_reinit_device(rmi4_data);
 		if (retval < 0) {
 			dev_err(&rmi4_data->i2c_client->dev,
 					"%s: Failed to reinit device\n",
 					__func__);
-		}*/
+		}
 		synaptics_rmi4_release_all_finger(rmi4_data);
 		return 0;
 	}
@@ -3772,6 +3773,69 @@ exit:
 }
 #endif
 
+static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
+{
+	int retval;
+	unsigned char ii = 0;
+	unsigned short intr_addr;
+	struct synaptics_rmi4_fn *fhandler;
+	struct synaptics_rmi4_device_info *rmi;
+
+	rmi = &(rmi4_data->rmi4_mod_info);
+
+	if (!list_empty(&rmi->support_fn_list)) {
+		list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
+			if (fhandler->fn_number == SYNAPTICS_RMI4_F12) {
+				retval = synaptics_rmi4_f12_set_enables(rmi4_data, 0);
+				if (retval < 0)
+					return retval;
+				break;
+			}
+		}
+	}
+#ifdef CONFIG_GLOVE_TOUCH
+	synaptics_rmi4_glove_mode_enables(rmi4_data);
+#endif
+#ifdef PROXIMITY
+	if (!f51) {
+		dev_info(&rmi4_data->i2c_client->dev,
+			"%s: f51 is no available.\n", __func__);
+		return -ENODEV;
+	}
+	dev_info(&rmi4_data->i2c_client->dev, "%s: proximity controls:[0X%02X]\n",
+			__func__, f51->proximity_controls);
+
+#ifdef USE_CUSTOM_REZERO
+	synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
+
+	msleep(100);
+#endif
+
+	retval = synaptics_rmi4_f51_set_enables(rmi4_data);
+	if (retval < 0)
+		return retval;
+
+#endif
+	for (ii = 0; ii < rmi4_data->num_of_intr_regs; ii++) {
+		if (rmi4_data->intr_mask[ii] != 0x00) {
+			dev_info(&rmi4_data->i2c_client->dev,
+					"%s: Interrupt enable mask register[%d] = 0x%02x\n",
+					__func__, ii, rmi4_data->intr_mask[ii]);
+			intr_addr = rmi4_data->f01_ctrl_base_addr + 1 + ii;
+			retval = synaptics_rmi4_i2c_write(rmi4_data,
+					intr_addr,
+					&(rmi4_data->intr_mask[ii]),
+					sizeof(rmi4_data->intr_mask[ii]));
+			if (retval < 0)
+				return retval;
+		}
+	}
+
+	synaptics_rmi4_set_configured(rmi4_data);
+
+	return 0;
+}
+
 static void synaptics_rmi4_release_all_finger(
 	struct synaptics_rmi4_data *rmi4_data)
 {
@@ -4705,7 +4769,8 @@ void set_screen_synaptic_on(void)
 	if (!rmi4_data->irq_enabled)
 	{
 		enable_irq(rmi4_data->i2c_client->irq);
-		pr_alert("IRQ DISABLED FROM EXTERNAL");
+		if (screen_wake_options_when_off)
+			pr_alert("IRQ DISABLED FROM EXTERNAL");
 	}
 	rmi4_data->irq_enabled = true;
 	
