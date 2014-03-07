@@ -223,6 +223,12 @@ static ssize_t synaptics_rmi4_screen_wake_options_show(struct device *dev,
 static ssize_t synaptics_rmi4_screen_wake_options_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+static ssize_t synaptics_rmi4_screen_wake_options_prox_max_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static ssize_t synaptics_rmi4_screen_wake_options_prox_max_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
 static ssize_t synaptics_rmi4_screen_wake_options_debug_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 
@@ -618,6 +624,9 @@ static struct device_attribute attrs[] = {
 	__ATTR(screen_wake_options_hold_wlock, (S_IRUGO | S_IWUSR | S_IWGRP),
 			synaptics_rmi4_screen_wake_options_hold_wlock_show,
 			synaptics_rmi4_screen_wake_options_hold_wlock_store),
+	__ATTR(screen_wake_options_prox_max, (S_IRUGO | S_IWUSR | S_IWGRP),
+			synaptics_rmi4_screen_wake_options_prox_max_show,
+			synaptics_rmi4_screen_wake_options_prox_max_store),
 };
 
 static struct list_head exp_fn_list;
@@ -646,7 +655,6 @@ struct pmic8xxx_pwrkey {
 	const struct pm8xxx_pwrkey_platform_data *pdata;
 };
 
-#define PROX_CLEAR	55
 static struct device *gdev;
 static bool call_in_progress = false;
 static bool ischarging = false;
@@ -664,6 +672,7 @@ static unsigned int x_hi;
 static unsigned int y_hi;
 static bool screen_is_off = false;
 static unsigned int screen_wake_options = 0; // 0 = disabled; 1 = s2w; 2 = s2w only while charging; 3 = dtap2wake; 4 = dtap2wake only while charging; 5 = both
+static unsigned int screen_wake_options_prox_max = 55;
 static unsigned int screen_wake_options_debug = 0;
 static unsigned int screen_wake_options_hold_wlock = 0;
 static unsigned int screen_wake_options_when_off = 0;
@@ -1012,6 +1021,27 @@ static ssize_t synaptics_rmi4_screen_wake_options_store(struct device *dev,
 		screen_wake_options = val;
 	}
 	check_options_while_soff(dev);
+
+	return count;
+}
+
+static ssize_t synaptics_rmi4_screen_wake_options_prox_max_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int ret;
+	ret = sprintf(buf, "%d\n", screen_wake_options_prox_max);
+	return ret;
+}
+static ssize_t synaptics_rmi4_screen_wake_options_prox_max_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int retval;
+	unsigned int val = 0;
+
+	retval = sscanf(buf, "%d", &val);
+	if (retval != 0 && val >= 0 && val <= 255) {
+		screen_wake_options_prox_max = val;
+	}
 
 	return count;
 }
@@ -1793,7 +1823,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			{
 				unsigned char prox;
 				prox = main_prox_data->buf[PROXIMITY_RAW].prox[0];//get_proximity_rawdata(main_prox_data);
-				if (prox <= PROX_CLEAR && !call_in_progress)
+				if (prox <= screen_wake_options_prox_max && !call_in_progress)
 					{
 					//sweep2wake
 					if ((screen_wake_options == 1 || (screen_wake_options == 2 && ischarging) || screen_wake_options == 5 || (screen_wake_options == 6 && ischarging)) && !rmi4_data->finger[finger].state)
