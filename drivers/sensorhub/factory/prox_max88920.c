@@ -81,8 +81,8 @@ static int prox_val_step_pocket = 0;
 static unsigned long  prox_val_step_pocket_tout = 0;
 static int prox_timer_length = 1000;
 struct device *gdev;
-#define PROX_CLEAR		25
-#define PROX_BLOCKED		220
+static unsigned int wake_options_prox_max = 55;
+#define PROX_BLOCKED		200
 #define PROX_POCKET_LENGTH	10
 
 static ssize_t prox_vendor_show(struct device *dev,
@@ -621,6 +621,10 @@ void ischarging_relay(bool status)
 {
 	ischarging = status;
 }
+void prox_max_relay(unsigned int val)
+{
+	wake_options_prox_max = val;
+}
 
 static void check_prox_value(struct work_struct *work)
 {
@@ -631,7 +635,7 @@ static void check_prox_value(struct work_struct *work)
 	{
 		if (prox_val_step_wave == 0)
 		{
-			if (prox_val <= PROX_CLEAR && prox > prox_val+30)
+			if (prox_val <= wake_options_prox_max && prox > prox_val+30)
 			{
 				prox_val_step_wave = 1;
 				if (!prox_val_step_wave_tout)
@@ -646,7 +650,7 @@ static void check_prox_value(struct work_struct *work)
 		}
 		else if (prox_val_step_wave == 2 || prox_val_step_wave == 4)
 		{
-			if (prox <= PROX_CLEAR)
+			if (prox <= wake_options_prox_max)
 			{
 				if (prox_val_step_wave == 2)
 					prox_val_step_wave = 3;
@@ -681,7 +685,7 @@ static void check_prox_value(struct work_struct *work)
 		}
 		else if (prox_val_step_pocket == 1)
 		{
-			if (prox <= PROX_CLEAR)
+			if (prox <= wake_options_prox_max)
 			{
 				if (jiffies_to_msecs(jiffies) - prox_val_step_pocket_tout >= 10000)
 				{
