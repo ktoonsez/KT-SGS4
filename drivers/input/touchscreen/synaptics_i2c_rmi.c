@@ -3806,7 +3806,7 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 			__func__, f51->proximity_controls);
 
 #ifdef USE_CUSTOM_REZERO
-	synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
+	//synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
 
 	msleep(100);
 #endif
@@ -4580,12 +4580,12 @@ static int synaptics_rmi4_input_open(struct input_dev *dev)
 #if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_PREVENT_HSYNC_LEAKAGE)
 		rmi4_data->board->hsync_onoff(true);
 #endif
-		/*ret = synaptics_rmi4_reinit_device(rmi4_data);
+		ret = synaptics_rmi4_reinit_device(rmi4_data);
 		if (ret < 0) {
 			dev_err(&rmi4_data->i2c_client->dev,
 					"%s: Failed to reinit device\n",
 					__func__);
-		}*/
+		}
 
 		enable_irq(rmi4_data->i2c_client->irq);
 
@@ -4732,7 +4732,8 @@ void set_screen_synaptic_on(void)
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
 	
 	int retval;
-
+	int ret;
+	
 	mutex_lock(&rmi4_data->input_dev->mutex);
 
 	wake_start = 0;
@@ -4763,6 +4764,13 @@ void set_screen_synaptic_on(void)
 	rmi4_data->board->power(true);
 	rmi4_data->touch_stopped = false;
 	rmi4_data->current_page = MASK_8BIT;
+	
+	ret = synaptics_rmi4_reinit_device(rmi4_data);
+	if (ret < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to reinit device\n",
+				__func__);
+	}
 
 	if (rmi4_data->ta_status)
 		synaptics_charger_conn(rmi4_data, rmi4_data->ta_status);
@@ -4846,12 +4854,12 @@ static int synaptics_rmi4_resume(struct device *dev)
 			rmi4_data->board->power(true);
 			rmi4_data->touch_stopped = false;
 
-			/*retval = synaptics_rmi4_reinit_device(rmi4_data);
+			retval = synaptics_rmi4_reinit_device(rmi4_data);
 			if (retval < 0) {
 				dev_err(&rmi4_data->i2c_client->dev,
 						"%s: Failed to reinit device\n",
 						__func__);
-			}*/
+			}
 			enable_irq(rmi4_data->i2c_client->irq);
 
 			dev_dbg(&rmi4_data->i2c_client->dev, "%s -\n", __func__);
