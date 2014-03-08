@@ -3063,8 +3063,8 @@ static int synaptics_rmi4_f51_set_enables(struct synaptics_rmi4_data *rmi4_data)
 		return retval;
 
 #ifdef USE_CUSTOM_REZERO
-	if (f51->proximity_enables & 0x01)
-		synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
+	//if (f51->proximity_enables & 0x01)
+	//	synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
 #endif
 
 	return 0;
