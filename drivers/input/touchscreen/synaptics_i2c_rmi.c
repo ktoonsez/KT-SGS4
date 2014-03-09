@@ -4685,6 +4685,7 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
 
 void set_screen_synaptic_off(void)
 {
+	int retval;
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
 	
 	screen_is_off = true;
