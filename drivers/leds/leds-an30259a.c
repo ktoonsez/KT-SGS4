@@ -467,7 +467,7 @@ static void an30259a_start_led_pattern(int mode)
 			return;
 		}
 	}
-	if (mode == LED_OFF || mode == POWERING || mode == CHARGING)
+	if (mode == LED_OFF || mode == POWERING)
 		notif_wakelock_forwake_funcs(false);
 	else
 		notif_wakelock_forwake_funcs(true);
