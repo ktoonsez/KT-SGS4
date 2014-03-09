@@ -533,16 +533,48 @@ static void an30259a_start_led_pattern(int mode)
 		pr_info("LED Missed Notifications Pattern on\n");
 		leds_on(LED_B, true, true,
 					led_b_brightness);
-		leds_set_slope_mode(client, LED_B,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		if (led_enable_fade == 1)
+		{
+			if (led_time_on)
+				delay_on_time = led_time_on;
+			if (led_time_off)
+				delay_off_time = led_time_off;
+			leds_on(LED_B, true, true,
+						led_r_brightness);
+			leds_set_slope_mode(client, LED_B, 0, 30, 15, 0,
+				(delay_on_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				(delay_off_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				led_step_speed1, led_step_speed2, led_step_speed3, led_step_speed4);
+		}
+		else
+			leds_set_slope_mode(client, LED_B, 10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		
 		break;
 
 	case LOW_BATTERY:
 		pr_info("LED Low Battery Pattern on\n");
 		leds_on(LED_R, true, true,
 					led_r_brightness);
-		leds_set_slope_mode(client, LED_R,
-					10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		if (led_enable_fade == 1)
+		{
+			if (led_time_on)
+				delay_on_time = led_time_on;
+			if (led_time_off)
+				delay_off_time = led_time_off;
+			leds_on(LED_R, true, true,
+						led_r_brightness);
+			leds_set_slope_mode(client, LED_R, 0, 30, 15, 0,
+				(delay_on_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				(delay_off_time + AN30259A_TIME_UNIT - 1) /
+				AN30259A_TIME_UNIT,
+				led_step_speed1, led_step_speed2, led_step_speed3, led_step_speed4);
+		}
+		else
+			leds_set_slope_mode(client, LED_R, 10, 15, 15, 0, 1, 10, 0, 0, 0, 0);
+		
 		break;
 
 	case FULLY_CHARGED:
