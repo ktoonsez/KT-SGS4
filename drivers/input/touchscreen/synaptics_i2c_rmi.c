@@ -665,7 +665,6 @@ extern void prox_max_relay(unsigned int val);
 static struct wake_lock wakelock;
 static struct delayed_work wakelock_monitor;
 static bool notif_cancel_work = false;
-static bool isbooted = false;
 static unsigned long last_touch_time = 0;
 static unsigned int wake_start = 0;
 static unsigned int x_lo;
@@ -4621,19 +4620,15 @@ void set_screen_synaptic_off(void)
 	set_wakelock_options(true);
 	if (screen_wake_options)
 	{
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d - %d", screen_wake_options, isbooted, ischarging);
-		//rmi4_data->stay_awake = true;
-		if (isbooted)
-		{
-			char chTempbuf[2] = { 1, 20};
-			send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-			main_prox_data->bProximityRawEnabled = true;
-			enable_irq_wake(rmi4_data->i2c_client->irq);
-		}
+		char chTempbuf[2] = { 1, 20};
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d ", screen_wake_options, ischarging);
+		send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+		main_prox_data->bProximityRawEnabled = true;
+		enable_irq_wake(rmi4_data->i2c_client->irq);
 	}
 	else
 	{
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d - %d", screen_wake_options, isbooted, ischarging);
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d", screen_wake_options, ischarging);
 		disable_irq(rmi4_data->i2c_client->irq);
 		rmi4_data->irq_enabled = false;
 		gpio_free(rmi4_data->board->gpio);
@@ -4643,7 +4638,6 @@ void set_screen_synaptic_off(void)
 	// release all finger when entered suspend 
 	synaptics_rmi4_release_all_finger(rmi4_data);
 	screen_wake_options_when_off = screen_wake_options;
-	isbooted = true;
 	
 	mutex_unlock(&rmi4_data->input_dev->mutex);
 }
