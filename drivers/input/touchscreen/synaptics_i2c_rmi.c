@@ -1874,22 +1874,24 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 					//Double Tap 2 wake
 					if ((screen_wake_options == 3 || (screen_wake_options == 4 && ischarging) || screen_wake_options == 5 || (screen_wake_options == 6 && ischarging)) && !rmi4_data->finger[finger].state)
 					{
+						bool block_store = false;
 						if (last_touch_time)
 						{
-							if (screen_wake_options_debug) pr_alert("DOUBLE TAP WAKE TOUCH %d-%d-%ld-%ld\n", x, y, jiffies, last_touch_time);
-							if ((jiffies - last_touch_time < 300)) //(x < x_lo) && (y > y_hi) && 
+							if (screen_wake_options_debug) pr_alert("DOUBLE TAP WAKE TOUCH %d-%d-%ld-%ld-%d\n", x, y, jiffies, last_touch_time, touch_count);
+							if (!touch_count && jiffies_to_msecs(jiffies - last_touch_time) < 2000) //(x < x_lo) && (y > y_hi) && //jiffies_to_msecs(jiffies - last_touch_time) > 50
 							{
 								if (screen_wake_options_debug) pr_alert("DOUBLE TAP WAKE WAKING %d-%d\n", x, y);
 								pwr_trig_fscreen();
-								last_touch_time = 0;
+								block_store = true;
 							}
 							else
 							{
 								if (screen_wake_options_debug) pr_alert("DOUBLE TAP WAKE DELETE %d-%d-%ld-%ld\n", x, y, jiffies, last_touch_time);
 								last_touch_time = 0;
+								block_store = true;
 							}
 						}
-						if (!last_touch_time)
+						if (!last_touch_time && !block_store)
 							last_touch_time = jiffies;
 					}
 				}
@@ -4561,33 +4563,36 @@ void set_call_in_progress_scrn(bool state)
 
 void notif_wakelock_forwake_funcs(bool state)
 {
-	if (state && !wake_lock_active(&wakelock) && (screen_wake_options_hold_wlock == 2 || (screen_wake_options_hold_wlock >= 12 && screen_wake_options_hold_wlock <= 19)))
+	if (screen_wake_options_hold_wlock == 2 || (screen_wake_options_hold_wlock >= 12 && screen_wake_options_hold_wlock <= 19))
 	{
-		schedule_delayed_work_on(0, &wakelock_monitor, msecs_to_jiffies(5000));
-		notif_cancel_work = false;
-		if (screen_wake_options_hold_wlock == 2)
-			wake_lock(&wakelock);
-		else if (screen_wake_options_hold_wlock == 12)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(30000));
-		else if (screen_wake_options_hold_wlock == 13)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(60000));
-		else if (screen_wake_options_hold_wlock == 14)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(120000));
-		else if (screen_wake_options_hold_wlock == 15)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(300000));
-		else if (screen_wake_options_hold_wlock == 16)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(600000));
-		else if (screen_wake_options_hold_wlock == 17)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(1800000));
-		else if (screen_wake_options_hold_wlock == 18)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(3600000));
-		else if (screen_wake_options_hold_wlock == 19)
-			wake_lock_timeout(&wakelock, msecs_to_jiffies(7200000));
-	}
-	else if (!state && wake_lock_active(&wakelock))
-	{
-		notif_cancel_work = true;
-		wake_unlock(&wakelock);
+		if (state && !wake_lock_active(&wakelock))
+		{
+			schedule_delayed_work_on(0, &wakelock_monitor, msecs_to_jiffies(5000));
+			notif_cancel_work = false;
+			if (screen_wake_options_hold_wlock == 2)
+				wake_lock(&wakelock);
+			else if (screen_wake_options_hold_wlock == 12)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(30000));
+			else if (screen_wake_options_hold_wlock == 13)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(60000));
+			else if (screen_wake_options_hold_wlock == 14)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(120000));
+			else if (screen_wake_options_hold_wlock == 15)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(300000));
+			else if (screen_wake_options_hold_wlock == 16)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(600000));
+			else if (screen_wake_options_hold_wlock == 17)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(1800000));
+			else if (screen_wake_options_hold_wlock == 18)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(3600000));
+			else if (screen_wake_options_hold_wlock == 19)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(7200000));
+		}
+		else if (!state && wake_lock_active(&wakelock))
+		{
+			notif_cancel_work = true;
+			wake_unlock(&wakelock);
+		}
 	}
 }
 
