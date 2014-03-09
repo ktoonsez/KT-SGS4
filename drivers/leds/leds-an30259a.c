@@ -366,6 +366,7 @@ static bool check_restrictions(void)
 	{
 		/* Set all LEDs Off */
 		an30259a_reset_register_work(0);
+		notif_wakelock_forwake_funcs(false);
 		ret = false;
 		goto skipitall;
 	}
@@ -396,6 +397,7 @@ static bool check_restrictions(void)
 		{
 			/* Set all LEDs Off */
 			an30259a_reset_register_work(0);
+			notif_wakelock_forwake_funcs(false);
 		}
 		
 		//Check to see if its ok to turn on LED now but was blocking previously
