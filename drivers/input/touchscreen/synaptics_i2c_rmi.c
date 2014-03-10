@@ -664,7 +664,8 @@ extern void ischarging_relay(bool status);
 extern void prox_max_relay(unsigned int val);
 static struct wake_lock wakelock;
 static struct delayed_work wakelock_monitor;
-static bool notif_cancel_work = false;
+static unsigned long wakelock_time_remaining = 0;
+static bool cancel_monitor_work = false;
 static unsigned long last_touch_time = 0;
 static unsigned int wake_start = 0;
 static unsigned int x_lo;
@@ -937,29 +938,32 @@ static void set_wakelock_options(bool setWork)
 	{
 		if (screen_wake_options_hold_wlock == 1 || (screen_wake_options_hold_wlock == 3 && ischarging) || (screen_wake_options_hold_wlock >= 4 && screen_wake_options_hold_wlock <= 11))
 		{
+			wakelock_time_remaining = 0;
 			if (screen_wake_options_hold_wlock == 1 || (screen_wake_options_hold_wlock == 3 && ischarging))
 				wake_lock(&wakelock);
 			else if (screen_wake_options_hold_wlock == 4)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(30000));
+				wakelock_time_remaining = 30000;
 			else if (screen_wake_options_hold_wlock == 5)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(60000));
+				wakelock_time_remaining = 60000;
 			else if (screen_wake_options_hold_wlock == 6)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(120000));
+				wakelock_time_remaining = 120000;
 			else if (screen_wake_options_hold_wlock == 7)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(300000));
+				wakelock_time_remaining = 300000;
 			else if (screen_wake_options_hold_wlock == 8)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(600000));
+				wakelock_time_remaining = 600000;
 			else if (screen_wake_options_hold_wlock == 9)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(1800000));
+				wakelock_time_remaining = 1800000;
 			else if (screen_wake_options_hold_wlock == 10)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(3600000));
+				wakelock_time_remaining = 3600000;
 			else if (screen_wake_options_hold_wlock == 11)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(7200000));
-
+				wakelock_time_remaining = 7200000;
+			
+			if (wakelock_time_remaining)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(wakelock_time_remaining));
 			if (setWork)
 			{
 				schedule_delayed_work_on(0, &wakelock_monitor, msecs_to_jiffies(5000));
-				notif_cancel_work = false;
+				cancel_monitor_work = false;
 			}
 		}
 	}
@@ -967,12 +971,43 @@ static void set_wakelock_options(bool setWork)
 
 static void wakelock_monitor_func(struct work_struct *work)
 {
-	if (!wake_lock_active(&wakelock) && screen_is_off)
-		set_wakelock_options(false);
-	if (screen_is_off && !notif_cancel_work)
+	int did_jumpstart = 0;
+	bool wloc_active = wake_lock_active(&wakelock);
+	long timeout = wakelock.expires - jiffies;
+
+	if (wakelock_time_remaining >= 5000)
+		wakelock_time_remaining -= 5000;
+	else if (wakelock_time_remaining < 5000)
+		wakelock_time_remaining = 0;
+	
+	if (screen_is_off && !cancel_monitor_work)
+	{
+		if (!wloc_active && (screen_wake_options_hold_wlock == 1 || (screen_wake_options_hold_wlock == 2 && !cancel_monitor_work) || (screen_wake_options_hold_wlock == 3 && ischarging && !cancel_monitor_work)))
+		{
+			wake_lock(&wakelock);
+			did_jumpstart = 1;
+		}
+		else if (screen_wake_options_hold_wlock >= 4)
+		{
+			if (!wloc_active && wakelock_time_remaining > 0)
+			{
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(wakelock_time_remaining));
+				did_jumpstart = 2;
+			}
+			else if (wakelock_time_remaining <= 0)
+				cancel_monitor_work = true;
+		}
+	}
+
+	if (screen_wake_options_debug) pr_alert("KT WAKE MONITOR: LockActive-%d TimeRemain-%ld Expires-%ld CancelWork-%d Jumpstart-%s\n", wloc_active, wakelock_time_remaining, timeout, cancel_monitor_work, did_jumpstart == 1 ? "Timed mode" : did_jumpstart == 2 ? "Permanent mode" : "NONE");
+
+	if (screen_is_off && !cancel_monitor_work)
 		schedule_delayed_work_on(0, &wakelock_monitor, msecs_to_jiffies(5000));
-	if (notif_cancel_work)
-		notif_cancel_work = false;
+	if (cancel_monitor_work || !screen_is_off)
+	{
+		cancel_monitor_work = false;
+		wakelock_time_remaining = 0;
+	}
 }
 
 static void check_options_while_soff(struct device *dev)
@@ -3894,7 +3929,7 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 	{
 		charger_connected |= CHARGER_CONNECTED;
 		ischarging = true;
-		notif_cancel_work = false;
+		cancel_monitor_work = false;
 		set_wakelock_options(true);
 	}
 	else
@@ -3903,7 +3938,7 @@ static void synaptics_charger_conn(struct synaptics_rmi4_data *rmi4_data,
 		ischarging = false;
 		if (screen_wake_options_hold_wlock == 3)
 		{
-			notif_cancel_work = true;
+			cancel_monitor_work = true;
 			wake_unlock(&wakelock);
 		}
 	}
@@ -4567,29 +4602,34 @@ void notif_wakelock_forwake_funcs(bool state)
 		if (state && !wake_lock_active(&wakelock))
 		{
 			schedule_delayed_work_on(0, &wakelock_monitor, msecs_to_jiffies(5000));
-			notif_cancel_work = false;
+			cancel_monitor_work = false;
+			wakelock_time_remaining = 0;
+			
 			if (screen_wake_options_hold_wlock == 2)
 				wake_lock(&wakelock);
 			else if (screen_wake_options_hold_wlock == 12)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(30000));
+				wakelock_time_remaining = 30000;
 			else if (screen_wake_options_hold_wlock == 13)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(60000));
+				wakelock_time_remaining = 60000;
 			else if (screen_wake_options_hold_wlock == 14)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(120000));
+				wakelock_time_remaining = 120000;
 			else if (screen_wake_options_hold_wlock == 15)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(300000));
+				wakelock_time_remaining = 300000;
 			else if (screen_wake_options_hold_wlock == 16)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(600000));
+				wakelock_time_remaining = 600000;
 			else if (screen_wake_options_hold_wlock == 17)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(1800000));
+				wakelock_time_remaining = 1800000;
 			else if (screen_wake_options_hold_wlock == 18)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(3600000));
+				wakelock_time_remaining = 3600000;
 			else if (screen_wake_options_hold_wlock == 19)
-				wake_lock_timeout(&wakelock, msecs_to_jiffies(7200000));
+				wakelock_time_remaining = 7200000;
+
+			if (wakelock_time_remaining)
+				wake_lock_timeout(&wakelock, msecs_to_jiffies(wakelock_time_remaining));
 		}
 		else if (!state && wake_lock_active(&wakelock))
 		{
-			notif_cancel_work = true;
+			cancel_monitor_work = true;
 			wake_unlock(&wakelock);
 		}
 	}
