@@ -1027,8 +1027,13 @@ static void check_options_while_soff(struct device *dev)
 			enable_irq(rmi4_data->i2c_client->irq);
 			rmi4_data->irq_enabled = true;
 		}
-		send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-		main_prox_data->bProximityRawEnabled = true;
+		
+		if (main_prox_data != NULL)
+		{
+			send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+			main_prox_data->bProximityRawEnabled = true;
+		}
+
 		enable_irq_wake(rmi4_data->i2c_client->irq);
 		screen_wake_options_when_off = screen_wake_options;
 	}
@@ -1858,7 +1863,10 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			if (screen_is_off && screen_wake_options)
 			{
 				unsigned char prox;
-				prox = main_prox_data->buf[PROXIMITY_RAW].prox[0];//get_proximity_rawdata(main_prox_data);
+				if (main_prox_data != NULL)
+				{
+					prox = main_prox_data->buf[PROXIMITY_RAW].prox[0];//get_proximity_rawdata(main_prox_data);
+				}
 				if (prox <= screen_wake_options_prox_max && !call_in_progress)
 					{
 					//sweep2wake
@@ -4723,9 +4731,15 @@ void set_screen_synaptic_off(void)
 	if (screen_wake_options)
 	{
 		char chTempbuf[2] = { 1, 20};
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d ", screen_wake_options, ischarging);
-		send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-		main_prox_data->bProximityRawEnabled = true;
+
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d", screen_wake_options, ischarging);
+
+		if (main_prox_data != NULL)
+		{
+			send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+			main_prox_data->bProximityRawEnabled = true;
+		}
+
 		enable_irq_wake(rmi4_data->i2c_client->irq);
 	}
 	else
@@ -4778,8 +4792,11 @@ void set_screen_synaptic_on(void)
 	{
 		char chTempbuf[2] = { 1, 20};
 		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON1 - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging);
-		send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-		main_prox_data->bProximityRawEnabled = false;
+		if (main_prox_data != NULL)
+		{
+			send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+			main_prox_data->bProximityRawEnabled = false;
+		}
 
 		disable_irq_wake(rmi4_data->i2c_client->irq);
 	}
