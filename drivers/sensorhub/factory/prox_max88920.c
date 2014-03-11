@@ -547,21 +547,27 @@ void check_prox_value_trig(bool trig)
 {
 	if (sensor_wake_options && trig && !call_in_progress)
 	{
-		if (!main_prox_data->bProximityRawEnabled)
+		if (main_prox_data != NULL)
 		{
-			char chTempbuf[2] = { 1, 20};
-			send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-			main_prox_data->bProximityRawEnabled = true;
+			if (!main_prox_data->bProximityRawEnabled)
+			{
+				char chTempbuf[2] = { 1, 20};
+				send_instruction(main_prox_data, ADD_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+				main_prox_data->bProximityRawEnabled = true;
+			}
 		}
 		schedule_delayed_work_on(0, &check_prox_val, msecs_to_jiffies(prox_timer_length));
 	}
 	else
 	{
-		if (main_prox_data->bProximityRawEnabled)
+		if (main_prox_data != NULL)
 		{
-			char chTempbuf[2] = { 1, 20};
-			send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
-			main_prox_data->bProximityRawEnabled = false;
+			if (main_prox_data->bProximityRawEnabled)
+			{
+				char chTempbuf[2] = { 1, 20};
+				send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
+				main_prox_data->bProximityRawEnabled = false;
+			}
 		}
 		prox_val_step_wave = 0;
 		prox_val_step_wave_tout = 0;
