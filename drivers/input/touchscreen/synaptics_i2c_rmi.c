@@ -4244,6 +4244,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 	const struct synaptics_rmi4_platform_data *platform_data =
 			client->dev.platform_data;
 
+	gdev = &client->dev;
 	if (!i2c_check_functionality(client->adapter,
 			I2C_FUNC_SMBUS_BYTE_DATA)) {
 		dev_err(&client->dev,
@@ -4270,7 +4271,6 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 	if (ret < 0)
 		pr_alert("KT_PM unable to set runtime pm state\n");
 	pm_runtime_enable(&client->dev);
-	gdev = &client->dev;
 	
 	rmi = &(rmi4_data->rmi4_mod_info);
 
@@ -4721,9 +4721,13 @@ static void synaptics_rmi4_early_suspend(struct early_suspend *h)
 
 void set_screen_synaptic_off(void)
 {
-	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
-	
 	int retval;
+	struct synaptics_rmi4_data *rmi4_data;
+	
+	if (gdev == NULL)
+		return;
+	rmi4_data = dev_get_drvdata(gdev);
+	
 	screen_is_off = true;
 	
 	mutex_lock(&rmi4_data->input_dev->mutex);
@@ -4774,11 +4778,14 @@ static void synaptics_rmi4_late_resume(struct early_suspend *h)
 
 void set_screen_synaptic_on(void)
 {
-	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(gdev);
-	
 	int retval;
 	int ret;
+	struct synaptics_rmi4_data *rmi4_data;
 	
+	if (gdev == NULL)
+		return;
+	rmi4_data = dev_get_drvdata(gdev);
+
 	mutex_lock(&rmi4_data->input_dev->mutex);
 
 	wake_start = 0;
