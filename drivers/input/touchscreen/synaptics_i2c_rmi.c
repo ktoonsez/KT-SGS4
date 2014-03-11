@@ -687,6 +687,8 @@ void screenwake_setdev(struct pmic8xxx_pwrkey *input_device) {
 	screenwake_pwrdev = input_device;
 	return;
 }
+extern irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey);
+extern irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey);
 
 static void screenwake_presspwr(struct work_struct *screenwake_presspwr_work)
 {
@@ -698,13 +700,15 @@ static void screenwake_presspwr(struct work_struct *screenwake_presspwr_work)
 	msleep(100);
 	input_event(screenwake_pwrdev, EV_SYN, 0, 0);
 	msleep(1000);*/
-	if (screen_wake_options_debug) pr_alert("POWER TRIGGER CALLED");
-	input_report_key(screenwake_pwrdev->pwr, KEY_POWER, 1);
-	input_sync(screenwake_pwrdev->pwr);
-	msleep(500);
-	input_report_key(screenwake_pwrdev->pwr, KEY_POWER, 0);
-	input_sync(screenwake_pwrdev->pwr);
-	msleep(500);
+	//if (screen_wake_options_debug) pr_alert("POWER TRIGGER CALLED");
+	//input_report_key(screenwake_pwrdev->pwr, KEY_POWER, 1);
+	//input_sync(screenwake_pwrdev->pwr);
+	pwrkey_press_irq(screenwake_pwrdev->key_press_irq, screenwake_pwrdev);
+	msleep(200);
+	pwrkey_release_irq(screenwake_pwrdev->key_release_irq, screenwake_pwrdev);
+	//input_report_key(screenwake_pwrdev->pwr, KEY_POWER, 0);
+	//input_sync(screenwake_pwrdev->pwr);
+	//msleep(500);
 	wake_start = 0;
 	last_touch_time = 0;
 	

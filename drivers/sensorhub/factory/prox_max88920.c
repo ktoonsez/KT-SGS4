@@ -581,6 +581,8 @@ void sensorwake_setdev(struct pmic8xxx_pwrkey *input_device) {
 	sensorwake_pwrdev = input_device;
 	return;
 }
+extern irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey);
+extern irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey);
 
 static void sensorwake_presspwr(struct work_struct *work) //(struct work_struct *screenwake_presspwr_work)
 {
@@ -595,11 +597,14 @@ static void sensorwake_presspwr(struct work_struct *work) //(struct work_struct 
 	msleep(500);*/
 	//wake_lock_timeout(&wakelock, msecs_to_jiffies(10000));
 	//pm_wakeup_event(gdev, 2000);
-	input_report_key(sensorwake_pwrdev->pwr, KEY_POWER, 1);
-	input_sync(sensorwake_pwrdev->pwr);
-	msleep(500);
-	input_report_key(sensorwake_pwrdev->pwr, KEY_POWER, 0);
-	input_sync(sensorwake_pwrdev->pwr);
+	//input_report_key(sensorwake_pwrdev->pwr, KEY_POWER, 1);
+	//input_sync(sensorwake_pwrdev->pwr);
+	//msleep(500);
+	//input_report_key(sensorwake_pwrdev->pwr, KEY_POWER, 0);
+	//input_sync(sensorwake_pwrdev->pwr);
+	pwrkey_press_irq(sensorwake_pwrdev->key_press_irq, sensorwake_pwrdev);
+	msleep(200);
+	pwrkey_release_irq(sensorwake_pwrdev->key_release_irq, sensorwake_pwrdev);
 	//wake_unlock(&wakelock);
 	//mutex_unlock(&prx_lock);
 }
