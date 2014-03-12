@@ -558,7 +558,7 @@ void check_prox_value_trig(bool trig)
 		}
 		schedule_delayed_work_on(0, &check_prox_val, msecs_to_jiffies(prox_timer_length));
 	}
-	else
+	else if (sensor_wake_options && !trig)
 	{
 		if (main_prox_data != NULL)
 		{
