@@ -10,11 +10,10 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/cpufreq_kt.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
-#include <linux/cpufreq.h>
-#include <linux/cpu.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/input.h>
@@ -51,56 +50,16 @@ struct pmic8xxx_pwrkey {
 
 extern void sensorwake_setdev(struct pmic8xxx_pwrkey * input_device);
 extern void screenwake_setdev(struct pmic8xxx_pwrkey * input_device);
-extern void screen_is_on_relay_kt(bool state);
-extern void boostpulse_relay_kt(void);
-//extern void set_screen_on_off_mhz(bool onoff);
-static bool ktoonservative_is_activef = false;
-static bool screen_state = true;
-struct work_struct pwr_online_work;
-static struct workqueue_struct *dbs_wq;
-
-void ktoonservative_is_activepk(bool val)
-{
-	ktoonservative_is_activef = val;
-}
-
-void set_screen_on_off_flag(bool onoff)
-{
-	screen_state = onoff;
-}
-
-static void __cpuinit pwr_online_work_fn(struct work_struct *work)
-{
-	int cpu, ret;
-	struct cpufreq_policy new_policy;
-	for_each_possible_cpu(cpu) {
-		if (likely(!cpu_online(cpu) && (cpu)))
-		{
-			cpu_up(cpu);
-			if (likely(cpu_online(cpu)))
-			{
-				ret = cpufreq_get_policy(&new_policy, cpu);
-				if (!ret)
-					__cpufreq_driver_target(&new_policy, 810000, CPUFREQ_RELATION_H);
-			}
-		}
-	}
-}
 
 irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
-	//if (!screen_state && pwrkey->powerkey_state == 0)
-	//	set_screen_on_off_mhz(true);
-	if (ktoonservative_is_activef && pwrkey->powerkey_state == 0)
+
+	if (pwrkey->powerkey_state == 0)
 	{
-		screen_is_on_relay_kt(true);
-		boostpulse_relay_kt();
-		pr_alert("KT_RELAY_CALL  FROM POWER KEY\n");
-	}
-	else if (!ktoonservative_is_activef && pwrkey->powerkey_state == 0)
-		queue_work_on(0, dbs_wq, &pwr_online_work);
-		
+		pr_alert("KT_RELAY_CALL FROM POWER KEY\n");
+		gkt_boost_cpu_call();
+	}	
 	pwrkey->powerkey_state = 1;
 	if (pwrkey->press == true) {
 		pwrkey->press = false;
@@ -307,13 +266,6 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(sec_powerkey, pwrkey);
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
-
-	dbs_wq = alloc_workqueue("pwrbtn_dbs_wq", WQ_HIGHPRI, 0);
-	if (!dbs_wq) {
-		printk(KERN_ERR "Failed to create pwrbtn_dbs_wq workqueue\n");
-		return -EFAULT;
-	}
-	INIT_WORK(&pwr_online_work, pwr_online_work_fn);
 
 	return 0;
 

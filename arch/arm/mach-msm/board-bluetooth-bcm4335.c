@@ -22,6 +22,7 @@
 
 #define DEBUG
 
+#include <linux/cpufreq_kt.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/hrtimer.h>
@@ -62,7 +63,6 @@
 
 
 static struct rfkill *bt_rfkill;
-extern void set_bluetooth_state(unsigned int val);
 
 int get_gpio_hwrev(int gpio)
 {

@@ -18,6 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <linux/cpufreq_kt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
@@ -44,10 +45,7 @@ static struct max77693_muic_info *gInfo;
 /* For restore charger interrupt states */
 static u8 chg_int_state;
 
-extern void send_cable_state(unsigned int state);
-extern void send_cable_state_kt(unsigned int state);
 unsigned int gbatt_chg_prev = 0;
-bool ktoonservative_is_active_chrg = false;
 
 /* MAX77693 MUIC CHG_TYP setting values */
 enum {
@@ -663,11 +661,6 @@ static ssize_t max77693_muic_set_apo_factory(struct device *dev,
 }
 #endif /* !CONFIG_MUIC_MAX77693_SUPPORT_CAR_DOCK */
 
-void ktoonservative_is_activechrg(bool val)
-{
-	ktoonservative_is_active_chrg = val;
-}
-
 void max77693_muic_monitor_status(void){
 	int ret;
 	u8 status[2];
@@ -679,7 +672,7 @@ void max77693_muic_monitor_status(void){
 	if (gInfo->cable_type != gbatt_chg_prev)
 	{
 		send_cable_state(gInfo->cable_type);
-		if (ktoonservative_is_active_chrg)
+		if (ktoonservative_is_active)
 			send_cable_state_kt(gInfo->cable_type);
 	}
 	gbatt_chg_prev = gInfo->cable_type;
