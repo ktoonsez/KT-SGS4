@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/cpufreq_kt.h>
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
@@ -49,7 +50,6 @@ static bool is_music_playing_func_sent = false;
 static bool is_music_playing_func_sentkt = false;
 extern bool set_music_playing_state(bool val);
 extern bool set_music_playing_statekt(bool state);
-static bool ktoonservative_is_active = false;
 
 static const struct slim_device_id *slim_match(const struct slim_device_id *id,
 					const struct slim_device *slim_dev)
@@ -159,11 +159,6 @@ EXPORT_SYMBOL_GPL(slimbus_type);
 struct device slimbus_dev = {
 	.init_name = "slimbus",
 };
-
-void ktoonservative_is_active_media(bool val)
-{
-	ktoonservative_is_active = val;
-}
 
 static void music_is_playing_fn(struct work_struct *work)
 {

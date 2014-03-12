@@ -24,6 +24,7 @@
  * 2009-Aug-10  Motorola         Changed "add_timer" to "mod_timer" to solve
  *                               race when flurry of queued work comes in.
 */
+#include <linux/cpufreq_kt.h>
 
 #include <linux/module.h>       /* kernel module definitions */
 #include <linux/errno.h>
@@ -80,8 +81,6 @@
 
 #define BT_BLUEDROID_SUPPORT 1
 
-extern void set_bluetooth_state(unsigned int val);
-extern void set_bluetooth_state_kt(bool val);
 static bool bt_conn_state = false;
 
 struct bluesleep_info {
