@@ -33,6 +33,16 @@ extern int force_fast_charge;
 #define FAST_CHARGE_FORCE_AC 1
 #define FAST_CHARGE_FORCE_CUSTOM_MA 2
 
+extern int use_mtp_during_fast_charge;
+
+#define USE_MTP_DURING_FAST_CHARGE_DISABLED 0
+#define USE_MTP_DURING_FAST_CHARGE_ENABLED 1	/* default */
+
+extern int screen_on_current_limit;
+
+#define SCREEN_ON_CURRENT_LIMIT_DISABLED 0
+#define SCREEN_ON_CURRENT_LIMIT_ENABLED 1	/* default */
+
 extern int ac_charge_level;
 
 #define AC_CHARGE_500 500
