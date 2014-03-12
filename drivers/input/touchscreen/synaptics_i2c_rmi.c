@@ -4668,11 +4668,11 @@ void set_screen_synaptic_off(void)
 	
 	mutex_lock(&rmi4_data->input_dev->mutex);
 	set_wakelock_options(true);
-	if (screen_wake_options)
+	if (screen_wake_options && !call_in_progress)
 	{
 		char chTempbuf[2] = { 1, 20};
 
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d", screen_wake_options, ischarging);
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF1 - %d - %d - %d", screen_wake_options, ischarging, call_in_progress);
 
 		if (main_prox_data != NULL)
 		{
@@ -4681,19 +4681,20 @@ void set_screen_synaptic_off(void)
 		}
 
 		enable_irq_wake(rmi4_data->i2c_client->irq);
+		screen_wake_options_when_off = screen_wake_options;
 	}
 	else
 	{
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d", screen_wake_options, ischarging);
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d - %d", screen_wake_options, ischarging, call_in_progress);
 		disable_irq(rmi4_data->i2c_client->irq);
 		rmi4_data->irq_enabled = false;
 		gpio_free(rmi4_data->board->gpio);
 		//rmi4_data->board->power(false);
 		//rmi4_data->stay_awake = false;
+		screen_wake_options_when_off = 0;
 	}
 	// release all finger when entered suspend 
 	synaptics_rmi4_release_all_finger(rmi4_data);
-	screen_wake_options_when_off = screen_wake_options;
 	
 	mutex_unlock(&rmi4_data->input_dev->mutex);
 }
@@ -4731,10 +4732,10 @@ void set_screen_synaptic_on(void)
 	if (screen_wake_options_hold_wlock || wake_lock_active(&wakelock))
 		wake_unlock(&wakelock);
 
-	if (screen_wake_options_when_off)
+	if (screen_wake_options_when_off && !call_in_progress)
 	{
 		char chTempbuf[2] = { 1, 20};
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON1 - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging);
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON1 - %d - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging, call_in_progress);
 		if (main_prox_data != NULL)
 		{
 			send_instruction(main_prox_data, REMOVE_SENSOR, PROXIMITY_RAW, chTempbuf, 2);
@@ -4745,7 +4746,7 @@ void set_screen_synaptic_on(void)
 	}
 	else
 	{
-		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON2 - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging);
+		if (screen_wake_options_debug) pr_alert("SCREEN POWER ON2 - %d - %d - %d - %d", screen_wake_options, screen_wake_options_when_off, ischarging, call_in_progress);
 		retval = gpio_request(rmi4_data->board->gpio, "tsp_int");
 		if (retval != 0) {
 			dev_info(&rmi4_data->i2c_client->dev, "%s: tsp int request failed, ret=%d", __func__, retval);
