@@ -13,17 +13,9 @@
  *
  */
 #include "ssp.h"
-#include <linux/cpufreq.h>
-#include <linux/cpu.h>
+#include <linux/cpufreq_kt.h>
 
 #define LIMIT_DELAY_CNT		200
-extern void set_gps_status(bool stat);
-extern void set_call_in_progress(bool state);
-extern void set_call_in_progress_prox(bool state);
-extern void set_call_in_progress_scrn(bool state);
-struct work_struct incall_online_work;
-static struct workqueue_struct *dbs_wq;
-bool iswork_initd = false;
 
 int waiting_wakeup_mcu(struct ssp_data *data)
 {
@@ -133,24 +125,6 @@ int ssp_i2c_read(struct ssp_data *data, char *pTxData, u16 uTxLength,
 	return ERROR;
 }
 
-static void __ref incall_online_work_fn(struct work_struct *work)
-{
-	int cpu, ret;
-	struct cpufreq_policy new_policy;
-	for_each_possible_cpu(cpu) {
-		if (likely(!cpu_online(cpu) && (cpu)))
-		{
-			cpu_up(cpu);
-			if (likely(cpu_online(cpu)))
-			{
-				ret = cpufreq_get_policy(&new_policy, cpu);
-				if (!ret)
-					__cpufreq_driver_target(&new_policy, 810000, CPUFREQ_RELATION_H);
-			}
-		}
-	}
-}
-
 int ssp_send_cmd(struct ssp_data *data, char command)
 {
 	char chRxBuf = 0;
@@ -180,21 +154,11 @@ int ssp_send_cmd(struct ssp_data *data, char command)
 			return FAIL;
 		}
 	}
-	if (!iswork_initd)
-	{
-		dbs_wq = alloc_workqueue("incall_dbs_wq", WQ_HIGHPRI, 0);
-		if (!dbs_wq) {
-			printk(KERN_ERR "Failed to create incall_dbs_wq workqueue\n");
-		}
-		INIT_WORK(&incall_online_work, incall_online_work_fn);
-		iswork_initd = true;
-	}
+
 	if (command == 0xd9)
 	{
 		pr_alert("KT CALL COMING IN FROM SEND CMD: %d\n", command);
-		//screen_is_on_relay_kt(true);
-		//boostpulse_relay_kt();
-		queue_work_on(0, dbs_wq, &incall_online_work);
+		gkt_boost_cpu_call();
 	}
 	
 	data->uInstFailCnt = 0;

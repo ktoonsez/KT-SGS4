@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/cpufreq_kt.h>
 #include <linux/mfd/max77693.h>
 #include <linux/mfd/max77693-private.h>
 #ifdef CONFIG_USB_HOST_NOTIFY
@@ -28,9 +29,7 @@
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 
 extern void send_cable_state(unsigned int state);
-extern void send_cable_state_kt(unsigned int state);
 int gwc_w_state = 0;
-bool ktoonservative_is_active_chrgW = false;
 
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
@@ -1090,7 +1089,7 @@ static void wpc_detect_work(struct work_struct *work)
 		pr_info("%s: wpc activated, set V_INT as PN\n",
 				__func__);
 		send_cable_state(10);
-		if (ktoonservative_is_active_chrgW)
+		if (ktoonservative_is_active)
 			send_cable_state_kt(10);
 	} else if (wc_w_state == 0) {
 		if (!chg_data->is_charging)
@@ -1115,7 +1114,7 @@ static void wpc_detect_work(struct work_struct *work)
 			pr_info("%s: wpc deactivated, set V_INT as PD\n",
 					__func__);
 			send_cable_state(0);
-			if (ktoonservative_is_active_chrgW)
+			if (ktoonservative_is_active)
 				send_cable_state_kt(0);
 		}
 	}
@@ -1129,11 +1128,6 @@ static void wpc_detect_work(struct work_struct *work)
 int get_cable_stateW(void)
 {
 	return gwc_w_state;
-}
-
-void ktoonservative_is_activechrgW(bool val)
-{
-	ktoonservative_is_active_chrgW = val;
 }
 
 static irqreturn_t wpc_charger_irq(int irq, void *data)

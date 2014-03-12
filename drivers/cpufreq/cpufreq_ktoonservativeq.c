@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/cpufreq.h>
+#include <linux/cpufreq_kt.h>
 #include <linux/cpu.h>
 #include <linux/jiffies.h>
 #include <linux/kernel_stat.h>
@@ -35,6 +36,8 @@
 #define DEF_BOOST_HOLD_CYCLES			(22)
 #define DEF_DISABLE_HOTPLUGGING			(0)
 #define CPUS_AVAILABLE				num_possible_cpus()
+
+bool ktoonservative_is_active = false;
 static int hotplug_cpu_enable_up[] = { 0, 58, 68, 78 };
 static int hotplug_cpu_enable_down[] = { 0, 35, 45, 55 };
 static int hotplug_cpu_single_up[] = { 0, 0, 0, 0 };
@@ -48,7 +51,6 @@ static bool disable_hotplugging_media_override;
 
 void setExtraCores(unsigned int requested_freq);
 unsigned int kt_freq_control[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
 /*
  * The polling frequency of this governor depends on the capability of
  * the processor. Default polling frequency is 1000 times the transition
@@ -71,10 +73,6 @@ static bool boostpulse_relayf = false;
 static int boost_hold_cycles_cnt = 0;
 static bool screen_is_on = true;
 
-extern void ktoonservative_is_active(bool val);
-extern void ktoonservative_is_activebd(bool val);
-extern void ktoonservative_is_activepk(bool val);
-extern void ktoonservative_is_activehk(bool val);
 extern void boost_the_gpu(unsigned int freq, bool getfreq);
 
 extern void apenable_auto_hotplug(bool state);
@@ -82,12 +80,8 @@ extern bool apget_enable_auto_hotplug(void);
 static bool prev_apenable;
 static bool hotplugInProgress = false;
 
-extern void kt_is_active_benabled_touchkey(bool val);
 extern unsigned int get_cable_state(void);
-extern void ktoonservative_is_activechrg(bool val);
 extern int get_cable_stateW(void);
-extern void ktoonservative_is_activechrgW(bool val);
-extern void ktoonservative_is_active_media(bool val);
 
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
@@ -918,12 +912,6 @@ static ssize_t store_boost_2nd_core_on_button(struct kobject *a, struct attribut
 		input = 0;
 
 	dbs_tuners_ins.boost_2nd_core_on_button = input;
-	if (dbs_tuners_ins.boost_2nd_core_on_button == 1)
-	{
-		//kt_is_active_benabled_gpio(true);
-		kt_is_active_benabled_touchkey(true);
-		//kt_is_active_benabled_power(true);
-	}
 
 	return count;
 }
@@ -938,12 +926,6 @@ static ssize_t store_boost_3rd_core_on_button(struct kobject *a, struct attribut
 		input = 0;
 
 	dbs_tuners_ins.boost_3rd_core_on_button = input;
-	if (dbs_tuners_ins.boost_3rd_core_on_button == 1)
-	{
-		//kt_is_active_benabled_gpio(true);
-		kt_is_active_benabled_touchkey(true);
-		//kt_is_active_benabled_power(true);
-	}
 
 	return count;
 }
@@ -958,12 +940,6 @@ static ssize_t store_boost_4th_core_on_button(struct kobject *a, struct attribut
 		input = 0;
 
 	dbs_tuners_ins.boost_4th_core_on_button = input;
-	if (dbs_tuners_ins.boost_4th_core_on_button == 1)
-	{
-		//kt_is_active_benabled_gpio(true);
-		kt_is_active_benabled_touchkey(true);
-		//kt_is_active_benabled_power(true);
-	}
 
 	return count;
 }
@@ -1405,29 +1381,26 @@ void check_boost_cores_up(bool dec1, bool dec2, bool dec3)
 	}
 }
 
-void screen_is_on_relay_kt(bool state)
+void ktoonservative_screen_is_on(bool state)
 {
 	screen_is_on = state;
 	if (state == true)
 	{
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
-
-		check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
-				
-		//pr_alert("SCREEN_IS_ON1: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
+		//check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
+		ktoonservative_boostpulse();
 	}
 	else
 	{
 		boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, false);
 		stored_sampling_rate = dbs_tuners_ins.sampling_rate;
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.sampling_rate_screen_off;
-		//pr_alert("SCREEN_IS_ON2: %d-%d\n", dbs_tuners_ins.sampling_rate, stored_sampling_rate);
 	}
 	
 }
 
-void boostpulse_relay_kt(void)
+void ktoonservative_boostpulse(void)
 {
 	if (!boostpulse_relayf)
 	{
@@ -1538,19 +1511,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 	switch (event) {
 	case CPUFREQ_GOV_START:
-		ktoonservative_is_active(true);
-		ktoonservative_is_activebd(true);
-		ktoonservative_is_activepk(true);
-		ktoonservative_is_activehk(true);
-		ktoonservative_is_activechrg(true);
-		ktoonservative_is_activechrgW(true);
-		ktoonservative_is_active_media(true);
-		if (dbs_tuners_ins.boost_2nd_core_on_button == 1 || dbs_tuners_ins.boost_3rd_core_on_button == 1 || dbs_tuners_ins.boost_4th_core_on_button == 1)
-    		{
-      			//kt_is_active_benabled_gpio(true);
-		      	kt_is_active_benabled_touchkey(true);
-      			//kt_is_active_benabled_power(true);
-    		}
+		ktoonservative_is_active = true;
 		
 		prev_apenable = apget_enable_auto_hotplug();
 		apenable_auto_hotplug(false);
@@ -1615,16 +1576,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
-		ktoonservative_is_active(false);
-		ktoonservative_is_activebd(false);
-		ktoonservative_is_activepk(false);
-		ktoonservative_is_activehk(false);
-		ktoonservative_is_activechrg(false);
-		ktoonservative_is_activechrgW(false);
-		ktoonservative_is_active_media(false);
-    		//kt_is_active_benabled_gpio(false);
-    		kt_is_active_benabled_touchkey(false);
-    		//kt_is_active_benabled_power(false);
+		ktoonservative_is_active = false;
 		
 		apenable_auto_hotplug(prev_apenable);
 		
