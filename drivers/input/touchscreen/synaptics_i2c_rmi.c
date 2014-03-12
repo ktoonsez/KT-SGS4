@@ -15,6 +15,7 @@
 #include <linux/module.h>
 #include <asm/unaligned.h>
 #include <mach/cpufreq.h>
+#include <linux/cpufreq_kt.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
@@ -138,14 +139,7 @@
 
 //KT specifics
 //extern void set_screen_on_off_mhz(unsigned long onoff);
-static bool ktoonservative_is_activef = false;
-extern void boostpulse_relay_kt(void);
 extern void hotplugap_boostpulse(void);
-
-void ktoonservative_is_active(bool val)
-{
-	ktoonservative_is_activef = val;
-}
 
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data,
@@ -1850,8 +1844,8 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 #ifndef TYPE_B_PROTOCOL
 			input_mt_sync(rmi4_data->input_dev);
 #endif
-			if (ktoonservative_is_activef)
-				boostpulse_relay_kt();
+			if (ktoonservative_is_active)
+				ktoonservative_boostpulse();
 			hotplugap_boostpulse();
 			
 			if (screen_is_off && screen_wake_options)
