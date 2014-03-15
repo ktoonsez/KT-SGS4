@@ -55,7 +55,6 @@ int pvs_bin;
 #endif
 
 struct acpu_level orig_drv[FREQ_STEPS];
-extern void reset_num_cpu_freqs(void);
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
@@ -994,7 +993,6 @@ static void __init cpufreq_table_init(void) {}
 static void __init dcvs_freq_init(void)
 {
 	int i;
-	reset_num_cpu_freqs();
 	
 	for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0; i++)
 		orig_drv[i].vdd_core = drv.acpu_freq_tbl[i].vdd_core;
@@ -1172,7 +1170,6 @@ void acpuclk_UV_mV_table(int cnt, unsigned int vdd_uv[]) {
 	int i;
 	int j=0;
 
-	reset_num_cpu_freqs();
 	if (vdd_uv[0] < vdd_uv[cnt-1])
 	{
 		for (i = 0; i < cnt; i++) {
