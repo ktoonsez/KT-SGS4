@@ -6931,7 +6931,7 @@ void __init sched_init(void)
 {
 	int i, j;
 	unsigned long alloc_size = 0, ptr;
-#if !defined(CONFIG_MACH_MELIUS)
+#ifdef CONFIG_SEC_DEBUG
     sec_gaf_supply_rqinfo(offsetof(struct rq, curr),
                           offsetof(struct cfs_rq, rq));
 #endif

@@ -62,8 +62,8 @@ static int ssr_magic_number = 0;
 static int restart_mode;
 #ifndef CONFIG_SEC_DEBUG
 void *restart_reason;
-#endif
 int kernel_sec_get_debug_level(void);
+#endif
 #define KERNEL_SEC_DEBUG_LEVEL_LOW      (0x574F4C44)
 int pmic_reset_irq;
 static void __iomem *msm_tmr0_base;
@@ -383,7 +383,7 @@ static int __init msm_pmic_restart_init(void)
 
 #if defined(CONFIG_MACH_JF_VZW) || defined(CONFIG_MACH_MELIUS)
 	return 0;
-#else
+#elif defined(CONFIG_SEC_DEBUG)
 	if (kernel_sec_get_debug_level() != KERNEL_SEC_DEBUG_LEVEL_LOW)
 		return 0;
 #endif
