@@ -1957,6 +1957,7 @@ nullgetwork:
 		hlist_del_init(&worker->hentry);
 	worker->current_work = NULL;
 	worker->current_cwq = NULL;
+	work_color = get_work_color(work);
 	if (likely(cwq))
 		cwq_dec_nr_in_flight(cwq, work_color, false);
 }
