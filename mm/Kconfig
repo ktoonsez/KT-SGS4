@@ -380,10 +380,6 @@ config CLEANCACHE
 
 	  If unsure, say Y to enable cleancache
 
-config FRONTSWAP
-	bool "Enable cleancache driver to cache clean pages if tmem is present"
-	default n
-	
 config MEMORY_HOLE_CARVEOUT
         bool
         help
