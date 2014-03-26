@@ -209,6 +209,11 @@ struct swap_info_struct {
 					 * swap_lock. If both locks need hold,
 					 * hold swap_lock first.
 					 */
+#ifdef CONFIG_FRONTSWAP
+ 	unsigned long *frontswap_map;	/* frontswap in-use, one bit per page */
+	unsigned long *frontswap_denial_map;	/* deny frontswap, 1bit/page */
+ 	atomic_t frontswap_pages;	/* frontswap pages in-use counter */
+#endif	
 };
 
 struct swap_list_t {
