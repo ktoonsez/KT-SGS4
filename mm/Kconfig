@@ -392,5 +392,18 @@ config USE_USER_ACCESSIBLE_TIMERS
 	  separately.
 
 config FRONTSWAP
-	bool "Enable cleancache driver to cache clean pages if tmem is present"
+	bool "Enable frontswap to cache swap pages if tmem is present"
+	depends on SWAP
 	default n
+	help
+	  Frontswap is so named because it can be thought of as the opposite
+	  of a "backing" store for a swap device.  The data is stored into
+	  "transcendent memory", memory that is not directly accessible or
+	  addressable by the kernel and is of unknown and possibly
+	  time-varying size.  When space in transcendent memory is available,
+	  a significant swap I/O reduction may be achieved.  When none is
+	  available, all frontswap calls are reduced to a single pointer-
+	  compare-against-NULL resulting in a negligible performance hit
+	  and swap data is stored as normal on the matching swap device.
+
+	  If unsure, say Y to enable frontswap.
