@@ -122,10 +122,9 @@ EXPORT_SYMBOL(__frontswap_init);
  * offset, the frontswap implmentation may either overwrite the data and
  * return success or invalidate the page from frontswap and return failure.
  */
-bool __frontswap_store(struct page *page)
+int __frontswap_store(struct page *page)
 {
-        bool dup = false;
-        bool ret;
+        int ret = -1, dup = 0;
         swp_entry_t entry = { .val = page_private(page), };
         int type = swp_type(entry);
         struct swap_info_struct *sis = swap_info[type];
@@ -134,9 +133,9 @@ bool __frontswap_store(struct page *page)
         BUG_ON(!PageLocked(page));
         BUG_ON(sis == NULL);
         if (frontswap_test(sis, offset))
-                dup = true;
+                dup = 1;
         ret = (*frontswap_ops.store)(type, offset, page);
-        if (ret) {
+        if (ret == 0) {
                 frontswap_set(sis, offset);
                 inc_frontswap_succ_stores();
                 if (!dup)
@@ -153,7 +152,7 @@ bool __frontswap_store(struct page *page)
                 inc_frontswap_failed_stores();
         if (frontswap_writethrough_enabled)
                 /* report failure so swap also writes to swap device */
-                return false;
+                ret = -1;
         return ret;
 }
 EXPORT_SYMBOL(__frontswap_store);
@@ -163,8 +162,9 @@ EXPORT_SYMBOL(__frontswap_store);
  * specified when the data was put to frontswap and use it to fill the
  * specified page with data. Page must be locked and in the swap cache.
  */
-bool __frontswap_load(struct page *page)
+int __frontswap_load(struct page *page)
 {
+        int ret = -1;
         swp_entry_t entry = { .val = page_private(page), };
         int type = swp_type(entry);
         struct swap_info_struct *sis = swap_info[type];
@@ -173,11 +173,10 @@ bool __frontswap_load(struct page *page)
         BUG_ON(!PageLocked(page));
         BUG_ON(sis == NULL);
         if (frontswap_test(sis, offset))
-                if ((*frontswap_ops.load)(type, offset, page)) {
-                        inc_frontswap_loads();
-                        return true;
-                }
-        return false;
+                ret = (*frontswap_ops.load)(type, offset, page);
+        if (ret == 0)
+                inc_frontswap_loads();
+        return ret;
 }
 EXPORT_SYMBOL(__frontswap_load);
 
