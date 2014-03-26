@@ -391,3 +391,6 @@ config USE_USER_ACCESSIBLE_TIMERS
 	  architecture-specific code that will need to be enabled
 	  separately.
 
+config FRONTSWAP
+	bool "Enable cleancache driver to cache clean pages if tmem is present"
+	default n
