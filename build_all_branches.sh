@@ -79,6 +79,11 @@ echo "Make Clean"
 make clean
 echo "Make Mrproper"
 make mrproper
+./build_vzw.sh
+echo "Make Clean"
+make clean
+echo "Make Mrproper"
+make mrproper
 ./build_intl.sh
 
 
