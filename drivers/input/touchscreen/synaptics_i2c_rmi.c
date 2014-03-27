@@ -3873,7 +3873,7 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 			__func__, f51->proximity_controls);
 
 #ifdef USE_CUSTOM_REZERO
-	//synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
+	synaptics_rmi4_f51_set_custom_rezero(rmi4_data);
 
 	msleep(100);
 #endif
