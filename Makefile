@@ -618,6 +618,9 @@ KBUILD_CFLAGS += $(call cc-disable-warning, array-bounds)
 # Use make W=1 to enable this warning (see scripts/Makefile.build)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
+#Disable aggressive-loop-optimizations due to bogus warnings during compile
+KBUILD_CFLAGS += $(call cc-disable-warning, aggressive-loop-optimizations)
+
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
