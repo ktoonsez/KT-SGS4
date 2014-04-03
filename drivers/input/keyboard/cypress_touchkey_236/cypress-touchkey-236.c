@@ -473,7 +473,7 @@ static ssize_t brightness_level_show(struct device *dev,
 {
 	int count;
 
-	count = snprintf(buf, sizeof(*buf), "%d\n", vol_mv_level);
+	count = sprintf(buf, "%d\n", vol_mv_level);
 
 	printk(KERN_DEBUG "[TouchKey] Touch LED voltage = %d\n", vol_mv_level);
 	return count;
