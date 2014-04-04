@@ -4757,11 +4757,14 @@ void set_screen_synaptic_off(void)
 	else
 	{
 		if (screen_wake_options_debug) pr_alert("SCREEN POWER OFF2 - %d - %d - %d", screen_wake_options, ischarging, call_in_progress);
+		rmi4_data->stay_awake = false;
+		rmi4_data->staying_awake = false;
 		disable_irq(rmi4_data->i2c_client->irq);
 		rmi4_data->irq_enabled = false;
+		rmi4_data->board->power(false);
+		rmi4_data->touch_stopped = true;
 		gpio_free(rmi4_data->board->gpio);
-		//rmi4_data->board->power(false);
-		//rmi4_data->stay_awake = false;
+		
 		screen_wake_options_when_off = 0;
 	}
 	// release all finger when entered suspend 
@@ -4803,6 +4806,9 @@ void set_screen_synaptic_on(void)
 	if (screen_wake_options_hold_wlock || wake_lock_active(&wakelock))
 		wake_unlock(&wakelock);
 
+	rmi4_data->board->power(true);
+	rmi4_data->touch_stopped = false;
+
 	if (screen_wake_options_when_off && !call_in_progress)
 	{
 		char chTempbuf[2] = { 1, 20};
@@ -4823,9 +4829,6 @@ void set_screen_synaptic_on(void)
 			dev_info(&rmi4_data->i2c_client->dev, "%s: tsp int request failed, ret=%d", __func__, retval);
 		}
 	}
-	
-	rmi4_data->board->power(true);
-	rmi4_data->touch_stopped = false;
 	
 	ret = synaptics_rmi4_reinit_device(rmi4_data);
 	if (ret < 0) {
