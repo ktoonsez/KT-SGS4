@@ -85,6 +85,7 @@
 #define	MAX_NUM_LEDS	3
 
 static struct delayed_work check_led_time;
+static bool is_work_active = false;
 
 u8 LED_DYNAMIC_CURRENT = 0x8;
 u8 LED_LOWPOWER_MODE = 0x0;
@@ -1070,6 +1071,13 @@ static ssize_t store_an30259a_led_block_leds_time_start(struct device *dev, stru
 	if (retval != 0 && (val == -1 || (val >= 0 && val <= 23))) {
 		led_block_leds_time_start = val;
 	}
+	if (!is_work_active && led_block_leds_time_start != -1 && led_block_leds_time_stop != -1)
+	{
+		is_work_active = true;
+		schedule_delayed_work_on(0, &check_led_time, msecs_to_jiffies(30000));
+	}
+	else if (led_block_leds_time_start == -1 || led_block_leds_time_stop == -1)
+		is_work_active = false;
 	return count;
 }
 
@@ -1088,6 +1096,13 @@ static ssize_t store_an30259a_led_block_leds_time_stop(struct device *dev, struc
 	if (retval != 0 && (val == -1 || (val >= 0 && val <= 23))) {
 		led_block_leds_time_stop = val;
 	}
+	if (!is_work_active && led_block_leds_time_start != -1 && led_block_leds_time_stop != -1)
+	{
+		is_work_active = true;
+		schedule_delayed_work_on(0, &check_led_time, msecs_to_jiffies(30000));
+	}
+	else if (led_block_leds_time_start == -1 || led_block_leds_time_stop == -1)
+		is_work_active = false;
 	return count;
 }
 
@@ -1440,7 +1455,8 @@ static int __devinit an30259a_initialize(struct i2c_client *client,
 static void check_led_timer(struct work_struct *work)
 {
 	check_restrictions();
-	schedule_delayed_work_on(0, &check_led_time, msecs_to_jiffies(30000));
+	if (is_work_active && led_block_leds_time_start != -1 && led_block_leds_time_stop != -1)
+		schedule_delayed_work_on(0, &check_led_time, msecs_to_jiffies(30000));
 }
 
 static int __devinit an30259a_probe(struct i2c_client *client,
@@ -1450,7 +1466,6 @@ static int __devinit an30259a_probe(struct i2c_client *client,
 	int ret, i;
 	
 	INIT_DELAYED_WORK(&check_led_time, check_led_timer);
-	schedule_delayed_work_on(0, &check_led_time, msecs_to_jiffies(30000));
 
 	dev_dbg(&client->adapter->dev, "%s\n", __func__);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
