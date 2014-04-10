@@ -163,7 +163,8 @@ static struct dbs_tuners {
 	unsigned int lockout_3rd_core_hotplug_screen_off;
 	unsigned int lockout_4th_core_hotplug_screen_off;
 	unsigned int touch_boost_gpu;
-	unsigned int sync_extra_cores;
+	unsigned int sync_extra_cores_screen_on;
+	unsigned int sync_extra_cores_screen_off;
 	unsigned int boost_hold_cycles;
 	unsigned int disable_hotplug;
 	unsigned int disable_hotplug_chrg;
@@ -213,7 +214,8 @@ static struct dbs_tuners {
 	.lockout_3rd_core_hotplug_screen_off = 0,
 	.lockout_4th_core_hotplug_screen_off = 0,
 	.touch_boost_gpu = DEF_BOOST_GPU,
-	.sync_extra_cores = 0,
+	.sync_extra_cores_screen_on = 0,
+	.sync_extra_cores_screen_off = 0,
 	.boost_hold_cycles = DEF_BOOST_HOLD_CYCLES,
 	.disable_hotplug = DEF_DISABLE_hotplug,
 	.disable_hotplug_chrg = 0,
@@ -367,10 +369,16 @@ static ssize_t show_touch_boost_cpu_all_cores(struct kobject *kobj,
 	return sprintf(buf, "%u\n", dbs_tuners_ins.touch_boost_cpu_all_cores);
 }
 
-static ssize_t show_sync_extra_cores(struct kobject *kobj,
+static ssize_t show_sync_extra_cores_screen_on(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
-	return sprintf(buf, "%u\n", dbs_tuners_ins.sync_extra_cores);
+	return sprintf(buf, "%u\n", dbs_tuners_ins.sync_extra_cores_screen_on);
+}
+
+static ssize_t show_sync_extra_cores_screen_off(struct kobject *kobj,
+				      struct attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", dbs_tuners_ins.sync_extra_cores_screen_off);
 }
 
 /* cpufreq_ktoonservative Governor Tunables */
@@ -897,7 +905,7 @@ static ssize_t store_touch_boost_cpu_all_cores(struct kobject *a, struct attribu
 		input = 1;
 	dbs_tuners_ins.touch_boost_cpu_all_cores = input;
 
-	if (dbs_tuners_ins.sync_extra_cores == 0 && dbs_tuners_ins.touch_boost_cpu_all_cores == 0)
+	if (((screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off == 0)) && dbs_tuners_ins.touch_boost_cpu_all_cores == 0)
 	{
 		for (i = 0; i < CPUS_AVAILABLE; i++)
 			kt_freq_control[i] = 0;
@@ -905,7 +913,7 @@ static ssize_t store_touch_boost_cpu_all_cores(struct kobject *a, struct attribu
 	return count;
 }
 
-static ssize_t store_sync_extra_cores(struct kobject *a, struct attribute *b,
+static ssize_t store_sync_extra_cores_screen_on(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -918,9 +926,32 @@ static ssize_t store_sync_extra_cores(struct kobject *a, struct attribute *b,
 
 	if (input != 0 && input != 1)
 		input = 1;
-	dbs_tuners_ins.sync_extra_cores = input;
+	dbs_tuners_ins.sync_extra_cores_screen_on = input;
 	
-	if (dbs_tuners_ins.sync_extra_cores == 0 && dbs_tuners_ins.touch_boost_cpu_all_cores == 0)
+	if (screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on == 0 && dbs_tuners_ins.touch_boost_cpu_all_cores == 0)
+	{
+		for (i = 0; i < CPUS_AVAILABLE; i++)
+			kt_freq_control[i] = 0;
+	}
+	return count;
+}
+
+static ssize_t store_sync_extra_cores_screen_off(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret, i;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input != 0 && input != 1)
+		input = 1;
+	dbs_tuners_ins.sync_extra_cores_screen_off = input;
+	
+	if (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off == 0 && dbs_tuners_ins.touch_boost_cpu_all_cores == 0)
 	{
 		for (i = 0; i < CPUS_AVAILABLE; i++)
 			kt_freq_control[i] = 0;
@@ -1404,7 +1435,8 @@ define_one_global_rw(lockout_2nd_core_hotplug_screen_off);
 define_one_global_rw(lockout_3rd_core_hotplug_screen_off);
 define_one_global_rw(lockout_4th_core_hotplug_screen_off);
 define_one_global_rw(touch_boost_gpu);
-define_one_global_rw(sync_extra_cores);
+define_one_global_rw(sync_extra_cores_screen_on);
+define_one_global_rw(sync_extra_cores_screen_off);
 define_one_global_rw(boost_hold_cycles);
 define_one_global_rw(disable_hotplug);
 define_one_global_rw(disable_hotplug_chrg);
@@ -1459,7 +1491,8 @@ static struct attribute *dbs_attributes[] = {
 	&lockout_3rd_core_hotplug_screen_off.attr,
 	&lockout_4th_core_hotplug_screen_off.attr,
 	&touch_boost_gpu.attr,
-	&sync_extra_cores.attr,
+	&sync_extra_cores_screen_on.attr,
+	&sync_extra_cores_screen_off.attr,
 	&boost_hold_cycles.attr,
 	&disable_hotplug.attr,
 	&disable_hotplug_chrg.attr,
@@ -1501,7 +1534,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		{
 			boostpulse_relayf = false;
 			boost_hold_cycles_cnt = 0;
-			if (dbs_tuners_ins.sync_extra_cores == 0)
+			if ((screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off == 0))
 			{
 				for (cpu = 0; cpu < CPUS_AVAILABLE; cpu++)
 					kt_freq_control[cpu] = 0;
@@ -1671,7 +1704,7 @@ boostcomplete:
 				this_dbs_info->requested_freq = policy->max;
 
 			__cpufreq_driver_target(policy, this_dbs_info->requested_freq, CPUFREQ_RELATION_H);
-			if (dbs_tuners_ins.sync_extra_cores && policy->cpu == 0)
+			if (((screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on) || (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off)) && policy->cpu == 0)
 				setExtraCores(this_dbs_info->requested_freq);
 			if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
 				Lblock_cycles_raise = 0;
@@ -1718,7 +1751,7 @@ boostcomplete:
 			return;
 
 		__cpufreq_driver_target(policy, this_dbs_info->requested_freq, CPUFREQ_RELATION_H);
-		if (dbs_tuners_ins.sync_extra_cores && policy->cpu == 0)
+		if (((screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on) || (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off)) && policy->cpu == 0)
 			setExtraCores(this_dbs_info->requested_freq);
 		return;
 	}
