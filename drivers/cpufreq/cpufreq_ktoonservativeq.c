@@ -126,14 +126,22 @@ static struct dbs_tuners {
 	unsigned int sampling_rate;
 	unsigned int sampling_rate_screen_off;
 	unsigned int sampling_down_factor;
-	unsigned int up_threshold;
-	unsigned int up_threshold_hotplug_1;
-	unsigned int up_threshold_hotplug_2;
-	unsigned int up_threshold_hotplug_3;
-	unsigned int down_threshold;
-	unsigned int down_threshold_hotplug_1;
-	unsigned int down_threshold_hotplug_2;
-	unsigned int down_threshold_hotplug_3;
+	unsigned int up_threshold_screen_on;
+	unsigned int up_threshold_screen_on_hotplug_1;
+	unsigned int up_threshold_screen_on_hotplug_2;
+	unsigned int up_threshold_screen_on_hotplug_3;
+	unsigned int up_threshold_screen_off;
+	unsigned int up_threshold_screen_off_hotplug_1;
+	unsigned int up_threshold_screen_off_hotplug_2;
+	unsigned int up_threshold_screen_off_hotplug_3;
+	unsigned int down_threshold_screen_on;
+	unsigned int down_threshold_screen_on_hotplug_1;
+	unsigned int down_threshold_screen_on_hotplug_2;
+	unsigned int down_threshold_screen_on_hotplug_3;
+	unsigned int down_threshold_screen_off;
+	unsigned int down_threshold_screen_off_hotplug_1;
+	unsigned int down_threshold_screen_off_hotplug_2;
+	unsigned int down_threshold_screen_off_hotplug_3;
 	unsigned int cpu_down_block_cycles;
 	unsigned int cpu_hotplug_block_cycles;
 	unsigned int super_conservative_screen_on;
@@ -160,14 +168,22 @@ static struct dbs_tuners {
 	unsigned int ignore_nice;
 	unsigned int freq_step;
 } dbs_tuners_ins = {
-	.up_threshold = 57,
-	.up_threshold_hotplug_1 = 58,
-	.up_threshold_hotplug_2 = 68,
-	.up_threshold_hotplug_3 = 78,
-	.down_threshold = 52,
-	.down_threshold_hotplug_1 = 35,
-	.down_threshold_hotplug_2 = 45,
-	.down_threshold_hotplug_3 = 55,
+	.up_threshold_screen_on = 57,
+	.up_threshold_screen_on_hotplug_1 = 58,
+	.up_threshold_screen_on_hotplug_2 = 68,
+	.up_threshold_screen_on_hotplug_3 = 78,
+	.up_threshold_screen_off = 57,
+	.up_threshold_screen_off_hotplug_1 = 58,
+	.up_threshold_screen_off_hotplug_2 = 68,
+	.up_threshold_screen_off_hotplug_3 = 78,
+	.down_threshold_screen_on = 52,
+	.down_threshold_screen_on_hotplug_1 = 35,
+	.down_threshold_screen_on_hotplug_2 = 45,
+	.down_threshold_screen_on_hotplug_3 = 55,
+	.down_threshold_screen_off = 52,
+	.down_threshold_screen_off_hotplug_1 = 35,
+	.down_threshold_screen_off_hotplug_2 = 45,
+	.down_threshold_screen_off_hotplug_3 = 55,
 	.cpu_down_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.cpu_hotplug_block_cycles = DEF_CPU_DOWN_BLOCK_CYCLES,
 	.super_conservative_screen_on = 0,
@@ -353,14 +369,22 @@ static ssize_t show_##file_name						\
 show_one(sampling_rate, sampling_rate);
 show_one(sampling_rate_screen_off, sampling_rate_screen_off);
 show_one(sampling_down_factor, sampling_down_factor);
-show_one(up_threshold, up_threshold);
-show_one(up_threshold_hotplug_1, up_threshold_hotplug_1);
-show_one(up_threshold_hotplug_2, up_threshold_hotplug_2);
-show_one(up_threshold_hotplug_3, up_threshold_hotplug_3);
-show_one(down_threshold, down_threshold);
-show_one(down_threshold_hotplug_1, down_threshold_hotplug_1);
-show_one(down_threshold_hotplug_2, down_threshold_hotplug_2);
-show_one(down_threshold_hotplug_3, down_threshold_hotplug_3);
+show_one(up_threshold_screen_on, up_threshold_screen_on);
+show_one(up_threshold_screen_on_hotplug_1, up_threshold_screen_on_hotplug_1);
+show_one(up_threshold_screen_on_hotplug_2, up_threshold_screen_on_hotplug_2);
+show_one(up_threshold_screen_on_hotplug_3, up_threshold_screen_on_hotplug_3);
+show_one(up_threshold_screen_off, up_threshold_screen_off);
+show_one(up_threshold_screen_off_hotplug_1, up_threshold_screen_off_hotplug_1);
+show_one(up_threshold_screen_off_hotplug_2, up_threshold_screen_off_hotplug_2);
+show_one(up_threshold_screen_off_hotplug_3, up_threshold_screen_off_hotplug_3);
+show_one(down_threshold_screen_on, down_threshold_screen_on);
+show_one(down_threshold_screen_on_hotplug_1, down_threshold_screen_on_hotplug_1);
+show_one(down_threshold_screen_on_hotplug_2, down_threshold_screen_on_hotplug_2);
+show_one(down_threshold_screen_on_hotplug_3, down_threshold_screen_on_hotplug_3);
+show_one(down_threshold_screen_off, down_threshold_screen_off);
+show_one(down_threshold_screen_off_hotplug_1, down_threshold_screen_off_hotplug_1);
+show_one(down_threshold_screen_off_hotplug_2, down_threshold_screen_off_hotplug_2);
+show_one(down_threshold_screen_off_hotplug_3, down_threshold_screen_off_hotplug_3);
 show_one(cpu_down_block_cycles, cpu_down_block_cycles);
 show_one(cpu_hotplug_block_cycles, cpu_hotplug_block_cycles);
 show_one(super_conservative_screen_on, super_conservative_screen_on);
@@ -428,7 +452,7 @@ static ssize_t store_sampling_rate_screen_off(struct kobject *a, struct attribut
 	return count;
 }
 
-static ssize_t store_up_threshold(struct kobject *a, struct attribute *b,
+static ssize_t store_up_threshold_screen_on(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
 {
 	unsigned int input;
@@ -436,14 +460,14 @@ static ssize_t store_up_threshold(struct kobject *a, struct attribute *b,
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > 100 ||
-			input <= dbs_tuners_ins.down_threshold)
+			input <= dbs_tuners_ins.down_threshold_screen_on)
 		return -EINVAL;
 
-	dbs_tuners_ins.up_threshold = input;
+	dbs_tuners_ins.up_threshold_screen_on = input;
 	return count;
 }
 
-static ssize_t store_up_threshold_hotplug_1(struct kobject *a, struct attribute *b,
+static ssize_t store_up_threshold_screen_on_hotplug_1(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
 {
 	unsigned int input;
@@ -451,15 +475,16 @@ static ssize_t store_up_threshold_hotplug_1(struct kobject *a, struct attribute 
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > 100 ||
-			input <= dbs_tuners_ins.down_threshold_hotplug_1)
+			input <= dbs_tuners_ins.down_threshold_screen_on_hotplug_1)
 		return -EINVAL;
 
-	dbs_tuners_ins.up_threshold_hotplug_1 = input;
-	hotplug_cpu_enable_up[1] = input;
+	dbs_tuners_ins.up_threshold_screen_on_hotplug_1 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_up[1] = input;
 	return count;
 }
 
-static ssize_t store_up_threshold_hotplug_2(struct kobject *a, struct attribute *b,
+static ssize_t store_up_threshold_screen_on_hotplug_2(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
 {
 	unsigned int input;
@@ -467,15 +492,16 @@ static ssize_t store_up_threshold_hotplug_2(struct kobject *a, struct attribute 
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > 100 ||
-			input <= dbs_tuners_ins.down_threshold_hotplug_2)
+			input <= dbs_tuners_ins.down_threshold_screen_on_hotplug_2)
 		return -EINVAL;
 
-	dbs_tuners_ins.up_threshold_hotplug_2 = input;
-	hotplug_cpu_enable_up[2] = input;
+	dbs_tuners_ins.up_threshold_screen_on_hotplug_2 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_up[2] = input;
 	return count;
 }
 
-static ssize_t store_up_threshold_hotplug_3(struct kobject *a, struct attribute *b,
+static ssize_t store_up_threshold_screen_on_hotplug_3(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
 {
 	unsigned int input;
@@ -483,15 +509,82 @@ static ssize_t store_up_threshold_hotplug_3(struct kobject *a, struct attribute 
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > 100 ||
-			input <= dbs_tuners_ins.down_threshold_hotplug_3)
+			input <= dbs_tuners_ins.down_threshold_screen_on_hotplug_3)
 		return -EINVAL;
 
-	dbs_tuners_ins.up_threshold_hotplug_3 = input;
-	hotplug_cpu_enable_up[3] = input;
+	dbs_tuners_ins.up_threshold_screen_on_hotplug_3 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_up[3] = input;
 	return count;
 }
 
-static ssize_t store_down_threshold(struct kobject *a, struct attribute *b,
+static ssize_t store_up_threshold_screen_off(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > 100 ||
+			input <= dbs_tuners_ins.down_threshold_screen_off)
+		return -EINVAL;
+
+	dbs_tuners_ins.up_threshold_screen_off = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_screen_off_hotplug_1(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > 100 ||
+			input <= dbs_tuners_ins.down_threshold_screen_off_hotplug_1)
+		return -EINVAL;
+
+	dbs_tuners_ins.up_threshold_screen_off_hotplug_1 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_up[1] = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_screen_off_hotplug_2(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > 100 ||
+			input <= dbs_tuners_ins.down_threshold_screen_off_hotplug_2)
+		return -EINVAL;
+
+	dbs_tuners_ins.up_threshold_screen_off_hotplug_2 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_up[2] = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_screen_off_hotplug_3(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > 100 ||
+			input <= dbs_tuners_ins.down_threshold_screen_off_hotplug_3)
+		return -EINVAL;
+
+	dbs_tuners_ins.up_threshold_screen_off_hotplug_3 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_up[3] = input;
+	return count;
+}
+
+static ssize_t store_down_threshold_screen_on(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -500,14 +593,14 @@ static ssize_t store_down_threshold(struct kobject *a, struct attribute *b,
 
 	/* cannot be lower than 11 otherwise freq will not fall */
 	if (ret != 1 || input < 11 || input > 100 ||
-			input >= dbs_tuners_ins.up_threshold)
+			input >= dbs_tuners_ins.up_threshold_screen_on)
 		return -EINVAL;
 
-	dbs_tuners_ins.down_threshold = input;
+	dbs_tuners_ins.down_threshold_screen_on = input;
 	return count;
 }
 
-static ssize_t store_down_threshold_hotplug_1(struct kobject *a, struct attribute *b,
+static ssize_t store_down_threshold_screen_on_hotplug_1(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -516,15 +609,16 @@ static ssize_t store_down_threshold_hotplug_1(struct kobject *a, struct attribut
 
 	/* cannot be lower than 11 otherwise freq will not fall */
 	if (ret != 1 || input < 11 || input > 100 ||
-			input >= dbs_tuners_ins.up_threshold_hotplug_1)
+			input >= dbs_tuners_ins.up_threshold_screen_on_hotplug_1)
 		return -EINVAL;
 
-	dbs_tuners_ins.down_threshold_hotplug_1 = input;
-	hotplug_cpu_enable_down[1] = input;
+	dbs_tuners_ins.down_threshold_screen_on_hotplug_1 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_down[1] = input;
 	return count;
 }
 
-static ssize_t store_down_threshold_hotplug_2(struct kobject *a, struct attribute *b,
+static ssize_t store_down_threshold_screen_on_hotplug_2(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -533,15 +627,16 @@ static ssize_t store_down_threshold_hotplug_2(struct kobject *a, struct attribut
 
 	/* cannot be lower than 11 otherwise freq will not fall */
 	if (ret != 1 || input < 11 || input > 100 ||
-			input >= dbs_tuners_ins.up_threshold_hotplug_2)
+			input >= dbs_tuners_ins.up_threshold_screen_on_hotplug_2)
 		return -EINVAL;
 
-	dbs_tuners_ins.down_threshold_hotplug_2 = input;
-	hotplug_cpu_enable_down[2] = input;
+	dbs_tuners_ins.down_threshold_screen_on_hotplug_2 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_down[2] = input;
 	return count;
 }
 
-static ssize_t store_down_threshold_hotplug_3(struct kobject *a, struct attribute *b,
+static ssize_t store_down_threshold_screen_on_hotplug_3(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -550,14 +645,84 @@ static ssize_t store_down_threshold_hotplug_3(struct kobject *a, struct attribut
 
 	/* cannot be lower than 11 otherwise freq will not fall */
 	if (ret != 1 || input < 11 || input > 100 ||
-			input >= dbs_tuners_ins.up_threshold_hotplug_3)
+			input >= dbs_tuners_ins.up_threshold_screen_on_hotplug_3)
 		return -EINVAL;
 
-	dbs_tuners_ins.down_threshold_hotplug_3 = input;
-	hotplug_cpu_enable_down[3] = input;
+	dbs_tuners_ins.down_threshold_screen_on_hotplug_3 = input;
+	if (screen_is_on)
+		hotplug_cpu_enable_down[3] = input;
 	return count;
 }
 
+static ssize_t store_down_threshold_screen_off(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (ret != 1 || input < 11 || input > 100 ||
+			input >= dbs_tuners_ins.up_threshold_screen_off)
+		return -EINVAL;
+
+	dbs_tuners_ins.down_threshold_screen_off = input;
+	return count;
+}
+
+static ssize_t store_down_threshold_screen_off_hotplug_1(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (ret != 1 || input < 11 || input > 100 ||
+			input >= dbs_tuners_ins.up_threshold_screen_off_hotplug_1)
+		return -EINVAL;
+
+	dbs_tuners_ins.down_threshold_screen_off_hotplug_1 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_down[1] = input;
+	return count;
+}
+
+static ssize_t store_down_threshold_screen_off_hotplug_2(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (ret != 1 || input < 11 || input > 100 ||
+			input >= dbs_tuners_ins.up_threshold_screen_off_hotplug_2)
+		return -EINVAL;
+
+	dbs_tuners_ins.down_threshold_screen_off_hotplug_2 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_down[2] = input;
+	return count;
+}
+
+static ssize_t store_down_threshold_screen_off_hotplug_3(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	/* cannot be lower than 11 otherwise freq will not fall */
+	if (ret != 1 || input < 11 || input > 100 ||
+			input >= dbs_tuners_ins.up_threshold_screen_off_hotplug_3)
+		return -EINVAL;
+
+	dbs_tuners_ins.down_threshold_screen_off_hotplug_3 = input;
+	if (!screen_is_on)
+		hotplug_cpu_enable_down[3] = input;
+	return count;
+}
 static ssize_t store_cpu_down_block_cycles(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -1011,14 +1176,22 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 define_one_global_rw(sampling_rate);
 define_one_global_rw(sampling_rate_screen_off);
 define_one_global_rw(sampling_down_factor);
-define_one_global_rw(up_threshold);
-define_one_global_rw(up_threshold_hotplug_1);
-define_one_global_rw(up_threshold_hotplug_2);
-define_one_global_rw(up_threshold_hotplug_3);
-define_one_global_rw(down_threshold);
-define_one_global_rw(down_threshold_hotplug_1);
-define_one_global_rw(down_threshold_hotplug_2);
-define_one_global_rw(down_threshold_hotplug_3);
+define_one_global_rw(up_threshold_screen_on);
+define_one_global_rw(up_threshold_screen_on_hotplug_1);
+define_one_global_rw(up_threshold_screen_on_hotplug_2);
+define_one_global_rw(up_threshold_screen_on_hotplug_3);
+define_one_global_rw(up_threshold_screen_off);
+define_one_global_rw(up_threshold_screen_off_hotplug_1);
+define_one_global_rw(up_threshold_screen_off_hotplug_2);
+define_one_global_rw(up_threshold_screen_off_hotplug_3);
+define_one_global_rw(down_threshold_screen_on);
+define_one_global_rw(down_threshold_screen_on_hotplug_1);
+define_one_global_rw(down_threshold_screen_on_hotplug_2);
+define_one_global_rw(down_threshold_screen_on_hotplug_3);
+define_one_global_rw(down_threshold_screen_off);
+define_one_global_rw(down_threshold_screen_off_hotplug_1);
+define_one_global_rw(down_threshold_screen_off_hotplug_2);
+define_one_global_rw(down_threshold_screen_off_hotplug_3);
 define_one_global_rw(cpu_down_block_cycles);
 define_one_global_rw(cpu_hotplug_block_cycles);
 define_one_global_rw(super_conservative_screen_on);
@@ -1050,14 +1223,22 @@ static struct attribute *dbs_attributes[] = {
 	&sampling_rate.attr,
 	&sampling_rate_screen_off.attr,
 	&sampling_down_factor.attr,
-	&up_threshold.attr,
-	&up_threshold_hotplug_1.attr,
-	&up_threshold_hotplug_2.attr,
-	&up_threshold_hotplug_3.attr,
-	&down_threshold.attr,
-	&down_threshold_hotplug_1.attr,
-	&down_threshold_hotplug_2.attr,
-	&down_threshold_hotplug_3.attr,
+	&up_threshold_screen_on.attr,
+	&up_threshold_screen_on_hotplug_1.attr,
+	&up_threshold_screen_on_hotplug_2.attr,
+	&up_threshold_screen_on_hotplug_3.attr,
+	&up_threshold_screen_off.attr,
+	&up_threshold_screen_off_hotplug_1.attr,
+	&up_threshold_screen_off_hotplug_2.attr,
+	&up_threshold_screen_off_hotplug_3.attr,
+	&down_threshold_screen_on.attr,
+	&down_threshold_screen_on_hotplug_1.attr,
+	&down_threshold_screen_on_hotplug_2.attr,
+	&down_threshold_screen_on_hotplug_3.attr,
+	&down_threshold_screen_off.attr,
+	&down_threshold_screen_off_hotplug_1.attr,
+	&down_threshold_screen_off_hotplug_2.attr,
+	&down_threshold_screen_off_hotplug_3.attr,
 	&cpu_down_block_cycles.attr,
 	&cpu_hotplug_block_cycles.attr,
 	&super_conservative_screen_on.attr,
@@ -1268,7 +1449,7 @@ boostcomplete:
 	}
 
 	/* Check for frequency increase */
-	if (max_load > dbs_tuners_ins.up_threshold) {
+	if ((screen_is_on && max_load > dbs_tuners_ins.up_threshold_screen_on) || (!screen_is_on && max_load > dbs_tuners_ins.up_threshold_screen_off)) {
 		if (Lcpu_raise_block_cycles > dbs_tuners_ins.cpu_down_block_cycles || (screen_is_on && dbs_tuners_ins.super_conservative_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off == 0))
 		{
 			this_dbs_info->down_skip = 0;
@@ -1318,7 +1499,7 @@ boostcomplete:
 	 * can support the current CPU usage without triggering the up
 	 * policy. To be safe, we focus 10 points under the threshold.
 	 */
-	if (max_load < (dbs_tuners_ins.down_threshold - 10)) {
+	if ((screen_is_on && max_load < (dbs_tuners_ins.down_threshold_screen_on - 10)) || (!screen_is_on && max_load < (dbs_tuners_ins.down_threshold_screen_off - 10))) {
 		freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
 
 		this_dbs_info->requested_freq -= freq_target;
@@ -1386,6 +1567,13 @@ void ktoonservative_screen_is_on(bool state)
 	screen_is_on = state;
 	if (state == true)
 	{
+		hotplug_cpu_enable_up[1] = dbs_tuners_ins.up_threshold_screen_on_hotplug_1;
+		hotplug_cpu_enable_up[2] = dbs_tuners_ins.up_threshold_screen_on_hotplug_2;
+		hotplug_cpu_enable_up[3] = dbs_tuners_ins.up_threshold_screen_on_hotplug_3;
+		hotplug_cpu_enable_down[1] = dbs_tuners_ins.down_threshold_screen_on_hotplug_1;
+		hotplug_cpu_enable_down[2] = dbs_tuners_ins.down_threshold_screen_on_hotplug_2;
+		hotplug_cpu_enable_down[3] = dbs_tuners_ins.down_threshold_screen_on_hotplug_3;
+	
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
 		//check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
@@ -1393,6 +1581,13 @@ void ktoonservative_screen_is_on(bool state)
 	}
 	else
 	{
+		hotplug_cpu_enable_up[1] = dbs_tuners_ins.up_threshold_screen_off_hotplug_1;
+		hotplug_cpu_enable_up[2] = dbs_tuners_ins.up_threshold_screen_off_hotplug_2;
+		hotplug_cpu_enable_up[3] = dbs_tuners_ins.up_threshold_screen_off_hotplug_3;
+		hotplug_cpu_enable_down[1] = dbs_tuners_ins.down_threshold_screen_off_hotplug_1;
+		hotplug_cpu_enable_down[2] = dbs_tuners_ins.down_threshold_screen_off_hotplug_2;
+		hotplug_cpu_enable_down[3] = dbs_tuners_ins.down_threshold_screen_off_hotplug_3;
+
 		boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, false);
 		stored_sampling_rate = dbs_tuners_ins.sampling_rate;
 		dbs_tuners_ins.sampling_rate = dbs_tuners_ins.sampling_rate_screen_off;
