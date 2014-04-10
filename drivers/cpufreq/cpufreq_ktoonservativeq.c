@@ -34,7 +34,7 @@
 #define DEF_BOOST_CPU				(1134000)
 #define DEF_BOOST_GPU				(450)
 #define DEF_BOOST_HOLD_CYCLES			(22)
-#define DEF_DISABLE_HOTPLUGGING			(0)
+#define DEF_DISABLE_hotplug			(0)
 #define CPUS_AVAILABLE				num_possible_cpus()
 
 bool ktoonservative_is_active = false;
@@ -46,8 +46,8 @@ static int hotplug_cpu_lockout[] = { 0, 0, 0, 0 };
 static bool hotplug_flag_on = false;
 static unsigned int Lcpu_hotplug_block_cycles = 0;
 static bool hotplug_flag_off = false;
-static bool disable_hotplugging_chrg_override;
-static bool disable_hotplugging_media_override;
+static bool disable_hotplug_chrg_override;
+static bool disable_hotplug_media_override;
 
 void setExtraCores(unsigned int requested_freq);
 unsigned int kt_freq_control[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -160,9 +160,9 @@ static struct dbs_tuners {
 	unsigned int touch_boost_gpu;
 	unsigned int sync_extra_cores;
 	unsigned int boost_hold_cycles;
-	unsigned int disable_hotplugging;
-	unsigned int disable_hotplugging_chrg;
-	unsigned int disable_hotplugging_media;
+	unsigned int disable_hotplug;
+	unsigned int disable_hotplug_chrg;
+	unsigned int disable_hotplug_media;
 	unsigned int disable_hotplug_bt;
 	unsigned int no_extra_cores_screen_off;
 	unsigned int ignore_nice;
@@ -202,9 +202,9 @@ static struct dbs_tuners {
 	.touch_boost_gpu = DEF_BOOST_GPU,
 	.sync_extra_cores = 0,
 	.boost_hold_cycles = DEF_BOOST_HOLD_CYCLES,
-	.disable_hotplugging = DEF_DISABLE_HOTPLUGGING,
-	.disable_hotplugging_chrg = 0,
-	.disable_hotplugging_media = 0,
+	.disable_hotplug = DEF_DISABLE_hotplug,
+	.disable_hotplug_chrg = 0,
+	.disable_hotplug_media = 0,
 	.disable_hotplug_bt = 0,
 	.no_extra_cores_screen_off = 1,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
@@ -302,25 +302,25 @@ void set_bluetooth_state_kt(bool val)
 void send_cable_state_kt(unsigned int state)
 {
 	int cpu;
-	if (state && dbs_tuners_ins.disable_hotplugging_chrg)
+	if (state && dbs_tuners_ins.disable_hotplug_chrg)
 	{
-		disable_hotplugging_chrg_override = true;
+		disable_hotplug_chrg_override = true;
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 			hotplug_cpu_single_up[cpu] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
 	}
 	else
-		disable_hotplugging_chrg_override = false;
+		disable_hotplug_chrg_override = false;
 }
 
 bool set_music_playing_statekt(bool state)
 {
 	int cpu;
 	bool ret = false;
-	if (state && dbs_tuners_ins.disable_hotplugging_media)
+	if (state && dbs_tuners_ins.disable_hotplug_media)
 	{
-		disable_hotplugging_media_override = true;
+		disable_hotplug_media_override = true;
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 			hotplug_cpu_single_up[cpu] = 1;
 		if (!hotplugInProgress)
@@ -328,7 +328,7 @@ bool set_music_playing_statekt(bool state)
 		ret = true;
 	}
 	else
-		disable_hotplugging_media_override = false;
+		disable_hotplug_media_override = false;
 	
 	return ret;
 }
@@ -400,9 +400,9 @@ show_one(lockout_3rd_core_hotplug, lockout_3rd_core_hotplug);
 show_one(lockout_4th_core_hotplug, lockout_4th_core_hotplug);
 show_one(touch_boost_gpu, touch_boost_gpu);
 show_one(boost_hold_cycles, boost_hold_cycles);
-show_one(disable_hotplugging, disable_hotplugging);
-show_one(disable_hotplugging_chrg, disable_hotplugging_chrg);
-show_one(disable_hotplugging_media, disable_hotplugging_media);
+show_one(disable_hotplug, disable_hotplug);
+show_one(disable_hotplug_chrg, disable_hotplug_chrg);
+show_one(disable_hotplug_media, disable_hotplug_media);
 show_one(disable_hotplug_bt, disable_hotplug_bt);
 show_one(no_extra_cores_screen_off, no_extra_cores_screen_off);
 show_one(ignore_nice_load, ignore_nice);
@@ -999,7 +999,7 @@ static ssize_t store_boost_hold_cycles(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_disable_hotplug(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret, cpu;
@@ -1008,7 +1008,7 @@ static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b,
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.disable_hotplugging = input;
+	dbs_tuners_ins.disable_hotplug = input;
 	if (input == 1)
 	{
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
@@ -1019,7 +1019,7 @@ static ssize_t store_disable_hotplugging(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static ssize_t store_disable_hotplugging_chrg(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_disable_hotplug_chrg(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input, c_state, c_stateW;
 	int ret;
@@ -1028,7 +1028,7 @@ static ssize_t store_disable_hotplugging_chrg(struct kobject *a, struct attribut
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.disable_hotplugging_chrg = input;
+	dbs_tuners_ins.disable_hotplug_chrg = input;
 	c_state = get_cable_state();
 	c_stateW = get_cable_stateW();
 
@@ -1040,7 +1040,7 @@ static ssize_t store_disable_hotplugging_chrg(struct kobject *a, struct attribut
 	return count;
 }
 
-static ssize_t store_disable_hotplugging_media(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_disable_hotplug_media(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -1049,7 +1049,7 @@ static ssize_t store_disable_hotplugging_media(struct kobject *a, struct attribu
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.disable_hotplugging_media = input;
+	dbs_tuners_ins.disable_hotplug_media = input;
 		
 	return count;
 }
@@ -1210,9 +1210,9 @@ define_one_global_rw(lockout_4th_core_hotplug);
 define_one_global_rw(touch_boost_gpu);
 define_one_global_rw(sync_extra_cores);
 define_one_global_rw(boost_hold_cycles);
-define_one_global_rw(disable_hotplugging);
-define_one_global_rw(disable_hotplugging_chrg);
-define_one_global_rw(disable_hotplugging_media);
+define_one_global_rw(disable_hotplug);
+define_one_global_rw(disable_hotplug_chrg);
+define_one_global_rw(disable_hotplug_media);
 define_one_global_rw(disable_hotplug_bt);
 define_one_global_rw(no_extra_cores_screen_off);
 define_one_global_rw(ignore_nice_load);
@@ -1257,9 +1257,9 @@ static struct attribute *dbs_attributes[] = {
 	&touch_boost_gpu.attr,
 	&sync_extra_cores.attr,
 	&boost_hold_cycles.attr,
-	&disable_hotplugging.attr,
-	&disable_hotplugging_chrg.attr,
-	&disable_hotplugging_media.attr,
+	&disable_hotplug.attr,
+	&disable_hotplug_chrg.attr,
+	&disable_hotplug_media.attr,
 	&disable_hotplug_bt.attr,
 	&no_extra_cores_screen_off.attr,
 	&ignore_nice_load.attr,
@@ -1481,7 +1481,7 @@ boostcomplete:
 	else if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
 		Lcpu_raise_block_cycles = 0;
 	
-	if (policy->cpu == 0 && hotplug_flag_off && !dbs_tuners_ins.disable_hotplugging && !disable_hotplugging_chrg_override && !disable_hotplugging_media_override && disable_hotplug_bt_active == false) {
+	if (policy->cpu == 0 && hotplug_flag_off && !dbs_tuners_ins.disable_hotplug && !disable_hotplug_chrg_override && !disable_hotplug_media_override && disable_hotplug_bt_active == false) {
 		if (num_online_cpus() > 1)
 		{
 			if (Lcpu_down_block_cycles > dbs_tuners_ins.cpu_down_block_cycles)
