@@ -1717,8 +1717,11 @@ boostcomplete:
 			if (policy->cur > (policy->min * 2))
 			{
 				hotplug_flag_on = false;
-				if (!hotplugInProgress && policy->cpu == 0)
-					queue_work_on(policy->cpu, dbs_wq, &hotplug_online_work);
+				if (dbs_tuners_ins.no_extra_cores_screen_off == 0 || (dbs_tuners_ins.no_extra_cores_screen_off == 1 && screen_is_on))
+				{
+					if (!hotplugInProgress && policy->cpu == 0)
+						queue_work_on(policy->cpu, dbs_wq, &hotplug_online_work);
+				}
 			}
 		}
 		else if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
@@ -1897,7 +1900,7 @@ void ktoonservative_screen_is_on(bool state)
 		hotplug_cpu_lockout[3] = dbs_tuners_ins.lockout_4th_core_hotplug_screen_off;
 		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
 		{
-			if (hotplug_cpu_lockout[cpu] == 1)
+			if (hotplug_cpu_lockout[cpu] == 1 && (dbs_tuners_ins.no_extra_cores_screen_off == 0 || (dbs_tuners_ins.no_extra_cores_screen_off == 1 && screen_is_on)))
 			{
 				hotplug_cpu_single_up[cpu] = 1;
 				if (need_to_queue == 0)
@@ -1985,6 +1988,7 @@ static void __cpuinit hotplug_online_work_fn(struct work_struct *work)
 			if (hotplug_cpu_single_up[cpu])
 			{
 				hotplug_cpu_single_up[cpu] = 0;
+				//if (dbs_tuners_ins.no_extra_cores_screen_off == 0 || (dbs_tuners_ins.no_extra_cores_screen_off == 1 && screen_is_on) || dbs_tuners_ins.disable_hotplug || disable_hotplug_chrg_override || disable_hotplug_media_override || disable_hotplug_bt_active)
 				cpu_up(cpu);
 			}
 			//pr_info("auto_hotplug: CPU%d up.\n", cpu);
