@@ -156,9 +156,12 @@ static struct dbs_tuners {
 	unsigned int boost_2nd_core_on_button;
 	unsigned int boost_3rd_core_on_button;
 	unsigned int boost_4th_core_on_button;
-	unsigned int lockout_2nd_core_hotplug;
-	unsigned int lockout_3rd_core_hotplug;
-	unsigned int lockout_4th_core_hotplug;
+	unsigned int lockout_2nd_core_hotplug_screen_on;
+	unsigned int lockout_3rd_core_hotplug_screen_on;
+	unsigned int lockout_4th_core_hotplug_screen_on;
+	unsigned int lockout_2nd_core_hotplug_screen_off;
+	unsigned int lockout_3rd_core_hotplug_screen_off;
+	unsigned int lockout_4th_core_hotplug_screen_off;
 	unsigned int touch_boost_gpu;
 	unsigned int sync_extra_cores;
 	unsigned int boost_hold_cycles;
@@ -203,9 +206,12 @@ static struct dbs_tuners {
 	.boost_2nd_core_on_button = 1,
 	.boost_3rd_core_on_button = 0,
 	.boost_4th_core_on_button = 0,
-	.lockout_2nd_core_hotplug = 0,
-	.lockout_3rd_core_hotplug = 0,
-	.lockout_4th_core_hotplug = 0,
+	.lockout_2nd_core_hotplug_screen_on = 0,
+	.lockout_3rd_core_hotplug_screen_on = 0,
+	.lockout_4th_core_hotplug_screen_on = 0,
+	.lockout_2nd_core_hotplug_screen_off = 0,
+	.lockout_3rd_core_hotplug_screen_off = 0,
+	.lockout_4th_core_hotplug_screen_off = 0,
 	.touch_boost_gpu = DEF_BOOST_GPU,
 	.sync_extra_cores = 0,
 	.boost_hold_cycles = DEF_BOOST_HOLD_CYCLES,
@@ -407,9 +413,12 @@ show_one(touch_boost_4th_core, touch_boost_4th_core);
 show_one(boost_2nd_core_on_button, boost_2nd_core_on_button);
 show_one(boost_3rd_core_on_button, boost_3rd_core_on_button);
 show_one(boost_4th_core_on_button, boost_4th_core_on_button);
-show_one(lockout_2nd_core_hotplug, lockout_2nd_core_hotplug);
-show_one(lockout_3rd_core_hotplug, lockout_3rd_core_hotplug);
-show_one(lockout_4th_core_hotplug, lockout_4th_core_hotplug);
+show_one(lockout_2nd_core_hotplug_screen_on, lockout_2nd_core_hotplug_screen_on);
+show_one(lockout_3rd_core_hotplug_screen_on, lockout_3rd_core_hotplug_screen_on);
+show_one(lockout_4th_core_hotplug_screen_on, lockout_4th_core_hotplug_screen_on);
+show_one(lockout_2nd_core_hotplug_screen_off, lockout_2nd_core_hotplug_screen_off);
+show_one(lockout_3rd_core_hotplug_screen_off, lockout_3rd_core_hotplug_screen_off);
+show_one(lockout_4th_core_hotplug_screen_off, lockout_4th_core_hotplug_screen_off);
 show_one(touch_boost_gpu, touch_boost_gpu);
 show_one(boost_hold_cycles, boost_hold_cycles);
 show_one(disable_hotplug, disable_hotplug);
@@ -961,7 +970,7 @@ static ssize_t store_touch_boost_4th_core(struct kobject *a, struct attribute *b
 	return count;
 }
 
-static ssize_t store_lockout_2nd_core_hotplug(struct kobject *a, struct attribute *b,
+static ssize_t store_lockout_2nd_core_hotplug_screen_on(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -971,15 +980,16 @@ static ssize_t store_lockout_2nd_core_hotplug(struct kobject *a, struct attribut
 	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
-	dbs_tuners_ins.lockout_2nd_core_hotplug = input;
-	hotplug_cpu_lockout[1] = input;
-	if (input == 1)
+	dbs_tuners_ins.lockout_2nd_core_hotplug_screen_on = input;
+	if (screen_is_on)
+		hotplug_cpu_lockout[1] = input;
+	if (screen_is_on && input == 1)
 	{
 		hotplug_cpu_single_up[1] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
 	}
-	else if (input == 2)
+	else if (screen_is_on && input == 2)
 	{
 		hotplug_cpu_single_down[1] = 1;
 		if (!hotplugInProgress)
@@ -988,7 +998,7 @@ static ssize_t store_lockout_2nd_core_hotplug(struct kobject *a, struct attribut
 	return count;
 }
 
-static ssize_t store_lockout_3rd_core_hotplug(struct kobject *a, struct attribute *b,
+static ssize_t store_lockout_3rd_core_hotplug_screen_on(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -998,15 +1008,16 @@ static ssize_t store_lockout_3rd_core_hotplug(struct kobject *a, struct attribut
 	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
-	dbs_tuners_ins.lockout_3rd_core_hotplug = input;
-	hotplug_cpu_lockout[2] = input;
-	if (input == 1)
+	dbs_tuners_ins.lockout_3rd_core_hotplug_screen_on = input;
+	if (screen_is_on)
+		hotplug_cpu_lockout[2] = input;
+	if (screen_is_on && input == 1)
 	{
 		hotplug_cpu_single_up[2] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
 	}
-	else if (input == 2)
+	else if (screen_is_on && input == 2)
 	{
 		hotplug_cpu_single_down[2] = 1;
 		if (!hotplugInProgress)
@@ -1015,7 +1026,7 @@ static ssize_t store_lockout_3rd_core_hotplug(struct kobject *a, struct attribut
 	return count;
 }
 
-static ssize_t store_lockout_4th_core_hotplug(struct kobject *a, struct attribute *b,
+static ssize_t store_lockout_4th_core_hotplug_screen_on(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
 	unsigned int input;
@@ -1025,15 +1036,100 @@ static ssize_t store_lockout_4th_core_hotplug(struct kobject *a, struct attribut
 	if (input != 0 && input != 1 && input != 2)
 		input = 0;
 
-	dbs_tuners_ins.lockout_4th_core_hotplug = input;
-	hotplug_cpu_lockout[3] = input;
-	if (input == 1)
+	dbs_tuners_ins.lockout_4th_core_hotplug_screen_on = input;
+	if (screen_is_on)
+		hotplug_cpu_lockout[3] = input;
+	if (screen_is_on && input == 1)
 	{
 		hotplug_cpu_single_up[3] = 1;
 		if (!hotplugInProgress)
 			queue_work_on(0, dbs_wq, &hotplug_online_work);
 	}
-	else if (input == 2)
+	else if (screen_is_on && input == 2)
+	{
+		hotplug_cpu_single_down[3] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
+	}
+	return count;
+}
+
+static ssize_t store_lockout_2nd_core_hotplug_screen_off(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret, cpu;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1 && input != 2)
+		input = 0;
+
+	dbs_tuners_ins.lockout_2nd_core_hotplug_screen_off = input;
+	if (!screen_is_on)
+		hotplug_cpu_lockout[1] = input;
+	if (!screen_is_on && input == 1)
+	{
+		hotplug_cpu_single_up[1] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (!screen_is_on && input == 2)
+	{
+		hotplug_cpu_single_down[1] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
+	}
+	return count;
+}
+
+static ssize_t store_lockout_3rd_core_hotplug_screen_off(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret, cpu;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1 && input != 2)
+		input = 0;
+
+	dbs_tuners_ins.lockout_3rd_core_hotplug_screen_off = input;
+	if (!screen_is_on)
+		hotplug_cpu_lockout[2] = input;
+	if (!screen_is_on && input == 1)
+	{
+		hotplug_cpu_single_up[2] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (!screen_is_on && input == 2)
+	{
+		hotplug_cpu_single_down[2] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_offline_work);
+	}
+	return count;
+}
+
+static ssize_t store_lockout_4th_core_hotplug_screen_off(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret, cpu;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1 && input != 2)
+		input = 0;
+
+	dbs_tuners_ins.lockout_4th_core_hotplug_screen_off = input;
+	if (!screen_is_on)
+		hotplug_cpu_lockout[3] = input;
+	if (!screen_is_on && input == 1)
+	{
+		hotplug_cpu_single_up[3] = 1;
+		if (!hotplugInProgress)
+			queue_work_on(0, dbs_wq, &hotplug_online_work);
+	}
+	else if (!screen_is_on && input == 2)
 	{
 		hotplug_cpu_single_down[3] = 1;
 		if (!hotplugInProgress)
@@ -1301,9 +1397,12 @@ define_one_global_rw(touch_boost_4th_core);
 define_one_global_rw(boost_2nd_core_on_button);
 define_one_global_rw(boost_3rd_core_on_button);
 define_one_global_rw(boost_4th_core_on_button);
-define_one_global_rw(lockout_2nd_core_hotplug);
-define_one_global_rw(lockout_3rd_core_hotplug);
-define_one_global_rw(lockout_4th_core_hotplug);
+define_one_global_rw(lockout_2nd_core_hotplug_screen_on);
+define_one_global_rw(lockout_3rd_core_hotplug_screen_on);
+define_one_global_rw(lockout_4th_core_hotplug_screen_on);
+define_one_global_rw(lockout_2nd_core_hotplug_screen_off);
+define_one_global_rw(lockout_3rd_core_hotplug_screen_off);
+define_one_global_rw(lockout_4th_core_hotplug_screen_off);
 define_one_global_rw(touch_boost_gpu);
 define_one_global_rw(sync_extra_cores);
 define_one_global_rw(boost_hold_cycles);
@@ -1353,9 +1452,12 @@ static struct attribute *dbs_attributes[] = {
 	&boost_2nd_core_on_button.attr,
 	&boost_3rd_core_on_button.attr,
 	&boost_4th_core_on_button.attr,
-	&lockout_2nd_core_hotplug.attr,
-	&lockout_3rd_core_hotplug.attr,
-	&lockout_4th_core_hotplug.attr,
+	&lockout_2nd_core_hotplug_screen_on.attr,
+	&lockout_3rd_core_hotplug_screen_on.attr,
+	&lockout_4th_core_hotplug_screen_on.attr,
+	&lockout_2nd_core_hotplug_screen_off.attr,
+	&lockout_3rd_core_hotplug_screen_off.attr,
+	&lockout_4th_core_hotplug_screen_off.attr,
 	&touch_boost_gpu.attr,
 	&sync_extra_cores.attr,
 	&boost_hold_cycles.attr,
@@ -1643,17 +1745,17 @@ void check_boost_cores_up(bool dec1, bool dec2, bool dec3)
 {
 	bool got_boost_core = false;
 
-	if (!cpu_online(1) && dec1 && hotplug_cpu_lockout[1] != 2)
+	if (!cpu_online(1) && (dec1 || hotplug_cpu_lockout[1] == 1) && hotplug_cpu_lockout[1] != 2)
 	{
 		hotplug_cpu_single_up[1] = 1;
 		got_boost_core = true;
 	}
-	if (!cpu_online(2) && dec2 && hotplug_cpu_lockout[2] != 2)
+	if (!cpu_online(2) && (dec2 || hotplug_cpu_lockout[2] == 1) && hotplug_cpu_lockout[2] != 2)
 	{
 		hotplug_cpu_single_up[2] = 1;
 		got_boost_core = true;
 	}
-	if (!cpu_online(3) && dec3 && hotplug_cpu_lockout[3] != 2)
+	if (!cpu_online(3) && (dec3 || hotplug_cpu_lockout[3] == 1) && hotplug_cpu_lockout[3] != 2)
 	{
 		hotplug_cpu_single_up[3] = 1;
 		got_boost_core = true;
@@ -1667,9 +1769,13 @@ void check_boost_cores_up(bool dec1, bool dec2, bool dec3)
 
 void ktoonservative_screen_is_on(bool state)
 {
+	unsigned int need_to_queue = 0;
+	unsigned int cpu;
 	screen_is_on = state;
+	
 	if (state == true)
 	{
+		//Set hotplug options when screen is on
 		hotplug_cpu_enable_up[1] = dbs_tuners_ins.up_threshold_screen_on_hotplug_1;
 		hotplug_cpu_enable_up[2] = dbs_tuners_ins.up_threshold_screen_on_hotplug_2;
 		hotplug_cpu_enable_up[3] = dbs_tuners_ins.up_threshold_screen_on_hotplug_3;
@@ -1677,6 +1783,18 @@ void ktoonservative_screen_is_on(bool state)
 		hotplug_cpu_enable_down[2] = dbs_tuners_ins.down_threshold_screen_on_hotplug_2;
 		hotplug_cpu_enable_down[3] = dbs_tuners_ins.down_threshold_screen_on_hotplug_3;
 	
+		//Set core lockout options when screen is on
+		hotplug_cpu_lockout[1] = dbs_tuners_ins.lockout_2nd_core_hotplug_screen_on;
+		hotplug_cpu_lockout[2] = dbs_tuners_ins.lockout_3rd_core_hotplug_screen_on;
+		hotplug_cpu_lockout[3] = dbs_tuners_ins.lockout_4th_core_hotplug_screen_on;
+		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+		{
+			if (hotplug_cpu_lockout[cpu] == 1)
+				hotplug_cpu_single_up[cpu] = 1;
+			if (hotplug_cpu_lockout[cpu] == 2)
+				hotplug_cpu_single_down[cpu] = 1;
+		}
+			
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
 		//check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
@@ -1684,12 +1802,47 @@ void ktoonservative_screen_is_on(bool state)
 	}
 	else
 	{
+		//Set hotplug options when screen is off
 		hotplug_cpu_enable_up[1] = dbs_tuners_ins.up_threshold_screen_off_hotplug_1;
 		hotplug_cpu_enable_up[2] = dbs_tuners_ins.up_threshold_screen_off_hotplug_2;
 		hotplug_cpu_enable_up[3] = dbs_tuners_ins.up_threshold_screen_off_hotplug_3;
 		hotplug_cpu_enable_down[1] = dbs_tuners_ins.down_threshold_screen_off_hotplug_1;
 		hotplug_cpu_enable_down[2] = dbs_tuners_ins.down_threshold_screen_off_hotplug_2;
 		hotplug_cpu_enable_down[3] = dbs_tuners_ins.down_threshold_screen_off_hotplug_3;
+
+		//Set core lockout options when screen is on
+		hotplug_cpu_lockout[1] = dbs_tuners_ins.lockout_2nd_core_hotplug_screen_off;
+		hotplug_cpu_lockout[2] = dbs_tuners_ins.lockout_3rd_core_hotplug_screen_off;
+		hotplug_cpu_lockout[3] = dbs_tuners_ins.lockout_4th_core_hotplug_screen_off;
+		for (cpu = 1; cpu < CPUS_AVAILABLE; cpu++)
+		{
+			if (hotplug_cpu_lockout[cpu] == 1)
+			{
+				hotplug_cpu_single_up[cpu] = 1;
+				if (need_to_queue == 0)
+					need_to_queue = 1;
+				else
+					need_to_queue = 3;
+			}
+			if (hotplug_cpu_lockout[cpu] == 2)
+			{
+				hotplug_cpu_single_down[cpu] = 1;
+				if (need_to_queue == 0)
+					need_to_queue = 2;
+				else
+					need_to_queue = 3;
+			}
+		}
+		if (need_to_queue == 1 || need_to_queue == 3)
+		{
+			if (!hotplugInProgress)
+				queue_work_on(0, dbs_wq, &hotplug_online_work);
+		}
+		if (need_to_queue == 2 || need_to_queue == 3)
+		{
+			if (!hotplugInProgress)
+				queue_work_on(0, dbs_wq, &hotplug_offline_work);
+		}	
 
 		boost_the_gpu(dbs_tuners_ins.touch_boost_gpu, false);
 		stored_sampling_rate = dbs_tuners_ins.sampling_rate;
