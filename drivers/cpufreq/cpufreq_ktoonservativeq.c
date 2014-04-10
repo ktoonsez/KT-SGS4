@@ -168,7 +168,8 @@ static struct dbs_tuners {
 	unsigned int disable_hotplug_bt;
 	unsigned int no_extra_cores_screen_off;
 	unsigned int ignore_nice;
-	unsigned int freq_step;
+	unsigned int freq_step_screen_on;
+	unsigned int freq_step_screen_off;
 } dbs_tuners_ins = {
 	.up_threshold_screen_on = 57,
 	.up_threshold_screen_on_hotplug_1 = 58,
@@ -216,7 +217,8 @@ static struct dbs_tuners {
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.sampling_rate_screen_off = 45000,
 	.ignore_nice = 0,
-	.freq_step = 5,
+	.freq_step_screen_on = 5,
+	.freq_step_screen_off = 5,
 };
 
 static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu,
@@ -416,7 +418,8 @@ show_one(disable_hotplug_media, disable_hotplug_media);
 show_one(disable_hotplug_bt, disable_hotplug_bt);
 show_one(no_extra_cores_screen_off, no_extra_cores_screen_off);
 show_one(ignore_nice_load, ignore_nice);
-show_one(freq_step, freq_step);
+show_one(freq_step_screen_on, freq_step_screen_on);
+show_one(freq_step_screen_off, freq_step_screen_off);
 
 static ssize_t store_sampling_down_factor(struct kobject *a,
 					  struct attribute *b,
@@ -1225,7 +1228,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
+static ssize_t store_freq_step_screen_on(struct kobject *a, struct attribute *b,
 			       const char *buf, size_t count)
 {
 	unsigned int input;
@@ -1238,9 +1241,28 @@ static ssize_t store_freq_step(struct kobject *a, struct attribute *b,
 	if (input > 100)
 		input = 100;
 
-	/* no need to test here if freq_step is zero as the user might actually
+	/* no need to test here if freq_step_screen_on is zero as the user might actually
 	 * want this, they would be crazy though :) */
-	dbs_tuners_ins.freq_step = input;
+	dbs_tuners_ins.freq_step_screen_on = input;
+	return count;
+}
+
+static ssize_t store_freq_step_screen_off(struct kobject *a, struct attribute *b,
+			       const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1)
+		return -EINVAL;
+
+	if (input > 100)
+		input = 100;
+
+	/* no need to test here if freq_step_screen_off is zero as the user might actually
+	 * want this, they would be crazy though :) */
+	dbs_tuners_ins.freq_step_screen_off = input;
 	return count;
 }
 
@@ -1291,7 +1313,8 @@ define_one_global_rw(disable_hotplug_media);
 define_one_global_rw(disable_hotplug_bt);
 define_one_global_rw(no_extra_cores_screen_off);
 define_one_global_rw(ignore_nice_load);
-define_one_global_rw(freq_step);
+define_one_global_rw(freq_step_screen_on);
+define_one_global_rw(freq_step_screen_off);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -1342,7 +1365,8 @@ static struct attribute *dbs_attributes[] = {
 	&disable_hotplug_bt.attr,
 	&no_extra_cores_screen_off.attr,
 	&ignore_nice_load.attr,
-	&freq_step.attr,
+	&freq_step_screen_on.attr,
+	&freq_step_screen_off.attr,
 	NULL
 };
 
@@ -1476,7 +1500,7 @@ boostcomplete:
 	 * break out if we 'cannot' reduce the speed as the user might
 	 * want freq_step to be zero
 	 */
-	if (dbs_tuners_ins.freq_step == 0)
+	if ((screen_is_on && dbs_tuners_ins.freq_step_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.freq_step_screen_off == 0))
 		return;
 	
 	if (policy->cpu == 0)
@@ -1531,7 +1555,10 @@ boostcomplete:
 			if (this_dbs_info->requested_freq == policy->max)
 				return;
 
-			freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
+			if (screen_is_on)
+				freq_target = (dbs_tuners_ins.freq_step_screen_on * policy->max) / 100;
+			else
+				freq_target = (dbs_tuners_ins.freq_step_screen_off * policy->max) / 100;
 
 			/* max freq cannot be less than 100. But who knows.... */
 			if (unlikely(freq_target == 0))
@@ -1573,7 +1600,10 @@ boostcomplete:
 	 * policy. To be safe, we focus 10 points under the threshold.
 	 */
 	if ((screen_is_on && max_load < (dbs_tuners_ins.down_threshold_screen_on - 10)) || (!screen_is_on && max_load < (dbs_tuners_ins.down_threshold_screen_off - 10))) {
-		freq_target = (dbs_tuners_ins.freq_step * policy->max) / 100;
+		if (screen_is_on)
+			freq_target = (dbs_tuners_ins.freq_step_screen_on * policy->max) / 100;
+		else
+			freq_target = (dbs_tuners_ins.freq_step_screen_off * policy->max) / 100;
 
 		this_dbs_info->requested_freq -= freq_target;
 		if (this_dbs_info->requested_freq < policy->min)
