@@ -74,17 +74,18 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "Make boot.img"
 	./mkbootfs $INITRAMFS_DEST | gzip > $PACKAGEDIR/ramdisk.gz
 	./mkbootimg --cmdline 'console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3 maxcpus=4' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img 
-	if [ $EXEC_LOKI = 'Y' ]; then
-		echo "Executing loki"
-		./loki_patch-linux-x86_64 boot aboot$CARRIER.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
-		rm $PACKAGEDIR/boot.img
-	fi;
+	#if [ $EXEC_LOKI = 'Y' ]; then
+	#	echo "Executing loki"
+	#	./loki_patch-linux-x86_64 boot aboot$CARRIER.img $PACKAGEDIR/boot.img $PACKAGEDIR/boot.lok
+	#	rm $PACKAGEDIR/boot.img
+	#fi;
 	cd $PACKAGEDIR
-	if [ $EXEC_LOKI = 'Y' ]; then
-		cp -R ../META-INF-SEC ./META-INF
-	else
+	#if [ $EXEC_LOKI = 'Y' ]; then
+	#	cp -R ../META-INF-SEC ./META-INF
+	#else
 		cp -R ../META-INF .
-	fi;
+	#fi;
+	cp -R ../kernel .
 	rm ramdisk.gz
 	rm zImage
 	rm ../$MUXEDNAMESHRT.zip
