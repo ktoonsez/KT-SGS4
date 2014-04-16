@@ -70,7 +70,7 @@ static unsigned int Lcharging_max_mhz_orig = 1890000;
 static bool Lcharging_mhz_active;
 static bool Lcharging_mhz_active_block_min;
 static bool Lcharging_mhz_active_block_max;
-static bool call_in_progress=false;
+bool call_in_progress=false;
 static unsigned int Ldisable_som_call_in_progress = 0;
 static char scaling_governor_screen_off_sel[16];
 static char scaling_governor_screen_off_sel_prev[16];

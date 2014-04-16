@@ -661,7 +661,6 @@ struct pmic8xxx_pwrkey {
 };
 
 static struct device *gdev;
-static bool call_in_progress = false;
 static bool ischarging = false;
 extern void ischarging_relay(bool status);
 extern void prox_max_relay(unsigned int val);
@@ -4661,11 +4660,6 @@ static void synaptics_rmi4_input_close(struct input_dev *dev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #define synaptics_rmi4_suspend NULL
 #define synaptics_rmi4_resume NULL
-
-void set_call_in_progress_scrn(bool state)
-{
-	call_in_progress = state;
-}
 
 void notif_wakelock_forwake_funcs(bool state)
 {
