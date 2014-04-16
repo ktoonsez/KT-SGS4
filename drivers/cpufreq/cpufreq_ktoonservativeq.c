@@ -1724,7 +1724,7 @@ boostcomplete:
 				}
 			}
 		}
-		else if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
+		else if (!call_in_progress && ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off)))
 		{
 			if (!had_load_but_counting)
 				Lblock_cycles_online = 0;
@@ -1733,7 +1733,7 @@ boostcomplete:
 
 	/* Check for frequency increase */
 	if ((screen_is_on && max_load > dbs_tuners_ins.up_threshold_screen_on) || (!screen_is_on && max_load > dbs_tuners_ins.up_threshold_screen_off)) {
-		if ((screen_is_on && Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise_screen_on) || (!screen_is_on && Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise_screen_off) || (screen_is_on && dbs_tuners_ins.super_conservative_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off == 0))
+		if ((screen_is_on && Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise_screen_on) || (!screen_is_on && Lblock_cycles_raise > dbs_tuners_ins.block_cycles_raise_screen_off)) // || ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on == 0) || call_in_progress) || ((!screen_is_on && dbs_tuners_ins.super_conservative_screen_off == 0) || call_in_progress))
 		{
 			this_dbs_info->down_skip = 0;
 
@@ -1757,14 +1757,14 @@ boostcomplete:
 			__cpufreq_driver_target(policy, this_dbs_info->requested_freq, CPUFREQ_RELATION_H);
 			if (((screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_on) || (!screen_is_on && dbs_tuners_ins.sync_extra_cores_screen_off)) && policy->cpu == 0)
 				setExtraCores(this_dbs_info->requested_freq);
-			if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
-				Lblock_cycles_raise = 0;
+			//if ((!call_in_progress && screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!call_in_progress && !screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
+			Lblock_cycles_raise = 0;
 		}
-		if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
-			Lblock_cycles_raise++;
+		//if ((!call_in_progress && screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!call_in_progress && !screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
+		Lblock_cycles_raise++;
 		return;
 	}
-	else if ((screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
+	else if ((!call_in_progress && screen_is_on && dbs_tuners_ins.super_conservative_screen_on) || (!call_in_progress && !screen_is_on && dbs_tuners_ins.super_conservative_screen_off))
 		Lblock_cycles_raise = 0;
 	
 	if (policy->cpu == 0 && hotplug_flag_off && !dbs_tuners_ins.disable_hotplug && !disable_hotplug_chrg_override && !disable_hotplug_media_override && disable_hotplug_bt_active == false) {
