@@ -38,13 +38,14 @@ void gkt_work_init(void)
 	}
 }
 
-void gkt_boost_cpu_call(void)
+void gkt_boost_cpu_call(bool change_screen_state, bool boost_for_button)
 {
 	if (ktoonservative_is_active)
 	{
 		//pr_alert("KTGlobal WORK CALL - Ktoonservative mode\n");
-		ktoonservative_screen_is_on(true);
-		ktoonservative_boostpulse();
+		if (change_screen_state)
+			ktoonservative_screen_is_on(true);
+		ktoonservative_boostpulse(boost_for_button);
 	}
 	else
 	{
