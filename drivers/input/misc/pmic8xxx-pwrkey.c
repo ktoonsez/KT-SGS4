@@ -58,7 +58,7 @@ irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 	if (pwrkey->powerkey_state == 0)
 	{
 		pr_alert("KT_RELAY_CALL FROM POWER KEY\n");
-		gkt_boost_cpu_call();
+		gkt_boost_cpu_call(true, true);
 	}	
 	pwrkey->powerkey_state = 1;
 	if (pwrkey->press == true) {

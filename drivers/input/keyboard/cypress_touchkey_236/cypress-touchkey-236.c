@@ -804,7 +804,7 @@ static irqreturn_t cypress_touchkey_interrupt(int irq, void *dev_id)
 	
 	if (ktoonservative_is_active && press == 1 && (info->keycode[code] == 158 || info->keycode[code] == 139))
 	{
-		ktoonservative_boostpulse();
+		ktoonservative_boostpulse(true);
 		//pr_alert("KEY_PRESS: %d-%d\n", info->keycode[code], press);
 	}
 	

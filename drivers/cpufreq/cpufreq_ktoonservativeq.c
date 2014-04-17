@@ -153,9 +153,12 @@ static struct dbs_tuners {
 	unsigned int touch_boost_2nd_core;
 	unsigned int touch_boost_3rd_core;
 	unsigned int touch_boost_4th_core;
-	unsigned int boost_2nd_core_on_button;
-	unsigned int boost_3rd_core_on_button;
-	unsigned int boost_4th_core_on_button;
+	unsigned int boost_2nd_core_on_button_screen_on;
+	unsigned int boost_3rd_core_on_button_screen_on;
+	unsigned int boost_4th_core_on_button_screen_on;
+	unsigned int boost_2nd_core_on_button_screen_off;
+	unsigned int boost_3rd_core_on_button_screen_off;
+	unsigned int boost_4th_core_on_button_screen_off;
 	unsigned int lockout_2nd_core_hotplug_screen_on;
 	unsigned int lockout_3rd_core_hotplug_screen_on;
 	unsigned int lockout_4th_core_hotplug_screen_on;
@@ -206,9 +209,12 @@ static struct dbs_tuners {
 	.touch_boost_2nd_core = 1,
 	.touch_boost_3rd_core = 0,
 	.touch_boost_4th_core = 0,
-	.boost_2nd_core_on_button = 1,
-	.boost_3rd_core_on_button = 0,
-	.boost_4th_core_on_button = 0,
+	.boost_2nd_core_on_button_screen_on = 1,
+	.boost_3rd_core_on_button_screen_on = 0,
+	.boost_4th_core_on_button_screen_on = 0,
+	.boost_2nd_core_on_button_screen_off = 1,
+	.boost_3rd_core_on_button_screen_off = 0,
+	.boost_4th_core_on_button_screen_off = 0,
 	.lockout_2nd_core_hotplug_screen_on = 0,
 	.lockout_3rd_core_hotplug_screen_on = 0,
 	.lockout_4th_core_hotplug_screen_on = 0,
@@ -422,9 +428,12 @@ show_one(super_conservative_screen_off, super_conservative_screen_off);
 show_one(touch_boost_2nd_core, touch_boost_2nd_core);
 show_one(touch_boost_3rd_core, touch_boost_3rd_core);
 show_one(touch_boost_4th_core, touch_boost_4th_core);
-show_one(boost_2nd_core_on_button, boost_2nd_core_on_button);
-show_one(boost_3rd_core_on_button, boost_3rd_core_on_button);
-show_one(boost_4th_core_on_button, boost_4th_core_on_button);
+show_one(boost_2nd_core_on_button_screen_on, boost_2nd_core_on_button_screen_on);
+show_one(boost_3rd_core_on_button_screen_on, boost_3rd_core_on_button_screen_on);
+show_one(boost_4th_core_on_button_screen_on, boost_4th_core_on_button_screen_on);
+show_one(boost_2nd_core_on_button_screen_off, boost_2nd_core_on_button_screen_off);
+show_one(boost_3rd_core_on_button_screen_off, boost_3rd_core_on_button_screen_off);
+show_one(boost_4th_core_on_button_screen_off, boost_4th_core_on_button_screen_off);
 show_one(lockout_2nd_core_hotplug_screen_on, lockout_2nd_core_hotplug_screen_on);
 show_one(lockout_3rd_core_hotplug_screen_on, lockout_3rd_core_hotplug_screen_on);
 show_one(lockout_4th_core_hotplug_screen_on, lockout_4th_core_hotplug_screen_on);
@@ -1274,7 +1283,7 @@ static ssize_t store_no_extra_cores_screen_off(struct kobject *a, struct attribu
 	return count;
 }
 
-static ssize_t store_boost_2nd_core_on_button(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_boost_2nd_core_on_button_screen_on(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -1283,12 +1292,12 @@ static ssize_t store_boost_2nd_core_on_button(struct kobject *a, struct attribut
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.boost_2nd_core_on_button = input;
+	dbs_tuners_ins.boost_2nd_core_on_button_screen_on = input;
 
 	return count;
 }
 
-static ssize_t store_boost_3rd_core_on_button(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_boost_3rd_core_on_button_screen_on(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -1297,12 +1306,12 @@ static ssize_t store_boost_3rd_core_on_button(struct kobject *a, struct attribut
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.boost_3rd_core_on_button = input;
+	dbs_tuners_ins.boost_3rd_core_on_button_screen_on = input;
 
 	return count;
 }
 
-static ssize_t store_boost_4th_core_on_button(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+static ssize_t store_boost_4th_core_on_button_screen_on(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
 	int ret;
@@ -1311,7 +1320,49 @@ static ssize_t store_boost_4th_core_on_button(struct kobject *a, struct attribut
 	if (input != 0 && input != 1)
 		input = 0;
 
-	dbs_tuners_ins.boost_4th_core_on_button = input;
+	dbs_tuners_ins.boost_4th_core_on_button_screen_on = input;
+
+	return count;
+}
+
+static ssize_t store_boost_2nd_core_on_button_screen_off(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1)
+		input = 0;
+
+	dbs_tuners_ins.boost_2nd_core_on_button_screen_off = input;
+
+	return count;
+}
+
+static ssize_t store_boost_3rd_core_on_button_screen_off(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1)
+		input = 0;
+
+	dbs_tuners_ins.boost_3rd_core_on_button_screen_off = input;
+
+	return count;
+}
+
+static ssize_t store_boost_4th_core_on_button_screen_off(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input != 0 && input != 1)
+		input = 0;
+
+	dbs_tuners_ins.boost_4th_core_on_button_screen_off = input;
 
 	return count;
 }
@@ -1469,9 +1520,12 @@ define_one_global_rw(touch_boost_cpu_all_cores);
 define_one_global_rw(touch_boost_2nd_core);
 define_one_global_rw(touch_boost_3rd_core);
 define_one_global_rw(touch_boost_4th_core);
-define_one_global_rw(boost_2nd_core_on_button);
-define_one_global_rw(boost_3rd_core_on_button);
-define_one_global_rw(boost_4th_core_on_button);
+define_one_global_rw(boost_2nd_core_on_button_screen_on);
+define_one_global_rw(boost_3rd_core_on_button_screen_on);
+define_one_global_rw(boost_4th_core_on_button_screen_on);
+define_one_global_rw(boost_2nd_core_on_button_screen_off);
+define_one_global_rw(boost_3rd_core_on_button_screen_off);
+define_one_global_rw(boost_4th_core_on_button_screen_off);
 define_one_global_rw(lockout_2nd_core_hotplug_screen_on);
 define_one_global_rw(lockout_3rd_core_hotplug_screen_on);
 define_one_global_rw(lockout_4th_core_hotplug_screen_on);
@@ -1527,9 +1581,12 @@ static struct attribute *dbs_attributes[] = {
 	&touch_boost_2nd_core.attr,
 	&touch_boost_3rd_core.attr,
 	&touch_boost_4th_core.attr,
-	&boost_2nd_core_on_button.attr,
-	&boost_3rd_core_on_button.attr,
-	&boost_4th_core_on_button.attr,
+	&boost_2nd_core_on_button_screen_on.attr,
+	&boost_3rd_core_on_button_screen_on.attr,
+	&boost_4th_core_on_button_screen_on.attr,
+	&boost_2nd_core_on_button_screen_off.attr,
+	&boost_3rd_core_on_button_screen_off.attr,
+	&boost_4th_core_on_button_screen_off.attr,
 	&lockout_2nd_core_hotplug_screen_on.attr,
 	&lockout_3rd_core_hotplug_screen_on.attr,
 	&lockout_4th_core_hotplug_screen_on.attr,
@@ -1881,8 +1938,7 @@ void ktoonservative_screen_is_on(bool state)
 			
 		if (stored_sampling_rate > 0)
 			dbs_tuners_ins.sampling_rate = stored_sampling_rate; //max(input, min_sampling_rate);
-		//check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button, dbs_tuners_ins.boost_3rd_core_on_button, dbs_tuners_ins.boost_4th_core_on_button);
-		ktoonservative_boostpulse();
+		ktoonservative_boostpulse(true);
 	}
 	else
 	{
@@ -1935,7 +1991,7 @@ void ktoonservative_screen_is_on(bool state)
 	
 }
 
-void ktoonservative_boostpulse(void)
+void ktoonservative_boostpulse(bool boost_for_button)
 {
 	if (!boostpulse_relayf)
 	{
@@ -1948,7 +2004,15 @@ void ktoonservative_boostpulse(void)
 		
 		if (dbs_tuners_ins.touch_boost_2nd_core != 0 || dbs_tuners_ins.touch_boost_3rd_core != 0 || dbs_tuners_ins.touch_boost_4th_core != 0 || dbs_tuners_ins.touch_boost_cpu != 0) // && dbs_tuners_ins.touch_boost_gpu == 0)
 		{
-			check_boost_cores_up(dbs_tuners_ins.touch_boost_2nd_core, dbs_tuners_ins.touch_boost_3rd_core, dbs_tuners_ins.touch_boost_4th_core);
+			if (boost_for_button)
+			{
+				if (screen_is_on)
+					check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button_screen_on, dbs_tuners_ins.boost_3rd_core_on_button_screen_on, dbs_tuners_ins.boost_4th_core_on_button_screen_on);
+				else
+					check_boost_cores_up(dbs_tuners_ins.boost_2nd_core_on_button_screen_off, dbs_tuners_ins.boost_3rd_core_on_button_screen_off, dbs_tuners_ins.boost_4th_core_on_button_screen_off);
+			}
+			else
+				check_boost_cores_up(dbs_tuners_ins.touch_boost_2nd_core, dbs_tuners_ins.touch_boost_3rd_core, dbs_tuners_ins.touch_boost_4th_core);
 			boostpulse_relayf = true;
 			boost_hold_cycles_cnt = 0;
 		}
