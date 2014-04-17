@@ -427,7 +427,7 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	if (ktoonservative_is_active && button->code == KEY_HOMEPAGE && state)
 	{
 		ktoonservative_screen_is_on(true);
-		ktoonservative_boostpulse(true);
+		//ktoonservative_boostpulse(true);
 	}
 
 #ifdef CONFIG_SEC_DEBUG
