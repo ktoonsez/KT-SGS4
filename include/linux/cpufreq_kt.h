@@ -5,7 +5,7 @@ extern bool ktoonservative_is_active;
 extern bool call_in_progress;
 
 extern void ktoonservative_screen_is_on(bool state);
-extern void ktoonservative_boostpulse(void);
+extern void ktoonservative_boostpulse(bool boost_for_button);
 
 extern void send_cable_state(unsigned int state);
 extern void send_cable_state_kt(unsigned int state);
@@ -24,4 +24,4 @@ extern struct workqueue_struct *gkt_wq;
 
 extern void __ref gkt_online_work_fn(struct work_struct *work);
 extern void gkt_work_init(void);
-extern void gkt_boost_cpu_call(void);
+extern void gkt_boost_cpu_call(bool change_screen_state, bool boost_for_button);
