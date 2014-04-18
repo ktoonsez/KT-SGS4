@@ -1068,21 +1068,6 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 				ndelay(100);
 		}
 
-		if (hcd->speed != HCD_USB3) {
-			/* enable remote wake up for USB 2.0 */
-			__le32 __iomem *addr;
-			u32 tmp;
-
-			/* Add one to the port status register address to get
-			 * the port power control register address.
-			 */
-			addr = port_array[port_index] + 1;
-			tmp = xhci_readl(xhci, addr);
-			tmp |= PORT_RWE;
-			xhci_writel(xhci, tmp, addr);
-			if (xhci->quirks & XHCI_PORTSC_DELAY)
-				ndelay(100);
-		}
 	}
 	hcd->state = HC_STATE_SUSPENDED;
 	bus_state->next_statechange = jiffies + msecs_to_jiffies(10);
@@ -1165,21 +1150,6 @@ int xhci_bus_resume(struct usb_hcd *hcd)
 				ndelay(100);
 		}
 
-		if (hcd->speed != HCD_USB3) {
-			/* disable remote wake up for USB 2.0 */
-			__le32 __iomem *addr;
-			u32 tmp;
-
-			/* Add one to the port status register address to get
-			 * the port power control register address.
-			 */
-			addr = port_array[port_index] + 1;
-			tmp = xhci_readl(xhci, addr);
-			tmp &= ~PORT_RWE;
-			xhci_writel(xhci, tmp, addr);
-			if (xhci->quirks & XHCI_PORTSC_DELAY)
-				ndelay(100);
-		}
 	}
 
 	(void) xhci_readl(xhci, &xhci->op_regs->command);
