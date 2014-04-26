@@ -15,7 +15,7 @@ export PACKAGEDIR=$PARENT_DIR/Packages/$PLATFORM
 export USE_SEC_FIPS_MODE=true
 export ARCH=arm
 # export CROSS_COMPILE=/home/ktoonsez/aokp4.2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
-export CROSS_COMPILE=$PARENT_DIR/linaro4.8-a15/bin/arm-cortex_a15-linux-gnueabihf-
+export CROSS_COMPILE=$PARENT_DIR/linaro4.9-a15/bin/arm-cortex_a15-linux-gnueabihf-
 
 time_start=$(date +%s.%N)
 
