@@ -817,9 +817,7 @@ unsigned long apply_slack(struct timer_list *timer, unsigned long expires)
 
 	bit = __fls(mask);
 
-	mask = (1 << bit) - 1;
-
-	expires_limit = expires_limit & ~(mask);
+	expires_limit = (expires_limit >> bit) << bit;
 
 	return expires_limit;
 }
