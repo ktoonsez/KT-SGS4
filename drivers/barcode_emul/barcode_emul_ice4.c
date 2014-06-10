@@ -43,7 +43,7 @@
 #if defined(CONFIG_IR_REMOCON_FPGA)
 #include <linux/ir_remote_con.h>
 #endif
-#define USING_CONSUMERIR_SERVICE 1// Allows ConsumerIR service
+//#define USING_CONSUMERIR_SERVICE 1// Allows ConsumerIR service
 #ifdef USING_CONSUMERIR_SERVICE 
 #include <linux/miscdevice.h>
 #endif
@@ -74,7 +74,7 @@
 #define IRDA_I2C_ADDR		0x50
 #define IRDA_TEST_CODE_SIZE	140
 #define IRDA_TEST_CODE_ADDR	0x00
-#define MAX_SIZE		2048
+#define MAX_SIZE		4096
 #define READ_LENGTH	8
 #endif
 
@@ -266,18 +266,8 @@ static int barcode_fpga_fimrware_update_start(const u8 *data, int len)
 
 void ice4_fpga_firmware_update(void)
 {
-	if (g_pdata->fw_type == ICE_19M)
-		barcode_fpga_fimrware_update_start(spiword,
-						sizeof(spiword));
-	else if (g_pdata->fw_type == ICE_I2C)
-		barcode_fpga_fimrware_update_start(spiword_i2c,
-						sizeof(spiword_i2c));
-	else if (g_pdata->fw_type == ICE_24M)
-		barcode_fpga_fimrware_update_start(spiword_24m,
-						sizeof(spiword_24m));
-	else
-		barcode_fpga_fimrware_update_start(spiword,
-						sizeof(spiword));
+	barcode_fpga_fimrware_update_start(spiword_24m,
+					sizeof(spiword_24m));
 	//verification with dummy gpio
 	ice_gpiox_get(1);
 }
@@ -673,10 +663,9 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 	struct i2c_client *client = data->client;
 	int buf_size = count+2;
 	int ret;
-	int sleep_timing;
-	int end_data;
 	int emission_time;
 	int ack_pin_onoff;
+	/*int i = 0;*/
 
 	/* Put code here to handle the extra bytes from CRC and repeat frame length */
 
@@ -747,12 +736,12 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 
 	mutex_unlock(&data->mutex);
 
-/*
-	for (int i = 0; i < buf_size; i++) {
+
+/*	for (i = 0; i < buf_size; i++) {
 		printk(KERN_INFO "%s: data[%d] : 0x%02x\n", __func__, i,
 				data->i2c_block_transfer.data[i]);
-	}
-*/
+	}*/
+
 #ifdef USING_CONSUMERIR_SERVICE
 	data->count = 0;
 	data->length = 0;
@@ -760,21 +749,10 @@ static void ir_remocon_work(struct barcode_emul_data *ir_data, int count)
 	data->count = 2;
 #endif
 
-	end_data = data->i2c_block_transfer.data[count-2] << 8
-		| data->i2c_block_transfer.data[count-1];
+	emission_time = data->ir_sum;
 
-	emission_time = \
-		(1000 * (data->ir_sum - end_data) / (data->ir_freq)) + 10;
-	sleep_timing = emission_time - 130;
-	if (sleep_timing > 0)
-		msleep(sleep_timing);
-/*
-	printk(KERN_INFO "%s: sleep_timing = %d\n", __func__, sleep_timing);
-*/
-	emission_time = \
-		(1000 * (data->ir_sum) / (data->ir_freq)) + 50;
 	if (emission_time > 0)
-		msleep(emission_time);
+		usleep(emission_time);
 		pr_barcode("%s: emission_time = %d\n",
 					__func__, emission_time);
 
@@ -830,11 +808,11 @@ static ssize_t remocon_store(struct device *dev, struct device_attribute *attr,
 			} else {
 				data->ir_sum += _data;
 				count = data->count;
-				data->i2c_block_transfer.data[count]
-								= _data >> 8;
-				data->i2c_block_transfer.data[count+1]
-								= _data & 0xFF;
-				data->count += 2;
+				data->i2c_block_transfer.data[count]   = _data >> 24;
+				data->i2c_block_transfer.data[count+1] = _data >> 16;
+				data->i2c_block_transfer.data[count+2] = _data >> 8;
+				data->i2c_block_transfer.data[count+3] = _data & 0xFF;
+				data->count += 4;
 			}
 
 			while (_data > 0) {
