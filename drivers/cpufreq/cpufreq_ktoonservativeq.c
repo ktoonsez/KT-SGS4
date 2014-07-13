@@ -166,6 +166,7 @@ static struct dbs_tuners {
 	unsigned int lockout_3rd_core_hotplug_screen_off;
 	unsigned int lockout_4th_core_hotplug_screen_off;
 	unsigned int touch_boost_gpu;
+	unsigned int cpu_load_adder_at_max_gpu;
 	unsigned int sync_extra_cores_screen_on;
 	unsigned int sync_extra_cores_screen_off;
 	unsigned int boost_hold_cycles;
@@ -222,6 +223,7 @@ static struct dbs_tuners {
 	.lockout_3rd_core_hotplug_screen_off = 0,
 	.lockout_4th_core_hotplug_screen_off = 0,
 	.touch_boost_gpu = DEF_BOOST_GPU,
+	.cpu_load_adder_at_max_gpu = 0,
 	.sync_extra_cores_screen_on = 0,
 	.sync_extra_cores_screen_off = 0,
 	.boost_hold_cycles = DEF_BOOST_HOLD_CYCLES,
@@ -441,6 +443,7 @@ show_one(lockout_2nd_core_hotplug_screen_off, lockout_2nd_core_hotplug_screen_of
 show_one(lockout_3rd_core_hotplug_screen_off, lockout_3rd_core_hotplug_screen_off);
 show_one(lockout_4th_core_hotplug_screen_off, lockout_4th_core_hotplug_screen_off);
 show_one(touch_boost_gpu, touch_boost_gpu);
+show_one(cpu_load_adder_at_max_gpu, cpu_load_adder_at_max_gpu);
 show_one(boost_hold_cycles, boost_hold_cycles);
 show_one(disable_hotplug, disable_hotplug);
 show_one(disable_hotplug_chrg, disable_hotplug_chrg);
@@ -1201,6 +1204,20 @@ static ssize_t store_touch_boost_gpu(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+static ssize_t store_cpu_load_adder_at_max_gpu(struct kobject *a, struct attribute *b,
+				    const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (input < 0 || input > 100)
+		input = 0;
+	
+	dbs_tuners_ins.cpu_load_adder_at_max_gpu = input;
+	return count;
+}
+
 static ssize_t store_boost_hold_cycles(struct kobject *a, struct attribute *b,
 				    const char *buf, size_t count)
 {
@@ -1533,6 +1550,7 @@ define_one_global_rw(lockout_2nd_core_hotplug_screen_off);
 define_one_global_rw(lockout_3rd_core_hotplug_screen_off);
 define_one_global_rw(lockout_4th_core_hotplug_screen_off);
 define_one_global_rw(touch_boost_gpu);
+define_one_global_rw(cpu_load_adder_at_max_gpu);
 define_one_global_rw(sync_extra_cores_screen_on);
 define_one_global_rw(sync_extra_cores_screen_off);
 define_one_global_rw(boost_hold_cycles);
@@ -1594,6 +1612,7 @@ static struct attribute *dbs_attributes[] = {
 	&lockout_3rd_core_hotplug_screen_off.attr,
 	&lockout_4th_core_hotplug_screen_off.attr,
 	&touch_boost_gpu.attr,
+	&cpu_load_adder_at_max_gpu.attr,
 	&sync_extra_cores_screen_on.attr,
 	&sync_extra_cores_screen_off.attr,
 	&boost_hold_cycles.attr,
@@ -1735,11 +1754,15 @@ boostcomplete:
 		//max_load += load;
 		//pr_alert("LOAD CHECK2: %d-%d", load, max_load);
 	}
-	//max_load = max_load / num_online_cpus();
-	/*
-	 * break out if we 'cannot' reduce the speed as the user might
-	 * want freq_step_raise to be zero
-	 */
+
+	 //Adjust CPU load when GPU is maxed out
+	if (cur_gpu_step == cur_max_pwrlevel && dbs_tuners_ins.cpu_load_adder_at_max_gpu > 0)
+	{
+		max_load += dbs_tuners_ins.cpu_load_adder_at_max_gpu;
+		if (max_load > 100)
+			max_load = 100;
+	}
+	
 	if ((screen_is_on && dbs_tuners_ins.freq_step_raise_screen_on == 0) || (!screen_is_on && dbs_tuners_ins.freq_step_raise_screen_off == 0))
 		return;
 	
