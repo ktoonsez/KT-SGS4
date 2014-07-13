@@ -4,6 +4,10 @@
 extern bool ktoonservative_is_active;
 extern bool call_in_progress;
 
+//GPU
+extern unsigned int cur_gpu_step;
+extern unsigned int cur_max_pwrlevel;
+
 extern void ktoonservative_screen_is_on(bool state);
 extern void ktoonservative_boostpulse(bool boost_for_button);
 
