@@ -26,6 +26,11 @@
 #include "kgsl_trace.h"
 #include "kgsl_sharedmem.h"
 
+#include <linux/cpufreq_kt.h>
+
+unsigned int cur_gpu_step;
+unsigned int cur_max_pwrlevel;
+
 #define KGSL_PWRFLAGS_POWER_ON 0
 #define KGSL_PWRFLAGS_CLK_ON   1
 #define KGSL_PWRFLAGS_AXI_ON   2
@@ -161,6 +166,7 @@ void kgsl_pwrctrl_pwrlevel_change(struct kgsl_device *device,
 
 	pwr->active_pwrlevel = new_level;
 	pwrlevel = &pwr->pwrlevels[pwr->active_pwrlevel];
+	cur_gpu_step = new_level;
 
 	if (test_bit(KGSL_PWRFLAGS_AXI_ON, &pwr->power_flags)) {
 
@@ -287,7 +293,7 @@ static int kgsl_pwrctrl_max_pwrlevel_store(struct device *dev,
 		level = pwr->min_pwrlevel;
 
 	pwr->max_pwrlevel = level;
-
+	cur_max_pwrlevel = level;
 
 	max_level = max_t(int, pwr->thermal_pwrlevel, pwr->max_pwrlevel);
 
