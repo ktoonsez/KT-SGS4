@@ -3983,6 +3983,7 @@ static int cgroup_css_sets_empty(struct cgroup *cgrp)
 	}
 	read_unlock(&css_set_lock);
 
+	read_unlock(&css_set_lock);
 	return 1;
 }
 
