@@ -328,9 +328,12 @@ static int tk_request(struct l2cap_conn *conn, u8 remote_oob, u8 auth,
 		return 0;
 	}
 
-	/* MITM is now officially requested, but not required */
-	/* Determine what we need (if anything) from the agent */
-	method = gen_method[local_io][remote_io];
+	/* Not Just Works/Confirm results in MITM Authentication */
+	if (method != JUST_CFM) {
+		set_bit(SMP_FLAG_MITM_AUTH, &smp->smp_flags);
+		if (hcon->pending_sec_level < BT_SECURITY_HIGH)
+			hcon->pending_sec_level = BT_SECURITY_HIGH;
+	}
 
 	BT_DBG("tk_method: %d", method);
 
