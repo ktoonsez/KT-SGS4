@@ -1,6 +1,0 @@
-#
-# Makefile for the LGE board
-#
-
-# MAKO
-obj-$(CONFIG_MACH_APQ8064_MAKO) += mako/
