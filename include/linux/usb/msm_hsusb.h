@@ -220,7 +220,9 @@ struct msm_otg_platform_data {
 	bool core_clk_always_on_workaround;
 	struct msm_bus_scale_pdata *bus_scale_table;
 #ifdef CONFIG_USB_HOST_NOTIFY
-	unsigned int otg_power_gpio;
+	int otg_power_gpio;
+	int otg_test_gpio;
+	int ovp_ctrl_gpio;
 	int otg_power_irq;
 #endif
 
@@ -339,7 +341,7 @@ struct msm_otg {
 	struct delayed_work check_ta_work;
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
-	u8 dcd_retries;
+	unsigned dcd_time;
 	struct wake_lock wlock;
 	struct notifier_block usbdev_nb;
 	unsigned mA_port;
@@ -353,6 +355,7 @@ struct msm_otg {
 	struct work_struct otg_power_work;
 #endif
 	bool smartdock;
+	bool disable_peripheral;
 	struct msm_xo_voter *xo_handle;
 	uint32_t bus_perf_client;
 	bool mhl_enabled;
@@ -392,7 +395,12 @@ struct msm_hsic_host_platform_data {
 	unsigned data;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	unsigned log2_irq_thresh;
+
+	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
+
+	/*standalone latency is required when HSCI is active*/
+	u32 standalone_latency;
 };
 
 struct msm_usb_host_platform_data {
