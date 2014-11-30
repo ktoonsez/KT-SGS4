@@ -55,7 +55,7 @@ modules.builtin
 #
 !.gitignore
 !.mailmap
-kernel/usr/initramfs/*
+kernel/usr/*
 #
 # Generated include files
 #
