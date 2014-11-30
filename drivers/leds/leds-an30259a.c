@@ -176,7 +176,6 @@ static int led_debug_enable = 0;
 
 static void an30259a_start_led_pattern(int mode);
 static void an30259a_set_led_blink(enum an30259a_led_enum led, unsigned int delay_on_time, unsigned int delay_off_time, u8 brightness);
-extern void notif_wakelock_forwake_funcs(bool state);
 
 /*path : /sys/class/sec/led/led_pattern*/
 /*path : /sys/class/sec/led/led_blink*/
@@ -369,7 +368,6 @@ static bool check_restrictions(void)
 	{
 		/* Set all LEDs Off */
 		an30259a_reset_register_work(0);
-		notif_wakelock_forwake_funcs(false);
 		ret = false;
 		goto skipitall;
 	}
@@ -400,7 +398,6 @@ static bool check_restrictions(void)
 		{
 			/* Set all LEDs Off */
 			an30259a_reset_register_work(0);
-			notif_wakelock_forwake_funcs(false);
 		}
 		
 		//Check to see if its ok to turn on LED now but was blocking previously
@@ -473,10 +470,6 @@ static void an30259a_start_led_pattern(int mode)
 			return;
 		}
 	}
-	if (mode == LED_OFF || mode == POWERING)
-		notif_wakelock_forwake_funcs(false);
-	else
-		notif_wakelock_forwake_funcs(true);
 		
 	if (mode > BOOTING)
 		return;
@@ -487,11 +480,11 @@ static void an30259a_start_led_pattern(int mode)
 
 	/* Set to low power consumption mode */
 	if (LED_LOWPOWER_MODE == 1)
-		LED_DYNAMIC_CURRENT = 0x9;
+		LED_DYNAMIC_CURRENT = 0x8;
 	else if (led_enable_fade)
 		LED_DYNAMIC_CURRENT = 0x1;
 	else
-		LED_DYNAMIC_CURRENT = 0x48;
+		LED_DYNAMIC_CURRENT = 0x1;
 
 	if (led_intensity == 0) {	// then use stock values
 		led_r_brightness = LED_R_CURRENT;
@@ -596,7 +589,7 @@ static void an30259a_start_led_pattern(int mode)
 		leds_set_slope_mode(client, LED_G,
 				0, 8, 4, 1, 2, 2, 3, 3, 3, 3);
 		leds_set_slope_mode(client, LED_B,
-				0, 15, 14, 12, 2, 2, 7, 7, 7, 7);
+				0, 8, 4, 1, 2, 2, 3, 3, 3, 3);
 		break;
 	case BOOTING:
 		pr_info("LED Booting Pattern on\n");
@@ -643,11 +636,7 @@ static void an30259a_set_led_blink(enum an30259a_led_enum led,
 			return;
 		}
 	}
-	if (brightness == LED_OFF)
-		notif_wakelock_forwake_funcs(false);
-	else
-		notif_wakelock_forwake_funcs(true);
-
+			
 	if (brightness == LED_OFF) {
 		leds_on(led, false, false, brightness);
 		return;

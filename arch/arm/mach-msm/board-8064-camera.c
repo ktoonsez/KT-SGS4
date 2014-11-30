@@ -81,7 +81,11 @@ static struct gpiomux_setting cam_settings[] = {
 
 	{
 		.func = GPIOMUX_FUNC_1, /*active 1*/
+#if defined(CONFIG_MACH_JACTIVE_EUR)
+		.drv = GPIOMUX_DRV_4MA,
+#else
 		.drv = GPIOMUX_DRV_2MA,
+#endif
 		.pull = GPIOMUX_PULL_NONE,
 		.dir = GPIOMUX_OUT_LOW,
 	},
@@ -89,7 +93,11 @@ static struct gpiomux_setting cam_settings[] = {
 	{
 		.func = GPIOMUX_FUNC_GPIO, /*active 2*/
 		.drv = GPIOMUX_DRV_2MA,
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
+		.pull = GPIOMUX_PULL_DOWN,
+#else
 		.pull = GPIOMUX_PULL_NONE,
+#endif
 	},
 
 	{
@@ -145,7 +153,11 @@ static struct gpiomux_setting cam_settings[] = {
 	},
 	{
 		.func = GPIOMUX_FUNC_4, /*active 12*/
+#if defined(CONFIG_MACH_JACTIVE_EUR)
+		.drv = GPIOMUX_DRV_4MA,
+#else
 		.drv = GPIOMUX_DRV_2MA,
+#endif
 		.pull = GPIOMUX_PULL_NONE,
 		.dir = GPIOMUX_OUT_LOW,
 	},
@@ -557,7 +569,7 @@ static void cam_ldo_power_off(void)
 	int ret = 0;
 	printk(KERN_DEBUG "[Fortius] %s: Off\n", __func__);
 
-	if(l28){ 
+	if(l28){
 		ret = regulator_disable(l28);
 		if (ret)
 			printk(KERN_DEBUG "error disabling regulator 8921_l28 \n");;
@@ -589,7 +601,7 @@ static void cam_ldo_af_power_off(void)
 static void cam_ldo_vddio_power_off(void)
 {
 	int ret = 0;
-	
+
 	/* CAM_HOST_1.8V*/
 	if (system_rev == 0) {
 		if (lvs5) {
@@ -651,7 +663,7 @@ static void vt_cam_ldo_power_off(void)
 		if (ret)
 			printk(KERN_DEBUG "error disabling regulator 8921_l21\n");
 	}
-	
+
 	usleep(400);
 
 	/* CAM_SENSOR_2.8V (CIS 2.8V)*/
@@ -1301,7 +1313,7 @@ static struct msm_camera_csi_lane_params s5k3h5xa_csi_lane_params = {
 static int pmic_set_func(uint8_t pmic_gpio, uint8_t onoff)
 {
 	pmic_gpio_ctrl(PM8921_GPIO_PM_TO_SYS(pmic_gpio), onoff);
-		
+
 	return 0;
 }
 
@@ -1332,9 +1344,9 @@ static struct msm_camera_sensor_platform_info sensor_board_info_s5k3h5xa = {
 	.sensor_power_on = cam_ldo_power_on,
 	.sensor_power_off = cam_ldo_power_off,
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-	.sensor_power_on_sub = cam_ldo_power_on_sub,	
-	.sensor_power_off_sub = cam_ldo_power_off_sub,	
-#endif	
+	.sensor_power_on_sub = cam_ldo_power_on_sub,
+	.sensor_power_off_sub = cam_ldo_power_off_sub,
+#endif
 	.sensor_pmic_gpio_ctrl = pmic_gpio_ctrl,
 	.reset = GPIO_13M_CAM_RESET,
 };
@@ -1349,7 +1361,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_s5k3h5xa_data = {
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	.actuator_info = &msm_act_main_cam_2_info,
 	.eeprom_info = &imx175_eeprom_info,
-#endif	
+#endif
 };
 
 static struct msm_camera_sensor_flash_data flash_mt9m114 = {

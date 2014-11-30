@@ -32,7 +32,7 @@ enum {
 	DEBUG_WAKE_LOCK = 1U << 4,
 };
 static int debug_mask = DEBUG_EXIT_SUSPEND |
-				DEBUG_WAKEUP | DEBUG_SUSPEND | DEBUG_EXPIRE;  
+				DEBUG_WAKEUP | DEBUG_SUSPEND | DEBUG_EXPIRE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define WAKE_LOCK_TYPE_MASK              (0x0f)
@@ -301,6 +301,9 @@ long has_wake_lock(int type)
 	return ret;
 }
 
+static bool is_suspend_sys_sync_waiting;
+static void suspend_sys_sync_handler(unsigned long);
+static DEFINE_TIMER(suspend_sys_sync_timer, suspend_sys_sync_handler, 0, 0);
 static void suspend_sys_sync(struct work_struct *work)
 {
 	if (debug_mask & DEBUG_SUSPEND)
@@ -313,6 +316,10 @@ static void suspend_sys_sync(struct work_struct *work)
 
 	spin_lock(&suspend_sys_sync_lock);
 	suspend_sys_sync_count--;
+	if (is_suspend_sys_sync_waiting && (suspend_sys_sync_count == 0)) {
+		complete(&suspend_sys_sync_comp);
+		del_timer(&suspend_sys_sync_timer);
+	}
 	spin_unlock(&suspend_sys_sync_lock);
 }
 static DECLARE_WORK(suspend_sys_sync_work, suspend_sys_sync);
@@ -329,8 +336,6 @@ void suspend_sys_sync_queue(void)
 }
 
 static bool suspend_sys_sync_abort;
-static void suspend_sys_sync_handler(unsigned long);
-static DEFINE_TIMER(suspend_sys_sync_timer, suspend_sys_sync_handler, 0, 0);
 /* value should be less then half of input event wake lock timeout value
  * which is currently set to 5*HZ (see drivers/input/evdev.c)
  */
@@ -355,7 +360,9 @@ int suspend_sys_sync_wait(void)
 	if (suspend_sys_sync_count != 0) {
 		mod_timer(&suspend_sys_sync_timer, jiffies +
 				SUSPEND_SYS_SYNC_TIMEOUT);
+		is_suspend_sys_sync_waiting = true;
 		wait_for_completion(&suspend_sys_sync_comp);
+		is_suspend_sys_sync_waiting = false;
 	}
 	if (suspend_sys_sync_abort) {
 		pr_info("suspend aborted....while waiting for sys_sync\n");

@@ -746,7 +746,6 @@ int msm_mctl_pp_get_vpe_buf_info(struct msm_mctl_pp_frame_info *zoom);
 void msm_queue_init(struct msm_device_queue *queue, const char *name);
 void msm_enqueue(struct msm_device_queue *queue, struct list_head *entry);
 void msm_drain_eventq(struct msm_device_queue *queue);
-extern void sensor_native_control(void __user *arg);
 #endif /* __KERNEL__ */
 
 #endif /* _MSM_H */

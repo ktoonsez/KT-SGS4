@@ -224,12 +224,31 @@ config FB_MSM_MIPI_DSI_NT35510
 	bool
 	select FB_MSM_MIPI_DSI
 
+config SAMSUNG_CMC624
+	bool "Support for integrated LCD controller in msm8930"
+	depends on FB && ARCH_MSM
+	default n
+
+config FB_EBOOK_PANEL_SCENARIO
+	bool "Samsung EBOOK PANEL SCENARIO"
+	depends on FB_MSM
+	depends on SAMSUNG_CMC624
+	default n
+
+config FB_MSM_MIPI_DSI_NOVATEK_NT35596
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
 config FB_MSM_MIPI_DSI_ORISE
         bool
         select FB_MSM_MIPI_DSI
         default n
 
 config FB_MSM_MIPI_DSI_NT35516
+	bool
+	select FB_MSM_MIPI_DSI
+
+config FB_MSM_MIPI_DSI_NT35590
 	bool
 	select FB_MSM_MIPI_DSI
 
@@ -251,6 +270,7 @@ config FB_MSM_MIPI_DSI_RENESAS_TFT
 config FB_MSM_MIPI_DSI_SAMSUNG_OCTA
 	bool
 	select FB_MSM_MIPI_DSI
+	select GAMMA_CONTROL
 	default n
 
 config FB_MSM_MIPI_DSI_SAMSUNG_OLED
@@ -373,6 +393,11 @@ config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
 	select FB_MSM_MIPI_DSI_NOVATEK
 	default n
 
+config FB_MSM_MIPI_NOVATEK_VIDEO_HD_PT
+	bool
+	select FB_MSM_MIPI_DSI_NOVATEK_NT35596
+	default n
+
 config FB_MSM_MIPI_ORISE_VIDEO_720P_PT
 	bool
 	select FB_MSM_MIPI_DSI_ORISE
@@ -413,6 +438,15 @@ config FB_MSM_MIPI_NT35516_CMD_QHD_PT
         select FB_MSM_MIPI_DSI_NT35516
         default n
 
+config FB_MSM_MIPI_NT35590_CMD_720P_PT
+        bool
+        select FB_MSM_MIPI_DSI_NT35590
+        default n
+
+config FB_MSM_MIPI_NT35590_VIDEO_720P_PT
+        bool
+        select FB_MSM_MIPI_DSI_NT35590
+        default n
 
 config FB_MSM_MIPI_CHIMEI_WXGA
 	bool "LVDS Chimei WXGA Panel using Toshiba MIPI DSI-to-LVDS bridge."
@@ -488,16 +522,20 @@ config FB_MSM_OVERLAY0_WRITEBACK
 	---help---
 	  Support for MDP4 OVERLAY0 write back mode
 
+config FB_MSM_ENABLE_LCD_EN2
+	bool "LCD_EN2 Enable for J Active project"
+	default n
+		---help---
+			Enable LCD EN2 pin to control AVDD
+
 config FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT
 	bool
 	select FB_MSM_MIPI_DSI_RENESAS_TFT
 	default n
 
-config FB_MSM_ENABLE_LCD_EN2
-	bool "LCD_EN2 Enable for J Active project"
+config DISPLAY_DISABLE_TEST_KEY
+	bool "Disable test key"
 	default n
-	---help---
-		Enable LCD EN2 pin to control AVDD
 
 config FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT
 	bool
@@ -638,6 +676,8 @@ config FB_MSM_MIPI_PANEL_DETECT
 	select FB_MSM_MIPI_ORISE_CMD_720P_PT
 	select FB_MSM_MIPI_NT35516_VIDEO_QHD_PT
 	select FB_MSM_MIPI_NT35516_CMD_QHD_PT
+	select FB_MSM_MIPI_NT35590_CMD_720P_PT
+	select FB_MSM_MIPI_NT35590_VIDEO_720P_PT
 	select FB_MSM_MIPI_SIMULATOR_VIDEO
 	select FB_MSM_MIPI_CHIMEI_WXGA
 	select FB_MSM_MIPI_CHIMEI_WUXGA
@@ -678,6 +718,8 @@ config FB_MSM_LCDC_MIPI_PANEL_AUTO_DETECT
 	select FB_MSM_MIPI_NT35510_CMD_WVGA_PT
 	select FB_MSM_MIPI_NT35516_VIDEO_QHD_PT
 	select FM_MSM_MIPI_NT35516_CMD_QHD_PT
+	select FM_MSM_MIPI_NT35590_CMD_720P_PT
+	select FM_MSM_MIPI_NT35590_VIDEO_720P_PT
 	select FB_MSM_MIPI_SIMULATOR_VIDEO
 	---help---
 	  Support for LCDC + MIPI panel auto detect
@@ -686,6 +728,7 @@ config FB_MSM_LVDS_MIPI_PANEL_DETECT
 	bool "LVDS + MIPI Panel Auto Detect"
 	select FB_MSM_LVDS_CHIMEI_WXGA
 	select FB_MSM_LVDS_FRC_FHD
+	select FB_MSM_MIPI_NT35590_VIDEO_720P_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WUXGA
@@ -696,6 +739,7 @@ config FB_MSM_LVDS_MIPI_PANEL_DETECT
 	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
 	select FB_MSM_MIPI_NT35510_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_NT35510_CMD_WVGA_PT
+	select FB_MSM_MIPI_NT35590_CMD_720P_PT
 	select FB_MSM_MIPI_ORISE_VIDEO_720P_PT
 	select FB_MSM_MIPI_ORISE_CMD_720P_PT
 	select FB_MSM_MIPI_SIMULATOR_VIDEO
@@ -774,6 +818,9 @@ config FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT_PANEL
 	bool "MIPI Renesas Command FWVGA PT Panel"
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 
+config FB_MSM_MIPI_NOVATEK_VIDEO_HD_PT_PANEL
+	bool "MIPI NOVATEK VIDEO HD PT Panel"
+	select FB_MSM_MIPI_NOVATEK_VIDEO_HD_PT
 config FB_MSM_MIPI_CHIMEI_WXGA_PANEL
 	bool "MIPI Chimei WXGA PT Panel"
 	select FB_MSM_MIPI_CHIMEI_WXGA
@@ -801,6 +848,24 @@ config FB_MSM_MIPI_NT35516_VIDEO_QHD_PT_PANEL
 config FB_MSM_MIPI_NT35516_CMD_QHD_PT_PANEL
         bool "MIPI NT35516 Command qHD PT Panel"
         select FB_MSM_MIPI_NT35516_CMD_QHD_PT
+
+config FB_MSM_MIPI_NT35590_CMD_720P_PT_PANEL
+        bool "MIPI NT35590 Command 720p PT Panel"
+        select FB_MSM_MIPI_NT35590_CMD_720P_PT
+	---help---
+	Support for Truly NT35590 panel. This
+	panel supports MIPI DSI interface in
+	Command mode. The panel resolution is
+	720p (720x1280).
+
+config FB_MSM_MIPI_NT35590_VIDEO_720P_PT_PANEL
+        bool "MIPI NT35590 Video 720p PT Panel"
+        select FB_MSM_MIPI_NT35590_VIDEO_720P_PT
+	---help---
+	Support for Truly NT35590 panel. This
+	panel supports MIPI DSI interface in
+	Video mode. The panel resolution is
+	720p (720x1280).
 
 config FB_MSM_MIPI_SIMULATOR_VIDEO_PANEL
 	bool "MIPI Simulator Video Panel"
@@ -879,6 +944,9 @@ config FB_MSM_SECONDARY_PANEL_NONE
 	  No secondary panel
 endchoice
 
+config MIPI_SAMSUNG_ESD_REFRESH
+	bool "Samsung ESD Recovery Driver"
+	default n
 config FB_MSM_LCDC_DSUB
 	depends on FB_MSM_LCDC_SAMSUNG_WSVGA && FB_MSM_MDP40 && FB_MSM_LCDC_HW
 	bool "External DSUB support"
@@ -1071,6 +1139,12 @@ config FB_MSM_EBI2_PANEL_DETECT
 	---help---
 	  Support for EBI2 panel auto detect
 
+config MIPI_DSI_RESET_LP11	
+	bool "mipi dsi reset during LP11"
+	default n
+config MDP_SHUTDOWN	
+	bool "use mdp shutdown"
+	default n
 config FB_MDP4_ENHANCE
 	bool "MDP4 VIDEO ENHANCEMENT"
 	default n

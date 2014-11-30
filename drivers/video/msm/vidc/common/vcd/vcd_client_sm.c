@@ -1767,7 +1767,7 @@ static const struct vcd_clnt_state_table vcd_clnt_table_flushing = {
 	 vcd_get_buffer_requirements_cmn,
 	 NULL,
 	 NULL,
-	 vcd_free_buffer_cmn, //Port flush patch : AU_LINUX_ANDROID_JB_2.2_RB2_3.04.01.02.37.048.
+	 vcd_free_buffer_cmn,
 	 vcd_fill_output_buffer_cmn,
 	 vcd_clnt_cb_in_flushing,
 	 },

@@ -46,7 +46,7 @@
 #define max_control_command_size 512
 #define CROP_LEN 36
 
-enum vfe_mode_of_operation {
+enum vfe_mode_of_operation{
 	VFE_MODE_OF_OPERATION_CONTINUOUS,
 	VFE_MODE_OF_OPERATION_SNAPSHOT,
 	VFE_MODE_OF_OPERATION_VIDEO,
@@ -162,7 +162,7 @@ struct msm_vfe_stats_msg {
 	uint32_t frame_id;
 };
 
-struct video_crop_t {
+struct video_crop_t{
 	uint32_t  in1_w;
 	uint32_t  out1_w;
 	uint32_t  in1_h;
@@ -635,6 +635,11 @@ enum msm_bus_perf_setting {
 	S_LIVESHOT,
 	S_DUAL,
 	S_LOW_POWER,
+#if defined(CONFIG_MACH_MELIUS)	
+/*Start : shchang@qualcomm.com : 1101*/
+	S_ADV_VIDEO,
+/*End : shchang@qualcomm.com : 1101*/
+#endif
 	S_EXIT
 };
 

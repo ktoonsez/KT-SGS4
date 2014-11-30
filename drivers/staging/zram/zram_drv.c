@@ -104,37 +104,33 @@ static int page_zero_filled(void *ptr)
 	return 1;
 }
 
-static void zram_set_disksize(struct zram *zram)
+static void zram_set_disksize(struct zram *zram, size_t totalram_bytes)
 {
-	u64 totalram_bytes = ((u64) totalram_pages) << PAGE_SHIFT;
-
 	if (!zram->disksize) {
-		u64 bytes = totalram_bytes;
 		pr_info(
 		"disk size not provided. You can use disksize_kb module "
 		"param to specify size.\nUsing default: (%u%% of RAM).\n",
 		default_disksize_perc_ram
 		);
-		do_div(bytes, 100);
-		zram->disksize = default_disksize_perc_ram * bytes;
+		zram->disksize = default_disksize_perc_ram *
+					(totalram_bytes / 100);
 	}
 
-	if (zram->disksize > 2 * totalram_bytes) {
+	if (zram->disksize > 2 * (totalram_bytes)) {
 		pr_info(
 		"There is little point creating a zram of greater than "
 		"twice the size of memory since we expect a 2:1 compression "
 		"ratio. Note that zram uses about 0.1%% of the size of "
 		"the disk when not in use so a huge zram is "
 		"wasteful.\n"
-		"\tMemory Size: %llu kB\n"
+		"\tMemory Size: %zu kB\n"
 		"\tSize you selected: %llu kB\n"
 		"Continuing anyway ...\n",
-		totalram_bytes >> 10, zram->disksize >> 10
+		totalram_bytes >> 10, zram->disksize
 		);
 	}
 
-	/* can't use PAGE_MASK because it does not extend correctly to 64 bit */
-	zram->disksize &= ~((1ULL << PAGE_SHIFT) - 1);
+	zram->disksize &= PAGE_MASK;
 }
 
 static void zram_free_page(struct zram *zram, size_t index)
@@ -644,7 +640,7 @@ int zram_init_device(struct zram *zram)
 		return 0;
 	}
 
-	zram_set_disksize(zram);
+	zram_set_disksize(zram, totalram_pages << PAGE_SHIFT);
 
 	zram->compress_workmem = kzalloc(LZO1X_MEM_COMPRESS, GFP_KERNEL);
 	if (!zram->compress_workmem) {
@@ -817,8 +813,8 @@ static int __init zram_init(void)
 	}
 
 	if (!num_devices) {
-		pr_info("num_devices not specified. Using default: 4\n");
-		num_devices = 4;
+		pr_info("num_devices not specified. Using default: 1\n");
+		num_devices = 1;
 	}
 
 	/* Allocate the device array and initialize each one */

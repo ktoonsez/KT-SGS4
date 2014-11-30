@@ -18,12 +18,16 @@
 #include <linux/bio.h>
 #include <linux/swapops.h>
 #include <linux/writeback.h>
-#ifdef CONFIG_FRONTSWAP
-#include <linux/frontswap.h>
-#endif
 #include <linux/aio.h>
 #include <linux/blkdev.h>
+#include <linux/ratelimit.h>
 #include <asm/pgtable.h>
+
+/*
+ * We don't need to see swap errors more than once every 1 second to know
+ * that a problem is occurring.
+ */
+#define SWAP_ERROR_LOG_RATE_MS 1000
 
 static struct bio *get_swap_bio(gfp_t gfp_flags,
 				struct page *page, bio_end_io_t end_io)
@@ -49,6 +53,7 @@ static void end_swap_bio_write(struct bio *bio, int err)
 {
 	const int uptodate = test_bit(BIO_UPTODATE, &bio->bi_flags);
 	struct page *page = bio->bi_io_vec[0].bv_page;
+	static unsigned long swap_error_rs_time;
 
 	if (!uptodate) {
 		SetPageError(page);
@@ -61,7 +66,9 @@ static void end_swap_bio_write(struct bio *bio, int err)
 		 * Also clear PG_reclaim to avoid rotate_reclaimable_page()
 		 */
 		set_page_dirty(page);
-		printk(KERN_ALERT "Write-error on swap-device (%u:%u:%Lu)\n",
+		if (printk_timed_ratelimit(&swap_error_rs_time,
+					   SWAP_ERROR_LOG_RATE_MS))
+			printk(KERN_ALERT "Write-error on swap-device (%u:%u:%Lu)\n",
 				imajor(bio->bi_bdev->bd_inode),
 				iminor(bio->bi_bdev->bd_inode),
 				(unsigned long long)bio->bi_sector);
@@ -143,14 +150,6 @@ int swap_writepage(struct page *page, struct writeback_control *wbc)
 		unlock_page(page);
 		goto out;
 	}
-#ifdef CONFIG_FRONTSWAP
-    if (frontswap_store(page) == 0) {
-            set_page_writeback(page);
-            unlock_page(page);
-            end_page_writeback(page);
-            goto out;
-    }
-#endif
 	bio = get_swap_bio(GFP_NOIO, page, end_swap_bio_write);
 	if (bio == NULL) {
 		set_page_dirty(page);
@@ -175,13 +174,6 @@ int swap_readpage(struct page *page)
 
 	VM_BUG_ON(!PageLocked(page));
 	VM_BUG_ON(PageUptodate(page));
-#ifdef CONFIG_FRONTSWAP
-    if (frontswap_load(page) == 0) {
-            SetPageUptodate(page);
-            unlock_page(page);
-            goto out;
-    }
-#endif
 	bio = get_swap_bio(GFP_KERNEL, page, end_swap_bio_read);
 	if (bio == NULL) {
 		unlock_page(page);

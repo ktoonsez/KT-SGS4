@@ -105,6 +105,7 @@ struct __fat_dirent {
 #if defined(CONFIG_VMWARE_MVP)
 #define FAT_IOCTL_VMW_EXTEND		_IO('r', 0x42)
 #endif
+
 struct fat_boot_sector {
 	__u8	ignored[3];	/* Boot strap short or near jump */
 	__u8	system_id[8];	/* Name - can be used to special case

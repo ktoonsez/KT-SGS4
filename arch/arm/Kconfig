@@ -31,6 +31,8 @@ config ARM
 	select HAVE_HW_BREAKPOINT if (PERF_EVENTS && (CPU_V6 || CPU_V6K || CPU_V7))
 	select HAVE_C_RECORDMCOUNT
 	select HAVE_GENERIC_HARDIRQS
+	select HAVE_SPARSE_IRQ
+	select HAVE_ARCH_SECCOMP_FILTER
 	select GENERIC_IRQ_SHOW
 	select CPU_PM if (SUSPEND || CPU_IDLE)
 	select GENERIC_PCI_IOMAP
@@ -212,16 +214,14 @@ config NEED_RET_TO_USER
 config ARCH_MTD_XIP
 	bool
 
-config ARCH_WANT_KMAP_ATOMIC_FLUSH
-	bool
-
 config VECTORS_BASE
 	hex
 	default 0xffff0000 if MMU || CPU_HIGH_VECTOR
 	default DRAM_BASE if REMAP_VECTORS_TO_RAM
 	default 0x00000000
 	help
-	  The base address of exception vectors.
+	  The base address of exception vectors.  This must be two pages
+	  in size.
 
 config ARM_PATCH_PHYS_VIRT
 	bool "Patch physical to virtual translations at runtime" if EMBEDDED
@@ -265,6 +265,14 @@ config PHYS_OFFSET
 config GENERIC_BUG
 	def_bool y
 	depends on BUG
+
+config ARCH_RANDOM
+	bool "SOC specific random number generation"
+	help
+	 Allow the kernel to use an architecture specific implementation for
+	 random number generation
+
+	 If unsure, say N
 
 config GENERIC_TIME_VSYSCALL
 	bool "Enable gettimeofday updates"
@@ -1490,6 +1498,16 @@ config KSAPI
           Scorpion processor supported hardware performance counters on a per
           thread basis or AXI counters on an overall system basis.
 
+config ARM_ERRATA_775420
+       bool "ARM errata: A data cache maintenance operation which aborts, might lead to deadlock"
+       depends on CPU_V7
+       help
+	 This option enables the workaround for the 775420 Cortex-A9 (r2p2,
+	 r2p6,r2p8,r2p10,r3p0) erratum. In case a date cache maintenance
+	 operation aborts with MMU exception, it might cause the processor
+	 to deadlock. This workaround puts DSB before executing ISB if
+	 an abort may occur on cache maintenance.
+
 endmenu
 
 source "arch/arm/common/Kconfig"
@@ -1553,42 +1571,6 @@ config PCI_HOST_ITE8152
 source "drivers/pci/Kconfig"
 
 source "drivers/pcmcia/Kconfig"
-
-config ARM_ERRATA_764369
-	bool "ARM errata: Data cache line maintenance operation by MVA may not succeed"
-	depends on CPU_V7 && SMP
-	help
-	  This option enables the workaround for erratum 764369
-	  affecting Cortex-A9 MPCore with two or more processors (all
-	  current revisions). Under certain timing circumstances, a data
-	  cache line maintenance operation by MVA targeting an Inner
-	  Shareable memory region may fail to proceed up to either the
-	  Point of Coherency or to the Point of Unification of the
-	  system. This workaround adds a DSB instruction before the
-	  relevant cache maintenance functions and sets a specific bit
-	  in the diagnostic control register of the SCU.
-
-config PL310_ERRATA_769419
-	bool "PL310 errata: no automatic Store Buffer drain"
-	depends on CACHE_L2X0
-	help
-	  On revisions of the PL310 prior to r3p2, the Store Buffer does
-	  not automatically drain. This can cause normal, non-cacheable
-	  writes to be retained when the memory system is idle, leading
-	  to suboptimal I/O performance for drivers using coherent DMA.
-	  This option adds a write barrier to the cpu_idle loop so that,
-	  on systems with an outer cache, the store buffer is drained
-	  explicitly.
-
-config ARM_ERRATA_775420
-       bool "ARM errata: A data cache maintenance operation which aborts, might lead to deadlock"
-       depends on CPU_V7
-       help
-	 This option enables the workaround for the 775420 Cortex-A9 (r2p2,
-	 r2p6,r2p8,r2p10,r3p0) erratum. In case a date cache maintenance
-	 operation aborts with MMU exception, it might cause the processor
-	 to deadlock. This workaround puts DSB before executing ISB if
-	 an abort may occur on cache maintenance.
 
 endmenu
 
@@ -1825,7 +1807,7 @@ config AEABI
 config OABI_COMPAT
 	bool "Allow old ABI binaries to run with this kernel (EXPERIMENTAL)"
 	depends on AEABI && EXPERIMENTAL && !THUMB2_KERNEL
-	default n
+	default y if !SMP
 	help
 	  This option preserves the old syscall interface along with the
 	  new (ARM EABI) one. It also provides a compatibility layer to
@@ -1901,8 +1883,36 @@ config ARCH_MEMORY_REMOVE
 config ENABLE_DMM
 	def_bool n
 
+choice
+	prompt "Virtual Memory Reclaim"
+	default NO_VM_RECLAIM
+	help
+	  Select the method of reclaiming virtual memory
+
 config DONT_MAP_HOLE_AFTER_MEMBANK0
-	def_bool n
+	bool "Map around the largest hole"
+	help
+	  Do not map the memory belonging to the largest hole
+	  into the virtual space. This results in more lowmem.
+	  If multiple holes are present, only the largest hole
+	  in the first 256MB of memory is not mapped.
+
+config ENABLE_VMALLOC_SAVING
+	bool "Reclaim memory for each subsystem"
+	help
+	  Enable this config to reclaim the virtual space belonging
+	  to any subsystem which is expected to have a lifetime of
+	  the entire system. This feature allows lowmem to be non-
+	  contiguous.
+
+config NO_VM_RECLAIM
+	bool "Do not reclaim memory"
+	help
+	  Do not reclaim any memory. This might result in less lowmem
+	  and wasting virtual memory space which could otherwise be
+	  reclaimed by using any of the other two config options.
+
+endchoice
 
 config HOLES_IN_ZONE
 	def_bool n
@@ -2060,9 +2070,9 @@ config CP_ACCESS
 
 	  If unsure, say N.
 
-source "arch/arm/mvp/Kconfig"
-
 endmenu
+
+source "arch/arm/mvp/Kconfig"
 
 menu "Boot options"
 

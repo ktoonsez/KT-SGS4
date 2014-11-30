@@ -143,6 +143,10 @@ static struct pm8xxx_gpio_init pm8921_cdp_kp_gpios[] __initdata = {
 	PM8921_GPIO_INPUT(17, PM_GPIO_PULL_UP_1P5),	/* SD_WP */
 };
 
+static struct pm8xxx_gpio_init pm8921_mpq8064_hrd_gpios[] __initdata = {
+	PM8921_GPIO_OUTPUT(37, 0, LOW),	/* MUX1_SEL */
+};
+
 /* Initial PM8917 GPIO configurations */
 static struct pm8xxx_gpio_init pm8917_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(14, 1, HIGH),	/* HDMI Mux Selector */
@@ -151,7 +155,7 @@ static struct pm8xxx_gpio_init pm8917_gpios[] __initdata = {
 	PM8921_GPIO_OUTPUT(26, 1, HIGH), /* Backlight: on */
 	PM8921_GPIO_OUTPUT_BUFCONF(36, 1, LOW, OPEN_DRAIN),
 	PM8921_GPIO_OUTPUT_FUNC(38, 0, PM_GPIO_FUNC_2),
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	PM8921_GPIO_OUTPUT(33, 0, LOW), /* FLASH_SET */
 	PM8921_GPIO_OUTPUT(24, 0, LOW), /* FLASH_EN */
 #else
@@ -166,7 +170,7 @@ static struct pm8xxx_gpio_init pm8917_gpios[] __initdata = {
 	PM8921_GPIO_INPUT(12, PM_GPIO_PULL_UP_30),     /* PCIE_WAKE_N */
 };
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 #else
 /* Initial PM8917 SD Card Detection Pin */
 static struct pm8xxx_gpio_init pm8917_sd_det[] __initdata = {
@@ -174,16 +178,22 @@ static struct pm8xxx_gpio_init pm8917_sd_det[] __initdata = {
 };
 #endif
 
+#if !defined(CONFIG_MACH_JFVE_EUR)
 /* PM8917 GPIO NC state */
 static struct pm8xxx_gpio_init pm8917_nc[] __initdata = {
 	PM8921_GPIO_INPUT(25, PM_GPIO_PULL_DN),
 };
+#endif
 
 /* PM8921 GPIO 42 remaps to PM8917 GPIO 8 */
 static struct pm8xxx_gpio_init pm8917_cdp_kp_gpios[] __initdata = {
 	PM8921_GPIO_INPUT(27, PM_GPIO_PULL_UP_30),
 	PM8921_GPIO_INPUT(8, PM_GPIO_PULL_UP_30),
 	PM8921_GPIO_INPUT(17, PM_GPIO_PULL_UP_1P5),	/* SD_WP */
+};
+
+static struct pm8xxx_gpio_init pm8921_8917_cdp_ts_gpios[] __initdata = {
+	PM8921_GPIO_OUTPUT(23, 0, HIGH),	/* touchscreen power FET */
 };
 
 static struct pm8xxx_gpio_init pm8921_mpq_gpios[] __initdata = {
@@ -196,6 +206,11 @@ static struct pm8xxx_gpio_init pm8921_mpq_gpios[] __initdata = {
 static struct pm8xxx_mpp_init pm8xxx_mpps[] __initdata = {
 	/* PM8917 VF */
 	PM8921_MPP_INIT(8, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH8, AOUT_CTRL_DISABLE),
+};
+
+static struct pm8xxx_gpio_init pm8921_sglte2_gpios[] __initdata = {
+	PM8921_GPIO_OUTPUT(23, 1, HIGH),		/* PM2QSC_SOFT_RESET */
+	PM8921_GPIO_OUTPUT(21, 1, HIGH),		/* PM2QSC_KEYPADPWR */
 };
 
 void __init apq8064_configure_gpios(struct pm8xxx_gpio_init *data, int len)
@@ -214,7 +229,7 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 {
 	int i, rc;
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	printk("%s Enter \n", __func__);
 	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
 		printk("PM8921 system_rev = %d\n", system_rev);
@@ -227,22 +242,26 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 	else {
 		apq8064_configure_gpios(pm8917_gpios, ARRAY_SIZE(pm8917_gpios));
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 #else
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR)
 		if (system_rev >= BOARD_REV09)
+#elif defined(CONFIG_MACH_JFVE_EUR)
+		if (system_rev >= BOARD_REV00)
 #else /* VZW/SPT/USCC */
 		if (system_rev >= BOARD_REV10)
 #endif
 			apq8064_configure_gpios(pm8917_sd_det, ARRAY_SIZE(pm8917_sd_det));
 #endif
 
+#if !defined(CONFIG_MACH_JFVE_EUR)
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO)
 		if (system_rev >= BOARD_REV11)
 #else /* EUR/VZW/SPR/USC/CRI */
 		if (system_rev >= BOARD_REV12)
 #endif
 			apq8064_configure_gpios(pm8917_nc, ARRAY_SIZE(pm8917_nc));
+#endif
 	}
 
 	if (machine_is_apq8064_cdp() || machine_is_apq8064_liquid()) {
@@ -252,16 +271,29 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 		else
 			apq8064_configure_gpios(pm8917_cdp_kp_gpios,
 					ARRAY_SIZE(pm8917_cdp_kp_gpios));
+
+		apq8064_configure_gpios(pm8921_8917_cdp_ts_gpios,
+				ARRAY_SIZE(pm8921_8917_cdp_ts_gpios));
 	}
 
-	if (machine_is_apq8064_mtp())
+	if (machine_is_apq8064_mtp()) {
 		apq8064_configure_gpios(pm8921_mtp_kp_gpios,
 					ARRAY_SIZE(pm8921_mtp_kp_gpios));
+		if (socinfo_get_platform_subtype() ==
+					PLATFORM_SUBTYPE_SGLTE2) {
+			apq8064_configure_gpios(pm8921_sglte2_gpios,
+					ARRAY_SIZE(pm8921_sglte2_gpios));
+		}
+	}
 
 	if (machine_is_mpq8064_cdp() || machine_is_mpq8064_hrd()
 	    || machine_is_mpq8064_dtv())
 		apq8064_configure_gpios(pm8921_mpq_gpios,
 					ARRAY_SIZE(pm8921_mpq_gpios));
+
+	if (machine_is_mpq8064_hrd())
+		apq8064_configure_gpios(pm8921_mpq8064_hrd_gpios,
+					ARRAY_SIZE(pm8921_mpq8064_hrd_gpios));
 
 	for (i = 0; i < ARRAY_SIZE(pm8xxx_mpps); i++) {
 		rc = pm8xxx_mpp_config(pm8xxx_mpps[i].mpp,
@@ -296,7 +328,11 @@ static struct pm8xxx_misc_platform_data apq8064_pm8921_misc_pdata = {
 static struct led_info pm8921_led_info[] = {
 	[0] = {
 		.name			= "led:red",
-		.default_trigger	= "ac-online",
+		.default_trigger	= "battery-charging",
+	},
+	[1] = {
+		.name			= "led:green",
+		.default_trigger	= "battery-full",
 	},
 };
 
@@ -332,6 +368,14 @@ static struct pm8xxx_led_config pm8921_led_configs[] = {
 		.mode = PM8XXX_LED_MODE_PWM2,
 		.max_current = PM8921_LC_LED_MAX_CURRENT,
 		.pwm_channel = 5,
+		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
+		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
+	},
+	[1] = {
+		.id = PM8XXX_ID_LED_1,
+		.mode = PM8XXX_LED_MODE_PWM1,
+		.max_current = PM8921_LC_LED_MAX_CURRENT,
+		.pwm_channel = 4,
 		.pwm_period_us = PM8XXX_LED_PWM_PERIOD,
 		.pwm_duty_cycles = &pm8921_led0_pwm_duty_cycles,
 	},
@@ -455,7 +499,7 @@ apq8064_pm8921_irq_pdata __devinitdata = {
 static struct pm8xxx_rtc_platform_data
 apq8064_pm8921_rtc_pdata = {
 	.rtc_write_enable       = true,
-	.rtc_alarm_powerup      = true,
+	.rtc_alarm_powerup      = false,
 };
 
 static int apq8064_pm8921_therm_mitigation[] = {
@@ -469,16 +513,17 @@ static int apq8064_pm8921_therm_mitigation[] = {
 #define CHG_TERM_MA		100
 static struct pm8921_charger_platform_data
 apq8064_pm8921_chg_pdata __devinitdata = {
-	.safety_time		= 180,
 	.update_time		= 60000,
 	.max_voltage		= MAX_VOLTAGE_MV,
 	.min_voltage		= 3200,
 	.uvd_thresh_voltage	= 4050,
-	.alarm_voltage		= 3400,
-	.resume_voltage_delta	= 100,
+	.alarm_low_mv		= 3400,
+	.alarm_high_mv		= 4000,
+	.resume_voltage_delta	= 60,
+	.resume_charge_percent	= 99,
 	.term_current		= CHG_TERM_MA,
 	.cool_temp		= 10,
-	.warm_temp		= 40,
+	.warm_temp		= 45,
 	.temp_check_period	= 1,
 	.max_bat_chg_current	= 1100,
 	.cool_bat_chg_current	= 350,
@@ -487,25 +532,37 @@ apq8064_pm8921_chg_pdata __devinitdata = {
 	.warm_bat_voltage	= 4100,
 	.thermal_mitigation	= apq8064_pm8921_therm_mitigation,
 	.thermal_levels		= ARRAY_SIZE(apq8064_pm8921_therm_mitigation),
+	.rconn_mohm		= 18,
 	.enable_tcxo_warmup_delay = true,
 };
 
 static struct pm8xxx_ccadc_platform_data
 apq8064_pm8xxx_ccadc_pdata = {
-	.r_sense		= 10,
+	.r_sense_uohm		= 10000,
 	.calib_delay_ms		= 600000,
 };
 
 static struct pm8921_bms_platform_data
 apq8064_pm8921_bms_pdata __devinitdata = {
 	.battery_type			= BATT_UNKNOWN,
-	.r_sense			= 10,
+	.r_sense_uohm			= 10000,
 	.v_cutoff			= 3400,
 	.max_voltage_uv			= MAX_VOLTAGE_MV * 1000,
 	.rconn_mohm			= 18,
 	.shutdown_soc_valid_limit	= 20,
 	.adjust_soc_low_threshold	= 25,
 	.chg_term_ua			= CHG_TERM_MA * 1000,
+	.normal_voltage_calc_ms		= 20000,
+	.low_voltage_calc_ms		= 1000,
+	.alarm_low_mv			= 3400,
+	.alarm_high_mv			= 4000,
+	.high_ocv_correction_limit_uv	= 50,
+	.low_ocv_correction_limit_uv	= 100,
+	.hold_soc_est			= 3,
+	.enable_fcc_learning		= 1,
+	.min_fcc_learning_soc		= 20,
+	.min_fcc_ocv_pc			= 30,
+	.min_fcc_learning_samples	= 5,
 };
 
 static struct pm8921_platform_data
@@ -585,4 +642,10 @@ void __init apq8064_init_pmic(void)
 	} else if (machine_is_apq8064_cdp()) {
 		apq8064_pm8921_chg_pdata.has_dc_supply = true;
 	}
+
+	if (!machine_is_apq8064_mtp() && !machine_is_apq8064_liquid())
+		apq8064_pm8921_chg_pdata.battery_less_hardware = 1;
+
+	if (machine_is_mpq8064_hrd())
+		apq8064_pm8921_chg_pdata.disable_chg_rmvl_wrkarnd = 1;
 }

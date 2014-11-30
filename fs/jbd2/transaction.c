@@ -100,6 +100,8 @@ jbd2_get_transaction(journal_t *journal, transaction_t *transaction)
 	journal->j_running_transaction = transaction;
 	transaction->t_max_wait = 0;
 	transaction->t_start = jiffies;
+	transaction->t_callbacked = 0;
+	transaction->t_dropped = 0;
 
 	return transaction;
 }
@@ -1501,6 +1503,29 @@ int jbd2_journal_stop(handle_t *handle)
 
 	jbd2_free_handle(handle);
 	return err;
+}
+
+/**
+ * int jbd2_journal_force_commit() - force any uncommitted transactions
+ * @journal: journal to force
+ *
+ * For synchronous operations: force any uncommitted transactions
+ * to disk.  May seem kludgy, but it reuses all the handle batching
+ * code in a very simple manner.
+ */
+int jbd2_journal_force_commit(journal_t *journal)
+{
+	handle_t *handle;
+	int ret;
+
+	handle = jbd2_journal_start(journal, 1);
+	if (IS_ERR(handle)) {
+		ret = PTR_ERR(handle);
+	} else {
+		handle->h_sync = 1;
+		ret = jbd2_journal_stop(handle);
+	}
+	return ret;
 }
 
 /*

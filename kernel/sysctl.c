@@ -2053,7 +2053,7 @@ static int __do_proc_doulongvec_minmax(void *data, struct ctl_table *table, int 
 	int vleft, first = 1, err = 0;
 	unsigned long page = 0;
 	size_t left;
-	char *kbuf = NULL;
+	char *kbuf;
 
 	if (!data || !table->maxlen || !*lenp || (*ppos && !write)) {
 		*lenp = 0;

@@ -321,7 +321,6 @@ struct _mmc_csd {
 #define EXT_CSD_PWR_CL_200_360		237	/* RO */
 #define EXT_CSD_PWR_CL_DDR_52_195	238	/* RO */
 #define EXT_CSD_PWR_CL_DDR_52_360	239	/* RO */
-#define EXT_CSD_CORRECTLY_PRG_SECTORS_NUM 242	/* RO, 4 bytes */
 #define EXT_CSD_BKOPS_STATUS		246	/* RO */
 #define EXT_CSD_POWER_OFF_LONG_TIME	247	/* RO */
 #define EXT_CSD_GENERIC_CMD6_TIME	248	/* RO */
@@ -332,6 +331,14 @@ struct _mmc_csd {
 #define EXT_CSD_MAX_PACKED_READS	501	/* RO */
 #define EXT_CSD_BKOPS_SUPPORT		502	/* RO */
 #define EXT_CSD_HPI_FEATURES		503	/* RO */
+
+/* additional : eMMC v5.0 or later Only */
+#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_B	269	/* RO */
+#define EXT_CSD_DEVICE_LIFE_TIME_EST_TYPE_A	268	/* RO */
+#define EXT_CSD_PRE_EOL_INFO			267	/* RO */
+#define EXT_CSD_OPTIMAL_TRIM_UNIT_SIZE		264	/* RO */
+#define EXT_CSD_DEVICE_VERSION			262	/* RO, 2Byte */
+#define EXT_CSD_FIRMWARE_VERSION		254	/* RO, 8Byte */
 
 /*
  * EXT_CSD field definitions

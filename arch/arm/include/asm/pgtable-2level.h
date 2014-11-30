@@ -205,7 +205,7 @@ static inline void copy_pmd(pmd_t *pmdpd, pmd_t *pmdps)
 		"isb\n"
 		"pop    {r0, r8-r11}\n"
 		:"=r"(tima_wr_out):"r"(cmd_id),"r"((unsigned long)pmdpd),"r"(pmdps[0]),"r"(pmdps[1]):"r0","r8","r9","r10","r11","cc");
-		
+
 		if (pmdpd[0] != pmdps[0] || pmdpd[1] != pmdps[1]) {
 			printk(KERN_ERR"TIMA: pmdpd[0] %lx != pmdps[0] %lx -- pmdpd[1] %lx != pmdps[1] %lx in tima_wr_out = %lx\n",
 					(unsigned long) pmdpd[0], (unsigned long) pmdps[0], (unsigned long) pmdpd[1], (unsigned long) pmdps[1], tima_wr_out);
@@ -240,7 +240,7 @@ static inline void pmd_clear(pmd_t *pmdp)
 	unsigned long cmd_id = 0x3f80a221;
 	unsigned long tima_wr_out;
 
-	cpu_dcache_clean_area(pmdp, 8);	
+	cpu_dcache_clean_area(pmdp, 8);
 	__asm__ __volatile__ (
 		"stmfd  sp!,{r0, r1, r11}\n"
 		"mov   	r11, r0\n"
@@ -264,7 +264,7 @@ static inline void pmd_clear(pmd_t *pmdp)
 		"isb\n"
 		"pop    {r0, r1, r11}\n"
 		:"=r"(tima_wr_out):"r"(cmd_id),"r"((unsigned long)pmdp):"r0","r1","r11","cc");
-		 
+
 		if (pmdp[0] != 0 || pmdp[1] != 0 || tima_wr_out!=0)
 			printk(KERN_ERR"pmdp[0] %lx - pmdp[1] %lx in tima_wr_out = %lx\n", (unsigned long)pmdp[0], (unsigned long)pmdp[1], tima_wr_out);
 		clean_pmd_entry(pmdp);

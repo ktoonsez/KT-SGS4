@@ -100,30 +100,19 @@ static int try_to_freeze_tasks(bool user_only)
 	elapsed_msecs = elapsed_msecs64;
 
 	if (todo) {
-		/* This does not unfreeze processes that are already frozen
-		 * (we have slightly ugly calling convention in that respect,
-		 * and caller must call thaw_processes() if something fails),
-		 * but it cleans up leftover PF_FREEZE requests.
-		 */
-		if(wakeup) {
-			printk("\n");
-			printk(KERN_ERR "Freezing of %s aborted\n",
-					user_only ? "user space " : "tasks ");
-		}
-		else {
-			printk("\n");
-			printk(KERN_ERR "Freezing of tasks %s after %d.%03d seconds "
-					"(%d tasks refusing to freeze, wq_busy=%d):\n",
-					wakeup ? "aborted" : "failed",
-					elapsed_msecs / 1000, elapsed_msecs % 1000,
-					todo - wq_busy, wq_busy);
-		}
+		printk("\n");
+		printk(KERN_ERR "Freezing of tasks %s after %d.%03d seconds "
+		       "(%d tasks refusing to freeze, wq_busy=%d):\n",
+		       wakeup ? "aborted" : "failed",
+		       elapsed_msecs / 1000, elapsed_msecs % 1000,
+		       todo - wq_busy, wq_busy);
 
 		if (!wakeup) {
 			read_lock(&tasklist_lock);
 			do_each_thread(g, p) {
 				if (p != current && !freezer_should_skip(p)
-				    && freezing(p) && !frozen(p))
+				    && freezing(p) && !frozen(p) &&
+				    elapsed_msecs > 1000)
 					sched_show_task(p);
 			} while_each_thread(g, p);
 			read_unlock(&tasklist_lock);
@@ -211,6 +200,7 @@ void thaw_processes(void)
 
 	printk("Restarting tasks ... ");
 
+	__usermodehelper_set_disable_depth(UMH_FREEZING);
 	thaw_workqueues();
 
 	read_lock(&tasklist_lock);

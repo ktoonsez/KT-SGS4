@@ -114,7 +114,7 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	ret = panel_next_off(pdev);
 
 	spin_lock_bh(&dsi_clk_lock);
-	
+
 	mipi_dsi_clk_disable();
 
 	/* disbale dsi engine */
@@ -139,11 +139,10 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		mipi_dsi_pdata->active_reset(0); /* low */
 
 	usleep(2000); /*1ms delay(minimum) required between reset low and AVDD off*/
-
+#if defined(CONFIG_SUPPORT_SECOND_POWER)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
 		mipi_dsi_pdata->panel_power_save(0);
-
-
+#endif
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(0);
 
@@ -193,16 +192,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	if( is_booting == 1 )
 	{
 		is_booting = 0;
-#if defined(CONFIG_MACH_JACTIVE_ATT)
-		usleep(5000);
-		if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
-				mipi_dsi_pdata->active_reset(0); /* low */
-		usleep(2000);
-
-		if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
-			mipi_dsi_pdata->panel_power_save(0);
-		msleep(10);
-#elif defined(CONFIG_MACH_JACTIVE_EUR)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 		usleep(5000);
 		if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(0); /* low */
@@ -422,10 +412,10 @@ void esd_recovery(void)
 			mutex_lock(&power_state_chagne);
 
 			panel_next_off(pdev_for_esd);
-			
+
 			if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 				mipi_dsi_pdata->active_reset(0); /* low */
-	
+
 			if (mipi_dsi_pdata && mipi_dsi_pdata->panel_power_save)
 				mipi_dsi_pdata->panel_power_save(0);
 

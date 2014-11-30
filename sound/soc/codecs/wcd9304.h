@@ -175,6 +175,8 @@ struct sitar_mbhc_config {
 	unsigned int gpio;
 	unsigned int gpio_irq;
 	int gpio_level_insert;
+	/* swap_gnd_mic returns true if extern GND/MIC swap switch toggled */
+	bool (*swap_gnd_mic) (struct snd_soc_codec *);
 };
 
 extern int sitar_hs_detect(struct snd_soc_codec *codec,
@@ -190,6 +192,26 @@ struct anc_header {
 
 extern int sitar_mclk_enable(struct snd_soc_codec *codec, int mclk_enable,
 							 bool dapm);
+
+/* Number of input and output Slimbus ports
+ */
+enum {
+	SITAR_RX1 = 0,
+	SITAR_RX2,
+	SITAR_RX3,
+	SITAR_RX4,
+	SITAR_RX5,
+	SITAR_RX_MAX,
+};
+
+enum {
+	SITAR_TX1 = 0,
+	SITAR_TX2,
+	SITAR_TX3,
+	SITAR_TX4,
+	SITAR_TX5,
+	SITAR_TX_MAX,
+};
 
 extern void *sitar_mbhc_cal_btn_det_mp(const struct sitar_mbhc_btn_detect_cfg
 				       *btn_det,

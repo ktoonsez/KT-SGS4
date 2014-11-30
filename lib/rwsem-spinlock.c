@@ -94,7 +94,7 @@ __rwsem_do_wake(struct rw_semaphore *sem, int wakewrite)
 		tsk = waiter->task;
 		/* Don't touch waiter after ->task has been NULLed */
 		smp_mb();
-		
+
 #ifdef CONFIG_SEC_FORKHANG_DEBUG
 		sem->owner = waiter->task;
 		sem->owner_pid = waiter->task->pid;
@@ -242,7 +242,7 @@ void __sched __down_write_nested(struct rw_semaphore *sem, int subclass)
 		/* granted */
 		sem->activity = -1;
 		raw_spin_unlock_irqrestore(&sem->wait_lock, flags);
-		
+
 #ifdef CONFIG_SEC_FORKHANG_DEBUG
 		sem->owner = current;
 		sem->owner_pid = current->pid;
@@ -340,7 +340,7 @@ void __up_write(struct rw_semaphore *sem)
 	raw_spin_lock_irqsave(&sem->wait_lock, flags);
 
 	sem->activity = 0;
-	
+
 #ifdef CONFIG_SEC_FORKHANG_DEBUG
 	sem->owner = current;
 	sem->owner_pid = current->pid;

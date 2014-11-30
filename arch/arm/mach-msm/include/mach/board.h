@@ -61,6 +61,12 @@ struct msm_camera_device_platform_data {
 	struct msm_camera_io_ext ioext;
 	struct msm_camera_io_clk ioclk;
 	uint8_t csid_core;
+#if defined(CONFIG_MACH_MELIUS)	
+	uint8_t is_csiphy;
+	uint8_t is_csic;
+	uint8_t is_csid;
+	uint8_t is_ispif;
+#endif	
 	uint8_t is_vpe;
 	struct msm_bus_scale_pdata *cam_bus_scale_table;
 };
@@ -84,7 +90,7 @@ struct msm_camera_legacy_device_platform_data {
 #define MSM_CAMERA_FLASH_SRC_EXT     (0x00000001<<3)
 #define MSM_CAMERA_FLASH_SRC_LED (0x00000001<<3)
 #define MSM_CAMERA_FLASH_SRC_LED1 (0x00000001<<4)
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 #define MSM_CAMERA_FLASH_SRC_PMIC_GPIO (0x00000001<<5) /* richardra added 3 */
 #endif
 
@@ -97,7 +103,7 @@ struct msm_camera_sensor_flash_pmic {
 	int (*pmic_set_current)(enum pmic8058_leds id, unsigned mA);
 };
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 /* richardra added 4 */
 struct msm_camera_sensor_flash_pmic_gpio {
 	uint8_t num_of_src;
@@ -139,7 +145,7 @@ struct msm_camera_sensor_flash_led {
 	const int led_name_len;
 };
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 struct msm_camera_sensor_flash_src {
 	int flash_sr_type;
 
@@ -244,7 +250,36 @@ enum msm_camera_vreg_name_t {
 	CAM_VANA,
 	CAM_VAF,
 };
-
+#if defined(CONFIG_MACH_MELIUS)
+struct msm_camera_sensor_platform_info {
+	int mount_angle;
+	int sensor_reset;
+	struct camera_vreg_t *cam_vreg;
+	int num_vreg;
+	int32_t (*ext_power_ctrl) (int enable);
+	struct msm_camera_gpio_conf *gpio_conf;
+	struct msm_camera_i2c_conf *i2c_conf;
+	struct msm_camera_csi_lane_params *csi_lane_params;
+	int sensor_reset_enable;
+	int sensor_stby;
+	int vt_sensor_reset;
+	int vt_sensor_stby;
+	int flash_en;
+	int flash_set;
+	int mclk;
+	int sensor_pwd;
+	int vcm_pwd;
+	int vcm_enable;
+	int privacy_light;
+	void *privacy_light_info;
+	void(*sensor_power_on) (int);
+	void(*sensor_power_off) (int);
+	void(*sensor_isp_reset) (void);
+	void(*sensor_get_fw) (u8 *isp_fw, u8 *phone_fw);
+	void(*sensor_set_isp_core) (int);
+	bool(*sensor_is_vdd_core_set) (void);
+};
+#else
 struct msm_camera_sensor_platform_info {
 	int mount_angle;
 	int sensor_reset;
@@ -258,8 +293,8 @@ struct msm_camera_sensor_platform_info {
 	void(*sensor_power_off)(void);
 #if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	void(*sensor_power_on_sub)(void);
-	void(*sensor_power_off_sub)(void);	
-#endif	
+	void(*sensor_power_off_sub)(void);
+#endif
 	void(*sensor_af_power_off)(void);
 	void(*sensor_vddio_power_off)(void);
 	void(*sensor_pmic_gpio_ctrl)(int, int);
@@ -271,6 +306,7 @@ struct msm_camera_sensor_platform_info {
 	int stby;
 	int (*sys_rev)(void);
 };
+#endif
 
 enum msm_camera_actuator_name {
 	MSM_ACTUATOR_MAIN_CAM_0,
@@ -302,7 +338,7 @@ struct msm_eeprom_info {
 	int eeprom_reg_addr;
 	int eeprom_read_length;
 	int eeprom_i2c_slave_addr;
-#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_MELIUS)
 	enum msm_eeprom_type type;
 #endif
 };
@@ -440,7 +476,7 @@ struct msm_panel_common_pdata {
 	int (*vga_switch)(int select_vga);
 	int *gpio_num;
 	u32 mdp_max_clk;
-	u64 mdp_max_bw;
+	u32 mdp_max_bw;
 	u32 mdp_bw_ab_factor;
 	u32 mdp_bw_ib_factor;
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -490,6 +526,7 @@ struct mipi_dsi_platform_data {
 	int (*dsi_client_reset)(void);
 	int (*get_lane_config)(void);
 	char (*splash_is_enabled)(void);
+	void (*lcd_rst_down) (void);
 	int target_type;
 #if defined(CONFIG_SUPPORT_SECOND_POWER)
 	int (*panel_power_save)(int on);
@@ -519,6 +556,7 @@ struct mipi_dsi_panel_platform_data {
 	char dlane_swap;
 	void (*dsi_pwm_cfg)(void);
 	char enable_wled_bl_ctrl;
+	void (*gpio_set_backlight)(int bl_level);
 };
 
 struct lvds_panel_platform_data {
@@ -651,6 +689,7 @@ void mpq8092_init_gpiomux(void);
 struct mmc_platform_data;
 int msm_add_sdcc(unsigned int controller,
 		struct mmc_platform_data *plat);
+int msm_add_uio(void);
 
 void msm_pm_register_irqs(void);
 struct msm_usb_host_platform_data;

@@ -204,7 +204,7 @@ pm8xxx_rtc_set_time(struct device *dev, struct rtc_time *tm)
 			secs, tm->tm_hour, tm->tm_min, tm->tm_sec,
 			tm->tm_mday, tm->tm_mon, tm->tm_year);
 #endif
-			
+
 rtc_rw_fail:
 	if (alarm_enabled)
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
@@ -275,6 +275,20 @@ pm8xxx_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 
 	rtc_tm_to_time(&alarm->time, &secs);
 
+#ifdef CONFIG_RTC_AUTO_PWRON
+	if ( sapa_saved_time.enabled ) {
+		unsigned long secs_pwron;
+
+		/* If there are power on alarm before alarm time, ignore alarm */
+		rtc_tm_to_time(&sapa_saved_time.time, &secs_pwron);
+		pr_info("secs_pwron=%lu, secs=%lu\n", secs_pwron, secs);
+		if ( secs_pwron < secs ) {
+			pr_info("RTC alarm don't need because of power on alarm\n");
+			return 0;
+		}
+	}
+#endif
+
 	/*
 	 * Read the current RTC time and verify if the alarm time is in the
 	 * past. If yes, return invalid.
@@ -290,25 +304,6 @@ pm8xxx_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 		dev_err(dev, "Trying to set alarm in the past\n");
 		return -EINVAL;
 	}
-
-#ifdef CONFIG_RTC_AUTO_PWRON
-	if ( sapa_saved_time.enabled ) {
-		unsigned long secs_pwron;
-
-		/* If there are power on alarm before alarm time, ignore alarm */
-		rtc_tm_to_time(&sapa_saved_time.time, &secs_pwron);
-		pr_info("secs_pwron=%lu, secs=%lu, rtc=%lu\n", secs_pwron, secs, secs_rtc);
-		if ( secs_rtc < secs_pwron && secs_pwron < secs ) {
-			pr_info("Override with SAPA\n");
-			memcpy(alarm, &sapa_saved_time, sizeof(struct rtc_wkalrm));
-			secs = secs_pwron;
-		}
-		if (  secs_pwron < secs_rtc ) {
-			pr_info("SAPA was expired. Clear\n");
-			sapa_saved_time.enabled = 0;
-		}
-	}
-#endif
 
 	value[0] = secs & 0xFF;
 	value[1] = (secs >> 8) & 0xFF;
@@ -947,7 +942,7 @@ static void pm8xxx_rtc_shutdown(struct platform_device *pdev)
 				rtc_dd->alarm_rw_base, NUM_8_BIT_RTC_REGS);
 		if (rc < 0)
 			dev_err(rtc_dd->rtc_dev, "PM8xxx write failed\n");
-		
+
 fail_alarm_disable:
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
 	}

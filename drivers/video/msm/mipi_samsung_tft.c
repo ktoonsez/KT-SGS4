@@ -190,7 +190,7 @@ void lcd_hsync_onoff(bool onoff)
 //		return -EINVAL;
 
 #if defined(CONFIG_MACH_JACTIVE_EUR) /* HW DEFECT under REV 0.5 */
-	if( system_rev > 15 )
+	if( system_rev > 16 )
 		return;
 #endif
 
@@ -288,7 +288,7 @@ static void execute_panel_init(struct msm_fb_data_type *mfd)
 
 	mipi_samsung_disp_send_cmd(mfd, PANEL_MTP_DISABLE, false);
 }
-
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
@@ -333,7 +333,7 @@ static int mipi_samsung_disp_on_in_video_engine(struct platform_device *pdev)
 
 	return 0;
 }
-
+#endif
 static int mipi_samsung_disp_on(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = NULL;
@@ -361,9 +361,39 @@ static int mipi_samsung_disp_on(struct platform_device *pdev)
 			mipi_samsung_disp_send_cmd(mfd,
 						PANEL_NEED_FLIP, false);
 	}
+#if !defined(CONFIG_MACH_JACTIVE_ATT) && !defined(CONFIG_MACH_JACTIVE_EUR)
+	mipi_samsung_disp_send_cmd(mfd, PANEL_ON, false);
+	mfd->resume_state = MIPI_RESUME_STATE;
 
-	printk(KERN_INFO "[lcd] mipi_samsung_disp_on end\n" );
+#if	defined(CONFIG_MDNIE_LITE_TUNING)
+	if (!first_boot_on)
+	{
+		mfd->resume_state = MIPI_RESUME_STATE;
+		first_boot_on = 1;
+	}
+#endif
 
+#if defined(RUMTIME_MIPI_CLK_CHANGE)
+	current_fps = mfd->panel_info.mipi.frame_rate;
+#endif
+
+#if defined(AUTO_BRIGHTNESS_CABC_FUNCTION)
+	is_disp_on = 1;
+
+	if( (is_cabc_delayed == 1) || (msd.mpd->siop_status == true) )
+	{
+		mipi_samsung_disp_send_cmd(mfd, PANEL_CABC_ENABLE, false);
+		is_cabc_delayed = 0;
+		printk ( KERN_ERR "%s-PANEL_CABC_ENABLE(delayed)\n", __func__ );
+	}
+#endif
+
+	printk(KERN_INFO "[lcd] mipi_samsung_disp_on end %d\n", gpio_get_value(err_fg_gpio));
+
+#if defined(CONFIG_ESD_ERR_FG_RECOVERY)
+	enable_irq(PM8921_GPIO_IRQ(PM8921_IRQ_BASE, PMIC_GPIO_ERR_FG));
+#endif
+#endif
 	return 0;
 }
 
@@ -402,24 +432,25 @@ static int mipi_samsung_disp_off(struct platform_device *pdev)
 static void __devinit mipi_samsung_disp_shutdown(struct platform_device *pdev)
 {
 	static struct mipi_dsi_platform_data *mipi_dsi_pdata = NULL;
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	struct msm_fb_data_type *mfd = NULL;
-
+#endif
 	if (pdev->id != 0)
 		return;
-
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	mfd = platform_get_drvdata(msd.msm_pdev);
 	if (unlikely(!mfd))
 		return;
-
+#endif
 	mipi_dsi_pdata = pdev->dev.platform_data;
 	if (mipi_dsi_pdata == NULL) {
 		pr_err("LCD Power off failure: No Platform Data\n");
 		return;
 	}
-
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	mfd->resume_state = MIPI_SUSPEND_STATE;
 	mipi_samsung_disp_send_cmd(mfd, PANEL_OFF, false);
-
+#endif
 	if (mipi_dsi_pdata && mipi_dsi_pdata->active_reset)
 		mipi_dsi_pdata->active_reset(0); /* low */
 
@@ -545,24 +576,30 @@ int mipi_samsung_cabc_onoff ( int enable )
 	{
 		if( enable )
 		{
+#if defined(CONFIG_MACH_JACTIVE_EUR) || defined (CONFIG_MACH_JACTIVE_ATT)
 			if( is_cabc_on() != false )
 			{
-				mipi_samsung_disp_send_cmd(mfd, PANEL_CABC_ENABLE, false);
-				printk ( KERN_ERR "@@@@@%s-PANEL_CABC_ENABLE\n", __func__ );
-			}
-			else
+#endif
+			mipi_samsung_disp_send_cmd(mfd, PANEL_CABC_ENABLE, false);
+			printk ( KERN_ERR "@@@@@%s-PANEL_CABC_ENABLE\n", __func__ );
+		}
+		else
+#if defined(CONFIG_MACH_JACTIVE_EUR) || defined (CONFIG_MACH_JACTIVE_ATT)
 				printk ( KERN_ERR "@@@@@%s-CABC KEYSTRING is OFF, so skip ENABLE\n", __func__ );
 		}
 		else
 		{
 			if( is_cabc_on() != true )
-			{
-				mipi_samsung_disp_send_cmd(mfd, PANEL_CABC_DISABLE, false);
-				printk ( KERN_ERR "@@@@@%s-PANEL_CABC_DISABLE\n", __func__ );
-			}
+#endif
+		{
+			mipi_samsung_disp_send_cmd(mfd, PANEL_CABC_DISABLE, false);
+			printk ( KERN_ERR "@@@@@%s-PANEL_CABC_DISABLE\n", __func__ );
+		}
+#if defined(CONFIG_MACH_JACTIVE_EUR) || defined (CONFIG_MACH_JACTIVE_ATT)
 			else
 				printk ( KERN_ERR "@@@@@%s-CABC KEYSTRING is ON, so skip DISABLE\n", __func__ );
 		}
+#endif
 	}
 
 	return 0;
@@ -817,7 +854,31 @@ static char tuning_file[MAX_FILE_NAME];
 
 static char mdni_tuning1[TUNE_FIRST_SIZE];
 static char mdni_tuning2[TUNE_SECOND_SIZE];
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
+static char level1_key_enable[] = {
+	0xF0,
+	0x5A, 0x5A,
+};
 
+static char level1_key_disable[] = {
+	0xF0,
+	0xA5, 0xA5,
+};
+
+static struct dsi_cmd_desc mdni_tune_cmd[] = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
+		sizeof(level1_key_enable), level1_key_enable},
+
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
+		sizeof(mdni_tuning1), mdni_tuning1},
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
+		sizeof(mdni_tuning2), mdni_tuning2},
+
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
+		sizeof(level1_key_disable), level1_key_disable},
+};
+
+#else
 static char level1_key[] = {
 	0xF0,
 	0x5A, 0x5A,
@@ -839,7 +900,7 @@ static struct dsi_cmd_desc mdni_tune_cmd[] = {
 	{DTYPE_DCS_LWRITE, 1, 0, 0, 0,
 		sizeof(mdni_tuning2), mdni_tuning2},
 };
-
+#endif
 static char char_to_dec(char data1, char data2)
 {
 	char dec;
@@ -1208,7 +1269,9 @@ static struct platform_driver this_driver = {
 };
 
 static struct msm_fb_panel_data samsung_panel_data = {
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 	.late_init = mipi_samsung_disp_on_in_video_engine,
+#endif
 	.on		= mipi_samsung_disp_on,
 	.off		= mipi_samsung_disp_off,
 	.set_backlight	= mipi_samsung_disp_backlight,

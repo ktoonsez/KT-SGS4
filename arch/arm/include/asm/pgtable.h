@@ -110,7 +110,7 @@ extern pgprot_t		pgprot_kernel;
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_BUFFERABLE)
 
 #define pgprot_stronglyordered(prot) \
-	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_UNCACHED)
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_UNCACHED | L_PTE_XN)
 
 #define pgprot_device(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_DEV_NONSHARED)
@@ -327,7 +327,6 @@ static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
  */
 #define HAVE_ARCH_UNMAPPED_AREA
 #define HAVE_ARCH_UNMAPPED_AREA_TOPDOWN
-
 /*
  * remap a physical page `pfn' of size `size' with page protection `prot'
  * into virtual address `from'

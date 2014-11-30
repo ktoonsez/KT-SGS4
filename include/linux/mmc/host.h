@@ -146,8 +146,6 @@ struct mmc_host_ops {
 	void	(*enable_preset_value)(struct mmc_host *host, bool enable);
 	int	(*select_drive_strength)(unsigned int max_dtr, int host_drv, int card_drv);
 	void	(*hw_reset)(struct mmc_host *host);
-	int	(*stop_request)(struct mmc_host *host);
-	unsigned int	(*get_xfer_remain)(struct mmc_host *host);
 	unsigned long (*get_max_frequency)(struct mmc_host *host);
 	unsigned long (*get_min_frequency)(struct mmc_host *host);
 	int     (*notify_load)(struct mmc_host *, enum mmc_load);
@@ -159,28 +157,23 @@ struct device;
 struct mmc_async_req {
 	/* active mmc request */
 	struct mmc_request	*mrq;
-	unsigned int cmd_flags; /* copied from struct request */
-
 	/*
 	 * Check error status of completed mmc request.
 	 * Returns 0 if success otherwise non zero.
 	 */
 	int (*err_check) (struct mmc_card *, struct mmc_async_req *);
-	/* Reinserts request back to the block layer */
-	void (*reinsert_req) (struct mmc_async_req *);
-	/* update what part of request is not done (packed_fail_idx) */
-	int (*update_interrupted_req) (struct mmc_card *,
-			struct mmc_async_req *);
+};
+
+struct mmc_hotplug {
+	unsigned int irq;
+	void *handler_priv;
 };
 
 /**
  * mmc_context_info - synchronization details for mmc context
  * @is_done_rcv		wake up reason was done request
  * @is_new_req		wake up reason was new request
- * @is_waiting_last_req	is true, when 1 request running on the bus and
- *			NULL fetched as second request. MMC_BLK_NEW_REQUEST
- *			notification will wake up mmc thread from waiting.
- * @is_urgent		wake up reason was urgent request
+ * @is_waiting_last_req	mmc context waiting for single running request
  * @wait		wait queue
  * @lock		lock to protect data fields
  */
@@ -188,14 +181,8 @@ struct mmc_context_info {
 	bool			is_done_rcv;
 	bool			is_new_req;
 	bool			is_waiting_last_req;
-	bool			is_urgent;
 	wait_queue_head_t	wait;
 	spinlock_t		lock;
-};
-
-struct mmc_hotplug {
-	unsigned int irq;
-	void *handler_priv;
 };
 
 struct mmc_host {
@@ -290,9 +277,8 @@ struct mmc_host {
 
 #define MMC_CAP2_SANITIZE	(1 << 13)		/* Support Sanitize */
 #define MMC_CAP2_INIT_BKOPS	    (1 << 15)	/* Need to set BKOPS_EN */
-#define MMC_CAP2_ADAPT_PACKED	(1 << 16) 	/*  Disable packed write adaptively */
-#define MMC_CAP2_CLK_SCALE	(1 << 17)	/* Allow dynamic clk scaling */
-#define MMC_CAP2_STOP_REQUEST	(1 << 18)	/* Allow stop ongoing request */
+#define MMC_CAP2_CLK_SCALE	(1 << 16)	/* Allow dynamic clk scaling */
+#define MMC_CAP2_ADAPT_PACKED	(1 << 17) 	/*  Disable packed write adaptively */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
@@ -464,6 +450,12 @@ extern int mmc_cache_ctrl(struct mmc_host *, u8);
 
 static inline void mmc_signal_sdio_irq(struct mmc_host *host)
 {
+	if (!host->sdio_irqs) {
+		pr_err("%s: SDIO interrupt recieved without function driver claiming an irq\n",
+				mmc_hostname(host));
+		return;
+	}
+
 	host->ops->enable_sdio_irq(host, 0);
 	host->sdio_irq_pending = true;
 	wake_up_process(host->sdio_irq_thread);
@@ -531,8 +523,8 @@ static inline int mmc_host_uhs(struct mmc_host *host)
 {
 	return host->caps &
 		(MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
-		MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
-		MMC_CAP_UHS_DDR50);
+		 MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
+		 MMC_CAP_UHS_DDR50);
 }
 
 #ifdef CONFIG_MMC_CLKGATE

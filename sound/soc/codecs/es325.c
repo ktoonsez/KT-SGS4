@@ -126,6 +126,8 @@ struct es325_slim_ch {
 #define FIRMWARE_NAME "audience-es325-fw-cmcc.bin"
 #elif defined(CONFIG_MACH_JF_EUR)
 #define FIRMWARE_NAME "audience-es325-fw-eur.bin"
+#elif defined(CONFIG_MACH_JFVE_EUR)
+#define FIRMWARE_NAME "audience-es325-fw-eur.bin"
 #elif defined(CONFIG_MACH_JACTIVE_EUR)
 #define FIRMWARE_NAME "audience-es325-fw-jactive-eur.bin"
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
@@ -222,7 +224,7 @@ static u8 es325_internal_route_1mic_headset_WB[10] = {
 	0xff		/* terminate */
 };
 
-#if defined(CONFIG_MACH_JACTIVE_ATT)
+#if defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
 /* 1-mic Speaker NB (1-mic FT)(NS off)(SW bypss) */
 static u8 es325_internal_route_1mic_speaker[10] = {
 	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
@@ -237,29 +239,27 @@ static u8 es325_internal_route_1mic_speaker[10] = {
 	0xff		/* terminate */
 };
 #endif
-
+#ifdef CONFIG_MACH_JACTIVE_EUR
+/* 1-mic Speaker WB (1-mic FT)(NS off)(SW bypss) */
+static u8 es325_internal_route_1mic_speaker_WB[10] = {		
+	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
+	0x90, 0x31, 0x00, 0x83, /* Algo Preset: 1-mic CT WB */
+	0xff		/* terminate */
+};
+#else
 /* 1-mic Speaker WB (1-mic FT)(NS off)(SW bypss) */
 static u8 es325_internal_route_1mic_speaker_WB[10] = {		
 	0x90, 0x31, 0x00, 0x0c, /* 1 Mic 1 FEOUT */
 	0x90, 0x31, 0x00, 0x83, /* Algo Preset: 1-mic CT WB */
 	0xff		/* terminate */
 };
-
-#if defined(CONFIG_MACH_JACTIVE_ATT)
-/* 1-mic Speaker NB (1-mic FT)(NS off)(SW bypss) - JACTIVE doesn't use 2-mic for SPK */
-static u8 es325_internal_route_2mic_speaker[10] = {
-	0x90, 0x31, 0x00, 0x0d, /* 1 Mic 1 FEOUT */
-	0x90, 0x31, 0x00, 0x82, /* Algo Preset: 1-mic CT NB */
-	0xff		/* terminate */
-};
-#else
+#endif
 /* 2-mic Speaker NB (2-mic FT)(NS on) */
 static u8 es325_internal_route_2mic_speaker[10] = {	
 	0x90, 0x31, 0x00, 0x02, /* 2 Mic 1 FEOUT w UITone CT */
 	0x90, 0x31, 0x00, 0x16, /* Algo Preset for 2 Mic FT NB */
 	0xff		/* terminate */
 };
-#endif
 
 /* 2-mic Speaker WB (2-mic FT)(NS off) */
 static u8 es325_internal_route_2mic_speaker_WB[10] = {		
@@ -1233,8 +1233,6 @@ static int es325_slim_write(struct es325_priv *es325, unsigned int offset,
 	if (bus_order)
 		msg_to_bus_order(buf, len);
 	rc = slim_change_val_element(sbdev, &msg, buf, len);
-	if (rc != 0)
-		pr_info("%s: rc=%d\n", __func__, rc);
 	return rc;
 }
 #endif
@@ -1734,7 +1732,7 @@ static void es325_switch_route(void)
 			es325->new_internal_route_config < 3 + NETWORK_OFFSET)) {
 			
 			es325->new_internal_route_config += NS_OFFSET;
-			pr_info("=[ES325]=%s() adjust 2mic_enable offset, es325_2mic_enable=%d\n", __func__, es325_2mic_enable);
+			pr_info("=[ES325]=%s() adjust 2mic_enable offset\n", __func__);
 		}
 	} else {
 		if ((es325->new_internal_route_config >= 1 + NS_OFFSET &&
@@ -1743,7 +1741,7 @@ static void es325_switch_route(void)
 			es325->new_internal_route_config < 3 + NETWORK_OFFSET + NS_OFFSET)) {
 			
 			es325->new_internal_route_config -= NS_OFFSET;
-			pr_info("=[ES325]=%s() adjust 2mic_enable offset, es325_2mic_enable=%d\n", __func__, es325_2mic_enable);
+			pr_info("=[ES325]=%s() adjust 2mic_enable offset\n", __func__);
 		}
 	}
 
@@ -2304,7 +2302,7 @@ LOOP:
 	rc = ES325_BUS_WRITE(es325, ES325_WRITE_VE_OFFSET,
 			     ES325_WRITE_VE_WIDTH, pwr_cmd, 4, 1);
 	if (rc < 0) {
-		if (--remain > 0) {
+		if (-remain > 0) {
 			pr_info("=[ES325]= wrapper %s sleep command failed remain count %d\n",
 				__func__, remain);
 			usleep_range(1000, 1100);

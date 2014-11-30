@@ -605,6 +605,9 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 	const u32 recon_bufs = 4;
 	u32 h263_cpfc_enable = false;
 	u32 scaled_frame_rate, ltr_enable;
+/* MMRND_AVRC. Start */
+	u32 pic_order_count = false;
+/* MMRND_AVRC. End */
 
 	ddl_vidc_encode_set_profile_level(ddl);
 	vidc_1080p_set_encode_frame_size(encoder->frame_size.width,
@@ -625,13 +628,16 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 		(DDL_FRAMERATE_SCALE(DDL_INITIAL_FRAME_RATE)
 		 != scaled_frame_rate))
 		h263_cpfc_enable = true;
-
 /* MMRND_AVRC. Start */
-	/* added for MMS issue - Remove plus header */
+/* pic_order_cnt_type = 2 */
+	if (encoder->codec.codec == VCD_CODEC_H264)
+		pic_order_count = true;
+
+/* added for MMS plus header issue */
 	if ((encoder->codec.codec == VCD_CODEC_H263) &&
 		(encoder->frame_size.width == QCIF_WIDTH) &&
 		(encoder->frame_size.height == QCIF_HEIGHT))
-			h263_cpfc_enable = false;
+		h263_cpfc_enable = false;
 /* MMRND_AVRC. End */
 
 	ltr_enable = DDL_IS_LTR_ENABLED(encoder);
@@ -640,8 +646,15 @@ void ddl_vidc_encode_init_codec(struct ddl_client_context *ddl)
 		[ddl->command_channel], hdr_ext_control,
 		r_cframe_skip, false, 0,
 		h263_cpfc_enable, encoder->sps_pps.sps_pps_for_idr_enable_flag,
+/* MMRND_AVRC. Start */
+#if 1
+		pic_order_count, encoder->closed_gop, encoder->
+		avc_delimiter_enable, encoder->vui_timinginfo_enable,
+#else		
 		encoder->closed_gop, encoder->avc_delimiter_enable,
 		encoder->vui_timinginfo_enable,
+#endif
+/* MMRND_AVRC. End */
 		encoder->bitstream_restrict_enable, ltr_enable);
 	if (encoder->vui_timinginfo_enable) {
 		vidc_sm_set_h264_encoder_timing_info(
@@ -823,7 +836,8 @@ void ddl_vidc_encode_frame_run(struct ddl_client_context *ddl)
 	struct vcd_frame_data *stream = &(ddl->output_frame.vcd_frm);
 	struct vcd_frame_data *input_vcd_frm =
 		&(ddl->input_frame.vcd_frm);
-	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB], dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
 	u32 index, y_addr, c_addr;
 
 	DDL_MSG_LOW("%s\n", __func__);
@@ -944,7 +958,8 @@ void ddl_vidc_encode_slice_batch_run(struct ddl_client_context *ddl)
 	struct ddl_enc_buffers *enc_buffers = &(encoder->hw_bufs);
 	struct vcd_frame_data *input_vcd_frm =
 		&(ddl->input_frame.vcd_frm);
-	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB], dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_y[VIDC_1080P_MAX_DEC_DPB];
+	u32 dpb_addr_c[VIDC_1080P_MAX_DEC_DPB];
 	u32 index, y_addr, c_addr;
 	u32 bitstream_size;
 	struct vidc_1080p_enc_slice_batch_in_param *slice_batch_in =

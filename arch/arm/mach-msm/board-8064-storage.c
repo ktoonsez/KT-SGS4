@@ -49,7 +49,7 @@ static struct msm_mmc_reg_data mmc_vdd_reg_data[MAX_SDCC_CONTROLLER] = {
 		.lpm_uA = 9000,
 		.hpm_uA = 200000, /* 200mA */
 	},
-#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT	
+#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 	/* SDCC2 : External card slot connected after system_rev 08 */
 	[SDCC2] = {
 			.name = "sdc_vdd",
@@ -440,7 +440,7 @@ static struct mmc_platform_data sdc1_data = {
 	.pin_data	= &mmc_slot_pin_data[SDCC1],
 	.vreg_data	= &mmc_slot_vreg_data[SDCC1],
 	.uhs_caps	= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50,
-	.uhs_caps2	= MMC_CAP2_HS200_1_8V_SDR | MMC_CAP2_CACHE_CTRL,
+	.uhs_caps2	= MMC_CAP2_ADAPT_PACKED | MMC_CAP2_HS200_1_8V_SDR | MMC_CAP2_CACHE_CTRL,
 	.packed_write	= MMC_CAP2_PACKED_WR | MMC_CAP2_PACKED_WR_CONTROL,
 	.mpm_sdiowakeup_int = MSM_MPM_PIN_SDC1_DAT1,
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
@@ -562,7 +562,21 @@ void __init apq8064_init_mmc(void)
 					ARRAY_SIZE(sdc1_sup_clk_rates_all);
 		}
 		apq8064_add_sdcc(1, apq8064_sdc1_pdata);
+		apq8064_add_uio();
 	}
+#if defined(CONFIG_MACH_JFVE_EUR)
+	apq8064_sdc2_pdata = NULL;
+	apq8064_sdc4_pdata = NULL;
+
+	// SDC3 is used for External memory Card
+	if (apq8064_sdc3_pdata)
+   {  
+		apq8064_sdc3_pdata->status_gpio = PM8921_GPIO_PM_TO_SYS(33);
+		apq8064_sdc3_pdata->status_irq	= PM8921_GPIO_IRQ(PM8921_IRQ_BASE, 33);
+
+		apq8064_add_sdcc(3, apq8064_sdc3_pdata);
+   }
+#else
 /*
 	if (apq8064_sdc2_pdata)
 		apq8064_add_sdcc(2, apq8064_sdc2_pdata);
@@ -652,4 +666,5 @@ void __init apq8064_init_mmc(void)
 		apq8064_add_sdcc(4, apq8064_sdc4_pdata);
 	else if (apq8064_sdc2_pdata)
 		apq8064_add_sdcc(2, apq8064_sdc2_pdata);
+#endif
 }

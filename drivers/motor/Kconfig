@@ -6,9 +6,6 @@ menuconfig VIBETONZ
 	default n
 	help
 	Say Y to enable Vibetonz support.
-	-------------
-	-------------
-	-------------
 
 config MOTOR_DRV_MAX77693
 	tristate "Maxim MAX77693 motor"

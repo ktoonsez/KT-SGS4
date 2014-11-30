@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -304,6 +304,14 @@ struct afe_port_rtproxy_cfg {
 #define AFE_PORT_MULTI_CHAN_HDMI_AUDIO_IF_CONFIG	0x000100D9
 #define AFE_PORT_CMD_I2S_CONFIG	0x000100E7
 
+#define AFE_PARAM_ID_DEVICE_HW_DELAY     0x00010243
+#define AFE_API_VERSION_DEVICE_HW_DELAY  0x1
+
+struct afe_param_id_device_hw_delay_cfg {
+	uint32_t    device_hw_delay_minor_version;
+	uint32_t    delay_in_us;
+} __packed;
+
 union afe_port_config {
 	struct afe_port_pcm_cfg           pcm;
 	struct afe_port_mi2s_cfg          mi2s;
@@ -417,6 +425,7 @@ struct afe_param_payload {
 		struct afe_param_channels      channels;
 		struct afe_param_loopback_gain loopback_gain;
 		struct afe_param_loopback_cfg loopback_cfg;
+		struct afe_param_id_device_hw_delay_cfg hw_delay;
 	} __attribute__((packed)) param;
 } __attribute__ ((packed));
 
@@ -706,7 +715,7 @@ struct asm_pp_get_params_command {
 	u32    *payload;
 	struct  asm_pp_param_data_hdr params;
 	u32 dummy1;
-	u32 dummy2;	
+	u32 dummy2;
 } __attribute__ ((packed));
 
 #define EQUALIZER_MODULE_ID		0x00010c27
@@ -1230,6 +1239,23 @@ struct asm_stream_cmd_open_read_write {
 	u32                read_format;
 } __attribute__((packed));
 
+#define ASM_STREAM_CMD_OPEN_LOOPBACK	0x00010D6E
+struct asm_stream_cmd_open_loopback {
+	struct apr_hdr         hdr;
+	u32                    mode_flags;
+/* Mode flags.
+ * Bit 0-31: reserved; client should set these bits to 0
+ */
+	u16                    src_endpointype;
+	/* Endpoint type. 0 = Tx Matrix */
+	u16                    sink_endpointype;
+	/* Endpoint type. 0 = Rx Matrix */
+	u32                    postprocopo_id;
+/* Postprocessor topology ID. Specifies the topology of
+ * postprocessing algorithms.
+ */
+} __packed;
+
 #define ADM_CMD_CONNECT_AFE_PORT 0x00010320
 #define ADM_CMD_DISCONNECT_AFE_PORT 0x00010321
 
@@ -1288,6 +1314,17 @@ struct asm_stream_cmd_encdec_dualmono {
 	u32            param_id;
 	u32            param_size;
 	struct asm_dual_mono channel_map;
+} __packed;
+
+#define ASM_PARAM_ID_AAC_STEREO_MIX_COEFF_SELECTION_FLAG        0x00010DD8
+
+/* Structure for AAC decoder stereo coefficient setting. */
+
+struct asm_aac_stereo_mix_coeff_selection_param {
+	struct apr_hdr				hdr;
+	u32					param_id;
+	u32					param_size;
+	u32					aac_stereo_mix_coeff_flag;
 } __packed;
 
 #define ASM_ENCDEC_DEC_CHAN_MAP				 0x00010D82
@@ -1624,4 +1661,36 @@ struct srs_trumedia_params {
 int srs_trumedia_open(int port_id, int srs_tech_id, void *srs_params);
 /* SRS TruMedia end */
 
+/* SRS Studio Sound 3D start */
+#define SRS_ID_SS3D_GLOBAL	0x00000001
+#define SRS_ID_SS3D_CTRL	0x00000002
+#define SRS_ID_SS3D_FILTER	0x00000003
+
+struct srs_SS3D_params_GLOBAL {
+	uint8_t                  v1;
+	uint8_t                  v2;
+	uint8_t                  v3;
+	uint8_t                  v4;
+	uint8_t                  v5;
+	uint8_t                  v6;
+	uint8_t                  v7;
+	uint8_t                  v8;
+} __packed;
+
+struct srs_SS3D_ctrl_params {
+	uint8_t				v[236];
+} __packed;
+
+struct srs_SS3D_filter_params {
+	uint8_t				v[28 + 2752];
+} __packed;
+
+struct srs_SS3D_params {
+	struct srs_SS3D_params_GLOBAL   global;
+	struct srs_SS3D_ctrl_params     ss3d;
+	struct srs_SS3D_filter_params   ss3d_f;
+} __packed;
+
+int srs_ss3d_open(int port_id, int srs_tech_id, void *srs_params);
+/* SRS Studio Sound 3D end */
 #endif /*_APR_AUDIO_H_*/

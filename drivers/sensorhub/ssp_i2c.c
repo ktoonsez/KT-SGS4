@@ -13,9 +13,9 @@
  *
  */
 #include "ssp.h"
-#include <linux/cpufreq_kt.h>
 
 #define LIMIT_DELAY_CNT		200
+#include <linux/cpufreq_kt.h>
 
 int waiting_wakeup_mcu(struct ssp_data *data)
 {
@@ -247,28 +247,15 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	
 	//GPS activated/not activated hook
 	if (uInst == ADD_SENSOR && uSensorType == GEOMAGNETIC_SENSOR)
-	{
-		pr_alert("KT GPS ENABLE: %d-%d\n", uInst, uSensorType);
-		set_gps_status(true);
-	}
+		set_gps_status(true); //pr_alert("KT GPS ENABLE: %d-%d\n", uInst, uSensorType);
 	else if (uInst == REMOVE_SENSOR && uSensorType == GEOMAGNETIC_SENSOR)
-	{
-		pr_alert("KT GPS DISABLE: %d-%d\n", uInst, uSensorType);
-		set_gps_status(false);
-	}
+		set_gps_status(false); //pr_alert("KT GPS DISABLE: %d-%d\n", uInst, uSensorType);
+
 	//On a call/not on a call hook
 	if (uInst == ADD_SENSOR && uSensorType == PROXIMITY_SENSOR)
-	{
-		pr_alert("KT ON CALL ENABLE: %d-%d\n", uInst, uSensorType);
-		set_call_in_progress(true);
-		set_call_in_progress_prox(true);
-	}
+		set_call_in_progress(true); //pr_alert("KT ON CALL ENABLE: %d-%d\n", uInst, uSensorType);
 	else if (uInst == REMOVE_SENSOR && uSensorType == PROXIMITY_SENSOR)
-	{
-		pr_alert("KT ON CALL DISABLE: %d-%d\n", uInst, uSensorType);
-		set_call_in_progress(false);
-		set_call_in_progress_prox(false);
-	}
+		set_call_in_progress(false); //pr_alert("KT ON CALL DISABLE: %d-%d\n", uInst, uSensorType);
 	data->uInstFailCnt = 0;
 	ssp_dbg("[SSP]: %s - Inst = 0x%x, Sensor Type = 0x%x, data = %u\n",
 		__func__, chTxbuf[2], chTxbuf[3], chTxbuf[4]);

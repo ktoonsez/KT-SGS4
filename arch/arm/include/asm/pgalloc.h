@@ -164,9 +164,9 @@ static inline void __pmd_populate(pmd_t *pmdp, phys_addr_t pte,
 		"isb\n"
 		"pop    {r0, r8-r11}\n"
 		:"=r"(tima_wr_out):"r"(cmd_id),"r"((unsigned long)pmdp),"r"(pmdval),"r"(__pmd(pmdval + 256 * sizeof(pte_t))):"r0","r8","r9","r10","r11","cc");
-		
+
 		if ((pmdp[0]|0x4)!=(__pmd(pmdval)|0x4)) {
-			printk(KERN_ERR"pmdp[0] %lx != __pmd(pmdval) %lx - %lx %lx in func: %s tima_wr_out = %lx\n", 
+			printk(KERN_ERR"pmdp[0] %lx != __pmd(pmdval) %lx - %lx %lx in func: %s tima_wr_out = %lx\n",
 					(unsigned long) pmdp[0], (unsigned long) __pmd(pmdval), (unsigned long) pmdp[1], (unsigned long) (__pmd(pmdval + 256 * sizeof(pte_t))),
 					__func__, tima_wr_out);
 			tima_send_cmd(pmdp[0], 0x3f810221);

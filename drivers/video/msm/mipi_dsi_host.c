@@ -40,7 +40,9 @@
 #include "mipi_dsi.h"
 #include "mdp.h"
 #include "mdp4.h"
+#ifdef CONFIG_SEC_DEBUG_MDP
 #include "sec_debug_mdp.h"
+#endif
 
 static struct completion dsi_dma_comp;
 static struct completion dsi_mdp_comp;
@@ -58,7 +60,10 @@ static struct mutex clk_mutex;
 static struct list_head pre_kickoff_list;
 static struct list_head post_kickoff_list;
 
+struct work_struct mdp_reset_work;
+#ifdef CONFIG_SEC_DEBUG_MDP
 extern struct sec_debug_mdp sec_debug_mdp;
+#endif
 
 void mipi_dsi_configure_dividers(int fps);
 
@@ -107,6 +112,11 @@ void mipi_dsi_mdp_stat_inc(int which)
 }
 #endif
 
+static void mdp_reset_wq_handler(struct work_struct *work)
+{
+	mdp4_mixer_reset(0);
+}
+
 void mipi_dsi_init(void)
 {
 	init_completion(&dsi_dma_comp);
@@ -119,6 +129,7 @@ void mipi_dsi_init(void)
 	spin_lock_init(&dsi_clk_lock);
 	mutex_init(&cmd_mutex);
 	mutex_init(&clk_mutex);
+	INIT_WORK(&mdp_reset_work, mdp_reset_wq_handler);
 
 	INIT_LIST_HEAD(&pre_kickoff_list);
 	INIT_LIST_HEAD(&post_kickoff_list);
@@ -925,9 +936,14 @@ void mipi_dsi_host_init(struct mipi_panel_info *pinfo)
 	if (pinfo->data_lane0)
 		dsi_ctrl |= BIT(4);
 
-	/* from frame buffer, low power mode */
-	/* DSI_COMMAND_MODE_DMA_CTRL */
-	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);
+#if defined(CONFIG_MIPI_DSI_LP_CMD_SEND)
+		/* from frame buffer, low power mode */
+		/* DSI_COMMAND_MODE_DMA_CTRL */
+		MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x14000000);
+#else
+		/* send commands in High Speed Mode */
+		MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);
+#endif
 
 	data = 0;
 	if (pinfo->te_sel)
@@ -1040,7 +1056,8 @@ void mipi_dsi_op_mode_config(int mode)
 	dsi_ctrl &= ~0x07;
 	if (mode == DSI_VIDEO_MODE) {
 		dsi_ctrl |= 0x03;
-		intr_ctrl = DSI_INTR_CMD_DMA_DONE_MASK;
+		intr_ctrl = (DSI_INTR_CMD_DMA_DONE_MASK |
+					DSI_INTR_VIDEO_DONE_MASK);
 	} else {		/* command mode */
 		dsi_ctrl |= 0x05;
 		intr_ctrl = DSI_INTR_CMD_DMA_DONE_MASK | DSI_INTR_ERROR_MASK |
@@ -1064,7 +1081,7 @@ static void mipi_dsi_wait4video_done(void)
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK, DSI_INTR_VIDEO_DONE_MASK);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
-	
+
 	if (!wait_for_completion_timeout(&dsi_video_comp,
 					msecs_to_jiffies(200))) {
 		pr_err("%s: video_done timeout error\n", __func__);
@@ -1231,6 +1248,10 @@ int mipi_dsi_cmds_single_tx(struct dsi_buf *tp, struct dsi_cmd_desc *cmds,
 	int i, j = 0, k = 0, cmd_len = 0, video_mode;
 	char *cmds_tx;
 	char *bp;
+	if (tp == NULL || cmds == NULL) {
+		pr_err("%s: Null commands", __func__);
+		return -EINVAL;
+	}
 	pr_debug("%s:++\n",__func__);
 
 	/*Set Last Bit, only for last packet */
@@ -1595,28 +1616,28 @@ void dumstate(int error)
 	pr_err("mdp_current_clk_on : %08d\n", mdp_current_clk_on);
 	pr_err("%s: ============= END ==============\n", __func__);
 }
-void mdp4_dump_regs(void) 
-{ 
+void mdp4_dump_regs(void)
+{
 	int i, z, start, len;
-	int offsets[] = {0x0, 0x200, 0x10000, 0x18000,  0x20000,  0x30000,  0x40000,  0x50000, 0x88000, 0x90000, 0xB0000, 0xD0000, 0xE0000}; 
+	int offsets[] = {0x0, 0x200, 0x10000, 0x18000,  0x20000,  0x30000,  0x40000,  0x50000, 0x88000, 0x90000, 0xB0000, 0xD0000, 0xE0000};
 	int length[]  = {24,     64,     101,     101,       32,       32,       32,       32,     101,      64,      64,      27,      64};
 
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE); 
-	for (i = 0; i < sizeof(offsets) / sizeof(int); i++) { 
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+	for (i = 0; i < sizeof(offsets) / sizeof(int); i++) {
 		start = offsets[i];
 		len   = length[i];
 		printk("-------- Address %05x: -------\n", start);
-		for (z = 0; z < len; z++) { 
-			if ((z & 3) == 0) 
-				printk("%05x:", start + (z * 4)); 
+		for (z = 0; z < len; z++) {
+			if ((z & 3) == 0)
+				printk("%05x:", start + (z * 4));
 			printk(" %08x", inpdw(MDP_BASE + start + (z * 4)));
-			if ((z & 3) == 3) 
+			if ((z & 3) == 3)
 				printk("\n");
 		}
-		if ((z & 3) != 0) 
-			printk("\n"); 
-	} 
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE); 
+		if ((z & 3) != 0)
+			printk("\n");
+	}
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 }
 
 void dsi_clk_dump(void)
@@ -1688,7 +1709,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 		if(normalcase==0){
 			dumpreg(1);
 			dumstate(1);
-			normalcase=1;			
+			normalcase=1;
 			mdp4_dump_regs();
 			dsi_clk_dump();
 		}
@@ -1917,6 +1938,11 @@ void mipi_dsi_ack_err_status(void)
 #ifdef CONFIG_SEC_DEBUG_MDP
 		sec_debug_mdp.dsi_err.mipi_dsi_ack_err_status = status;
 #endif
+		/*
+		 * base on hw enginner, write an extra 0 needed
+		 * to clear error bits
+		 */
+		MIPI_OUTP(MIPI_DSI_BASE + 0x0064, ~status);
 		pr_debug("%s: status=%x\n", __func__, status);
 	}
 }
@@ -1961,7 +1987,9 @@ void mipi_dsi_fifo_status(void)
 #ifdef CONFIG_SEC_DEBUG_MDP
 		sec_debug_mdp.dsi_err.mipi_dsi_fifo_status = status;
 #endif
-		pr_debug("%s: status=%x\n", __func__, status);
+		pr_err("%s: Error: status=%x\n", __func__, status);
+		mipi_dsi_sw_reset();
+		schedule_work(&mdp_reset_work);
 	}
 }
 
@@ -1998,10 +2026,10 @@ int mipi_runtime_clk_change(int fps)
 	int rc;
 
 	mutex_lock(&fps_done_mutex);
-		
+
 	runtime_clk_chagne = 1;
 	goal_fps = fps;
-		
+
 	INIT_COMPLETION(dsi_fps_comp);
 	mipi_dsi_enable_irq(DSI_VIDEO_TERM);
 	mipi_dsi_irq_set(DSI_INTR_VIDEO_DONE_MASK,
@@ -2016,7 +2044,7 @@ int mipi_runtime_clk_change(int fps)
 		sec_debug_mdp.dsi_err.fps_chage_time_out_err_cnt++;
 #endif
 	}
-		
+
 	mutex_unlock(&fps_done_mutex);
 
 	return rc;
@@ -2055,7 +2083,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 		sec_debug_mdp.dsi_err.fps_chage_time_out_err_cnt++;
 #endif
 	}
-		
+
 	mutex_unlock(&fps_done_mutex);
 
 	return rc;
@@ -2066,7 +2094,7 @@ int mipi_runtime_csc_update(uint32_t reg[][2], int length)
 irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 {
 	uint32 isr;
-	
+
 	isr = MIPI_INP(MIPI_DSI_BASE + 0x010c);/* DSI_INTR_CTRL */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x010c, isr);
 
@@ -2089,7 +2117,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		if (runtime_clk_chagne) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
-				
+
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
 				runtime_clk_chagne = 0;
@@ -2105,7 +2133,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		} else if (csc_updated) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
-				
+
 			} else {
 				int loop = 0;
 				for (loop = 0; loop < csc_length; loop++) {
@@ -2134,7 +2162,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		if (runtime_clk_chagne) {
 			if (inpdw(MDP_BASE+0x90014)) {
 				pr_debug("%s VIDEO_ENGINE BUSY", __func__);
-				
+
 			} else {
 				mipi_dsi_configure_dividers(goal_fps);
 				runtime_clk_chagne = 0;

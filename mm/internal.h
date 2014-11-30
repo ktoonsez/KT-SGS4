@@ -90,6 +90,8 @@ extern unsigned long highest_memmap_pfn;
  */
 extern int isolate_lru_page(struct page *page);
 extern void putback_lru_page(struct page *page);
+extern unsigned long zone_reclaimable_pages(struct zone *zone);
+extern bool zone_reclaimable(struct zone *zone);
 
 /*
  * in mm/page_alloc.c
@@ -350,7 +352,6 @@ extern u64 hwpoison_filter_flags_value;
 extern u64 hwpoison_filter_memcg;
 extern u32 hwpoison_filter_enable;
 
-extern void set_pageblock_order(void);
 /* The ALLOC_WMARK bits are used as an index to zone->watermark */
 #define ALLOC_WMARK_MIN		WMARK_MIN
 #define ALLOC_WMARK_LOW		WMARK_LOW
@@ -367,3 +368,4 @@ extern void set_pageblock_order(void);
 
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list);
+extern void set_pageblock_order(void);

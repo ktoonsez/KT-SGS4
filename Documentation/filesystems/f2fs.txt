@@ -122,6 +122,11 @@ disable_ext_identify   Disable the extension list configured by mkfs, so f2fs
 inline_xattr           Enable the inline xattrs feature.
 inline_data            Enable the inline data feature: New created small(<~3.4k)
                        files can be written into inode block.
+nobarrier              This option can be used if underlying storage guarantees
+                       its cached data should be written to the novolatile area.
+		       If this option is set, no cache_flush commands are issued
+		       but f2fs still guarantees the write ordering of all the
+		       data writes.
 
 ================================================================================
 DEBUGFS ENTRIES
@@ -174,12 +179,6 @@ Files in /sys/fs/f2fs/<devname>
 			      volume size, f2fs tries to conduct checkpoint to
 			      reclaim the prefree segments to free segments.
 			      By default, 5% over total # of segments.
-
- max_small_discards	      This parameter controls the number of discard
-			      commands that consist small blocks less than 2MB.
-			      The candidates to be discarded are cached until
-			      checkpoint is triggered, and issued during the
-			      checkpoint. By default, it is disabled with 0.
 
  ipu_policy                   This parameter controls the policy of in-place
                               updates in f2fs. There are five policies:
@@ -457,11 +456,11 @@ The number of blocks and buckets are determined by,
   # of blocks in level #n = |
                             `- 4, Otherwise
 
-                             ,- 2^ (n + dir_level),
-			     |            if n < MAX_DIR_HASH_DEPTH / 2,
+                             ,- 2^(n + dir_level),
+			     |        if n + dir_level < MAX_DIR_HASH_DEPTH / 2,
   # of buckets in level #n = |
-                             `- 2^((MAX_DIR_HASH_DEPTH / 2 + dir_level) - 1),
-			                  Otherwise
+                             `- 2^((MAX_DIR_HASH_DEPTH / 2) - 1),
+			              Otherwise
 
 When F2FS finds a file name in a directory, at first a hash value of the file
 name is calculated. Then, F2FS scans the hash table in level #0 to find the

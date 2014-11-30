@@ -518,17 +518,20 @@ int jbd2_log_start_commit(journal_t *journal, tid_t tid)
 }
 
 /*
- * Force and wait any uncommitted transactions.  We can only force the running
- * transaction if we don't have an active handle, otherwise, we will deadlock.
- * Returns: <0 in case of error,
- *           0 if nothing to commit,
- *           1 if transaction was successfully committed.
+ * Force and wait upon a commit if the calling process is not within
+ * transaction.  This is used for forcing out undo-protected data which contains
+ * bitmaps, when the fs is running out of space.
+ *
+ * We can only force the running transaction if we don't have an active handle;
+ * otherwise, we will deadlock.
+ *
+ * Returns true if a transaction was started.
  */
-static int __jbd2_journal_force_commit(journal_t *journal)
+int jbd2_journal_force_commit_nested(journal_t *journal)
 {
 	transaction_t *transaction = NULL;
 	tid_t tid;
-	int need_to_start = 0, ret = 0;
+	int need_to_start = 0;
 
 	read_lock(&journal->j_state_lock);
 	if (journal->j_running_transaction && !current->journal_info) {
@@ -539,53 +542,16 @@ static int __jbd2_journal_force_commit(journal_t *journal)
 		transaction = journal->j_committing_transaction;
 
 	if (!transaction) {
-		/* Nothing to commit */
 		read_unlock(&journal->j_state_lock);
-		return 0;
+		return 0;	/* Nothing to retry */
 	}
+
 	tid = transaction->t_tid;
 	read_unlock(&journal->j_state_lock);
 	if (need_to_start)
 		jbd2_log_start_commit(journal, tid);
-	ret = jbd2_log_wait_commit(journal, tid);
-	if (!ret)
-		ret = 1;
-
-	return ret;
-}
-
-/**
- * Force and wait upon a commit if the calling process is not within
- * transaction.  This is used for forcing out undo-protected data which contains
- * bitmaps, when the fs is running out of space.
- *
- * @journal: journal to force
- * Returns true if progress was made.
- */
-int jbd2_journal_force_commit_nested(journal_t *journal)
-{
-	int ret;
-
-	ret = __jbd2_journal_force_commit(journal);
-	return ret > 0;
-}
-
-/**
- * int journal_force_commit() - force any uncommitted transactions
- * @journal: journal to force
- *
- * Caller want unconditional commit. We can only force the running transaction
- * if we don't have an active handle, otherwise, we will deadlock.
- */
-int jbd2_journal_force_commit(journal_t *journal)
-{
-	int ret;
-
-	J_ASSERT(!current->journal_info);
-	ret = __jbd2_journal_force_commit(journal);
-	if (ret > 0)
-		ret = 0;
-	return ret;
+	jbd2_log_wait_commit(journal, tid);
+	return 1;
 }
 
 /*
@@ -732,7 +698,7 @@ EXPORT_SYMBOL(jbd2_complete_transaction);
 
 int jbd2_journal_next_log_block(journal_t *journal, unsigned long long *retp)
 {
-	unsigned long blocknr = 0;
+	unsigned long blocknr;
 
 	write_lock(&journal->j_state_lock);
 	J_ASSERT(journal->j_free > 1);
@@ -789,7 +755,7 @@ int jbd2_journal_bmap(journal_t *journal, unsigned long blocknr,
 struct journal_head *jbd2_journal_get_descriptor_buffer(journal_t *journal)
 {
 	struct buffer_head *bh;
-	unsigned long long blocknr = 0;
+	unsigned long long blocknr;
 	int err;
 
 	err = jbd2_journal_next_log_block(journal, &blocknr);
@@ -1163,7 +1129,7 @@ journal_t * jbd2_journal_init_inode (struct inode *inode)
 	char *p;
 	int err;
 	int n;
-	unsigned long long blocknr = 0;
+	unsigned long long blocknr;
 
 	if (!journal)
 		return NULL;
@@ -1473,6 +1439,14 @@ static int journal_get_superblock(journal_t *journal)
 		journal->j_maxlen = be32_to_cpu(sb->s_maxlen);
 	else if (be32_to_cpu(sb->s_maxlen) > journal->j_maxlen) {
 		printk(KERN_WARNING "JBD2: journal file too short\n");
+		goto out;
+	}
+
+	if (be32_to_cpu(sb->s_first) == 0 ||
+	    be32_to_cpu(sb->s_first) >= journal->j_maxlen) {
+		printk(KERN_WARNING
+			"JBD2: Invalid start block of journal: %u\n",
+			be32_to_cpu(sb->s_first));
 		goto out;
 	}
 

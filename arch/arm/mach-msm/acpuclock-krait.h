@@ -67,6 +67,7 @@ enum scalables {
 	CPU2,
 	CPU3,
 	L2,
+	MAX_SCALABLES
 };
 
 
@@ -170,8 +171,10 @@ struct acpu_level {
  * @user_val: Value to initialize the @user_offset register to.
  * @user_vco_mask: Bit in the @user_offset to enable high-frequency VCO mode.
  * @has_droop_ctl: Indicates the presence of a voltage droop controller.
+ * @has_lock_status: Indicates the presence of a lock status bit.
  * @droop_offset: Droop controller register offset from base address.
  * @droop_val: Value to initialize the @config_offset register to.
+ * @status_offset: PLL status register offset.
  * @low_vdd_l_max: Maximum "L" value supported at HFPLL_VDD_LOW.
  * @nom_vdd_l_max: Maximum "L" value supported at HFPLL_VDD_NOM.
  * @low_vco_l_max: Maximum "L" value supported in low-frequency VCO mode.
@@ -189,8 +192,10 @@ struct hfpll_data {
 	const u32 user_val;
 	const u32 user_vco_mask;
 	const bool has_droop_ctl;
+	const bool has_lock_status;
 	const u32 droop_offset;
 	const u32 droop_val;
+	const u32 status_offset;
 	u32 low_vdd_l_max;
 	u32 nom_vdd_l_max;
 	const u32 low_vco_l_max;
@@ -226,6 +231,20 @@ struct scalable {
 };
 
 /**
+ * struct bin_info - Hardware speed and voltage binning info.
+ * @speed_valid: @speed field is valid
+ * @pvs_valid: @pvs field is valid
+ * @speed: Speed bin ID
+ * @pvs: PVS bin ID
+ */
+struct bin_info {
+	bool speed_valid;
+	bool pvs_valid;
+	int speed;
+	int pvs;
+};
+
+/**
  * struct pvs_table - CPU performance level table and size.
  * @table: CPU performance level table
  * @size: sizeof(@table)
@@ -246,6 +265,7 @@ struct pvs_table {
  * @l2_freq_tbl: L2 frequency table.
  * @l2_freq_tbl_size: Size of @l2_freq_tbl.
  * @pte_efuse_phys: Physical address of PTE EFUSE.
+ * @get_bin_info: Function to populate bin_info from pte_efuse.
  * @bus_scale: MSM bus driver parameters.
  * @stby_khz: KHz value corresponding to an always-on clock source.
  */
@@ -257,8 +277,35 @@ struct acpuclk_krait_params {
 	struct l2_level *l2_freq_tbl;
 	size_t l2_freq_tbl_size;
 	phys_addr_t pte_efuse_phys;
+	void (*get_bin_info)(void __iomem *base, struct bin_info *bin);
 	struct msm_bus_scale_pdata *bus_scale;
 	unsigned long stby_khz;
+};
+
+/**
+ * struct drv_data - Driver state
+ * @acpu_freq_tbl: CPU frequency table.
+ * @l2_freq_tbl: L2 frequency table.
+ * @scalable: Array of scalables (CPUs and L2).
+ * @hfpll_data: High-frequency PLL data.
+ * @bus_perf_client: Bus driver client handle.
+ * @bus_scale: Bus driver scaling data.
+ * @boost_uv: Voltage boost amount
+ * @speed_bin: Speed bin ID.
+ * @pvs_bin: PVS bin ID.
+ * @dev: Device.
+ */
+struct drv_data {
+	struct acpu_level *acpu_freq_tbl;
+	const struct l2_level *l2_freq_tbl;
+	struct scalable *scalable;
+	struct hfpll_data *hfpll_data;
+	u32 bus_perf_client;
+	struct msm_bus_scale_pdata *bus_scale;
+	int boost_uv;
+	int speed_bin;
+	int pvs_bin;
+	struct device *dev;
 };
 
 /**
@@ -270,8 +317,28 @@ struct acpuclk_platform_data {
 };
 
 /**
+ * get_krait_bin_format_a - Populate bin_info from a 'Format A' pte_efuse
+ */
+void __init get_krait_bin_format_a(void __iomem *base, struct bin_info *bin);
+
+/**
+ * get_krait_bin_format_b - Populate bin_info from a 'Format B' pte_efuse
+ */
+void __init get_krait_bin_format_b(void __iomem *base, struct bin_info *bin);
+
+/**
  * acpuclk_krait_init - Initialize the Krait CPU clock driver give SoC params.
  */
 extern int acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params);
+
+#ifdef CONFIG_DEBUG_FS
+/**
+ * acpuclk_krait_debug_init - Initialize debugfs interface.
+ */
+extern void __init acpuclk_krait_debug_init(struct drv_data *drv);
+#else
+static inline void acpuclk_krait_debug_init(void) { }
+#endif
+
 #endif

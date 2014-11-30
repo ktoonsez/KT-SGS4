@@ -84,6 +84,7 @@ enum {
 	ADC_SMARTDOCK		= 0x10, /* 0x10000 40.2K ohm */
 	ADC_INCOMPATIBLE2_CHG	= 0x11, /* 0x10001 49.9K ohm */
 	ADC_AUDIODOCK		= 0x12, /* 0x10010 64.9K ohm */
+	ADC_CHARGING_CABLE	= 0x14, /* 0x10100 102K ohm */
 	ADC_CEA936ATYPE1_CHG	= 0x17,	/* 0x10111 200K ohm */
 	ADC_JIG_USB_OFF		= 0x18, /* 0x11000 255K ohm */
 	ADC_JIG_USB_ON		= 0x19, /* 0x11001 301K ohm */
@@ -275,6 +276,8 @@ static ssize_t max77693_muic_show_device(struct device *dev,
 		return sprintf(buf, "Audio Dock\n");
 	case CABLE_TYPE_CARDOCK_MUIC:
 		return sprintf(buf, "Car Dock\n");
+	case CABLE_TYPE_CHARGING_CABLE_MUIC:
+		return sprintf(buf, "Charging Cable\n");
 	case CABLE_TYPE_JIG_UART_OFF_MUIC:
 		return sprintf(buf, "JIG UART OFF\n");
 	case CABLE_TYPE_JIG_UART_OFF_VB_MUIC:
@@ -817,8 +820,8 @@ static int max77693_muic_set_charging_type(struct max77693_muic_info *info,
 {
 	struct max77693_muic_data *mdata = info->muic_data;
 	int ret = 0;
-	dev_info(info->dev, "func:%s force_disable:%d\n",
-		 __func__, force_disable);
+	dev_info(info->dev, "func:%s cable_type:%d force_disable:%d\n",
+		 __func__, info->cable_type, force_disable);
 	if (mdata->charger_cb) {
 		if (force_disable)
 			ret = mdata->charger_cb(CABLE_TYPE_NONE_MUIC);
@@ -998,6 +1001,8 @@ static int max77693_muic_attach_usb_type(struct max77693_muic_info *info,
 		info->cable_type = CABLE_TYPE_JIG_USB_ON_MUIC;
 		path = AP_USB_MODE;
 		break;
+	case ADC_CEA936ATYPE1_CHG:
+	case ADC_CEA936ATYPE2_CHG:
 	case ADC_OPEN:
 		if (info->cable_type == CABLE_TYPE_USB_MUIC) {
 			dev_info(info->dev, "%s: duplicated(USB)\n", __func__);
@@ -1104,10 +1109,10 @@ static int max77693_muic_attach_dock_type(struct max77693_muic_info *info,
 		msleep(40);
 
 		max77693_muic_set_charging_type(info, false);
-                
+
 		if (mdata->usb_cb && info->is_usb_ready)
 			mdata->usb_cb(USB_POWERED_HOST_ATTACHED);
-		                                                 
+
 		if (mdata->audiodock_cb)
 			mdata->audiodock_cb(MAX77693_MUIC_ATTACHED);
 
@@ -1347,10 +1352,10 @@ void otg_control(int enable)
 	 * CABLE_TYPE : CABLE_TYPE_JIG_UART_OFF_MUIC*/
 	if ( gInfo->cable_type!=CABLE_TYPE_OTG_MUIC) {
 		if ( !(gInfo->muic_data->jig_state) &&
-			gInfo->cable_type==CABLE_TYPE_NONE_MUIC){ 
+			gInfo->cable_type==CABLE_TYPE_NONE_MUIC){
 			pr_info("%s set some reg values directly"
 				"jig:(%d), CTRL1(%x), ST1(%x), ST2(%x), CABLE(%d)",
-				 __func__, 1, 0x1B, 0x3C, 0x00, 
+				 __func__, 1, 0x1B, 0x3C, 0x00,
 				 CABLE_TYPE_JIG_UART_OFF_MUIC);
 			gInfo->muic_data->jig_state(true);
 			ret = max77693_write_reg(gInfo->max77693->muic,
@@ -1674,9 +1679,9 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 		}
 		break;
 	case CABLE_TYPE_AUDIODOCK_MUIC:
-		if ((adc != ADC_AUDIODOCK) || (!vbvolt)) {                  	
-        		dev_warn(info->dev, "%s: assume audiodock detach\n",
-        			__func__);
+		if ((adc != ADC_AUDIODOCK) || (!vbvolt)) {
+			dev_warn(info->dev, "%s: assume audiodock detach\n",
+				__func__);
 			dev_info(info->dev, "%s: AUDIODOCK\n", __func__);
 			info->cable_type = CABLE_TYPE_NONE_MUIC;
 			if (mdata->audiodock_cb)
@@ -1686,7 +1691,17 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 				mdata->usb_cb(USB_POWERED_HOST_DETACHED);
 			ret = max77693_muic_set_charging_type(info, false);
 			max77693_muic_set_charging_type(info, false);
-	       	}
+		}
+		break;
+	case CABLE_TYPE_TA_MUIC:
+		if (((adc != ADC_OPEN) && (adc != ADC_CEA936ATYPE1_CHG) && (adc != ADC_CEA936ATYPE2_CHG))
+			|| (!vbvolt)) {
+			dev_warn(info->dev, "%s: assume ta detach\n",
+				__func__);
+			info->cable_type = CABLE_TYPE_NONE_MUIC;
+			max77693_muic_set_charging_type(info, false);
+			return 0;
+		}
 		break;
 	default:
 		break;
@@ -1742,6 +1757,10 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 				 __func__);
 			ret = max77693_muic_set_charging_type(info, !vbvolt);
 		}
+		break;
+	case ADC_CHARGING_CABLE:
+		info->cable_type = CABLE_TYPE_CHARGING_CABLE_MUIC;
+		max77693_muic_set_charging_type(info, false);
 		break;
 	case ADC_SMARTDOCK:
 		max77693_muic_attach_smart_dock(info, adc, vbvolt, chgtyp);
@@ -1816,38 +1835,18 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 		break;
 	case ADC_CEA936ATYPE1_CHG:
 	case ADC_CEA936ATYPE2_CHG:
-	case ADC_INCOMPATIBLE1_CHG:
-	case ADC_INCOMPATIBLE2_CHG:
 	case ADC_OPEN:
 		switch (chgtyp) {
 		case CHGTYP_USB:
 		case CHGTYP_DOWNSTREAM_PORT:
-			if (adc == ADC_CEA936ATYPE1_CHG
-			    || adc == ADC_CEA936ATYPE2_CHG
-			    || adc == ADC_INCOMPATIBLE1_CHG
-			    || adc == ADC_INCOMPATIBLE2_CHG) {
-				dev_info(info->dev, "%s:TA\n", __func__);
-				if (adc == ADC_INCOMPATIBLE1_CHG
-					|| adc == ADC_INCOMPATIBLE2_CHG)
-					info->cable_type = CABLE_TYPE_INCOMPATIBLE_MUIC;
-				else
-					info->cable_type = CABLE_TYPE_TA_MUIC;
 #ifdef CONFIG_USBHUB_USB3803
-				/* setting usb hub in default mode (standby) */
-				usb3803_set_mode(USB_3803_MODE_STANDBY);
-#endif					/* CONFIG_USBHUB_USB3803 */
-				ret = max77693_muic_set_charging_type(info, !vbvolt);
-				if (ret)
-					info->cable_type = CABLE_TYPE_NONE_MUIC;
-				break;
-			}
+			/* setting usb hub in default mode (standby) */
+			usb3803_set_mode(USB_3803_MODE_STANDBY);
+#endif /* CONFIG_USBHUB_USB3803 */
 			if (chgtyp == CHGTYP_DOWNSTREAM_PORT) {
 				dev_info(info->dev, "%s, CDP(charging)\n",
 					__func__);
 				info->cable_type = CABLE_TYPE_CDP_MUIC;
-				ret = max77693_muic_set_charging_type(info, !vbvolt);
-				if(ret)
-					info->cable_type = CABLE_TYPE_NONE_MUIC;
 			}
 			if (info->cable_type == CABLE_TYPE_MHL_MUIC) {
 				dev_info(info->dev, "%s: MHL(charging)\n",
@@ -1863,14 +1862,8 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 		case CHGTYP_500MA:
 		case CHGTYP_1A:
 		default:
-			if (adc == ADC_INCOMPATIBLE1_CHG
-			    || adc == ADC_INCOMPATIBLE2_CHG) {
-				dev_info(info->dev, "%s: INCOMPATIBLE TA\n", __func__);
-				info->cable_type = CABLE_TYPE_INCOMPATIBLE_MUIC;
-			} else {
-				dev_info(info->dev, "%s:TA\n", __func__);
-				info->cable_type = CABLE_TYPE_TA_MUIC;
-			}
+			dev_info(info->dev, "%s:TA\n", __func__);
+			info->cable_type = CABLE_TYPE_TA_MUIC;
 #ifdef CONFIG_USBHUB_USB3803
 			/* setting usb hub in default mode (standby) */
 			usb3803_set_mode(USB_3803_MODE_STANDBY);
@@ -1884,6 +1877,11 @@ static int max77693_muic_handle_attach(struct max77693_muic_info *info,
 	default:
 		dev_warn(info->dev, "%s: unsupported adc=0x%x\n", __func__,
 			 adc);
+		info->cable_type = CABLE_TYPE_INCOMPATIBLE_MUIC;
+
+		ret = max77693_muic_set_charging_type(info, !vbvolt);
+		if (ret)
+			info->cable_type = CABLE_TYPE_NONE_MUIC;
 		break;
 	}
 	return ret;
@@ -1934,6 +1932,11 @@ static int max77693_muic_handle_detach(struct max77693_muic_info *info, int irq)
 
 		if (mdata->usb_cb && info->is_usb_ready)
 			mdata->usb_cb(USB_OTGHOST_DETACHED);
+		break;
+	case CABLE_TYPE_CHARGING_CABLE_MUIC:
+		dev_info(info->dev, "%s: CHARGING CABLE\n", __func__);
+		info->cable_type = CABLE_TYPE_NONE_MUIC;
+		max77693_muic_set_charging_type(info, true);
 		break;
 	case CABLE_TYPE_USB_MUIC:
 	case CABLE_TYPE_CDP_MUIC:
@@ -2124,8 +2127,12 @@ static void max77693_muic_detect_dev(struct max77693_muic_info *info, int irq)
 			 chgtyp == CHGTYP_DEDICATED_CHGR ||
 			 chgtyp == CHGTYP_500MA || chgtyp == CHGTYP_1A) {
 			if (info->cable_type == CABLE_TYPE_OTG_MUIC ||
+			    info->cable_type == CABLE_TYPE_CHARGING_CABLE_MUIC ||
 			    info->cable_type == CABLE_TYPE_DESKDOCK_MUIC ||
 			    info->cable_type == CABLE_TYPE_CARDOCK_MUIC ||
+			    info->cable_type == CABLE_TYPE_SMARTDOCK_MUIC ||
+			    info->cable_type == CABLE_TYPE_SMARTDOCK_TA_MUIC ||
+			    info->cable_type == CABLE_TYPE_SMARTDOCK_USB_MUIC ||
 			    info->cable_type == CABLE_TYPE_AUDIODOCK_MUIC)
 				intr = INT_DETACH;
 		}
@@ -2594,6 +2601,7 @@ static int __devinit max77693_muic_probe(struct platform_device *pdev)
 		MAX77693_MUIC_REG_CDETCTRL1, cdetctrl1);
 	pr_info("%s: CDETCTRL1(0x%02x)\n", __func__, cdetctrl1);
 
+
 	/* Show Register State */
 	max77693_muic_monitor_status();
 
@@ -2623,7 +2631,6 @@ static int __devinit max77693_muic_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&info->mhl_work, max77693_muic_mhl_detect);
 	schedule_delayed_work(&info->mhl_work, msecs_to_jiffies(25000));
-
 
 	return 0;
 

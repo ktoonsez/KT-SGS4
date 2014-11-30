@@ -638,7 +638,7 @@ int ion_map_iommu(struct ion_client *client, struct ion_handle *handle,
 			unsigned long flags, unsigned long iommu_flags)
 {
 	struct ion_buffer *buffer;
-	struct ion_iommu_map *iommu_map;
+	struct ion_iommu_map *iommu_map = NULL;
 	int ret = 0;
 
 	if (client == NULL) {
@@ -1586,10 +1586,6 @@ void ion_debug_mem_map_create(struct seq_file *s, struct ion_heap *heap,
 {
 	struct ion_device *dev = heap->dev;
 	struct rb_node *n;
-	size_t size;
-
-	if (!heap->ops->phys)
-		return;
 
 	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
 		struct ion_buffer *buffer =
@@ -1602,11 +1598,9 @@ void ion_debug_mem_map_create(struct seq_file *s, struct ion_heap *heap,
 					   "Part of memory map will not be logged\n");
 				break;
 			}
-
-			buffer->heap->ops->phys(buffer->heap, buffer,
-						&(data->addr), &size);
-			data->size = (unsigned long) size;
-			data->addr_end = data->addr + data->size - 1;
+			data->addr = buffer->priv_phys;
+			data->addr_end = buffer->priv_phys + buffer->size-1;
+			data->size = buffer->size;
 			data->client_name = ion_debug_locate_owner(dev, buffer);
 			ion_debug_mem_map_add(mem_map, data);
 		}

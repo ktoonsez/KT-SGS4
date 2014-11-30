@@ -142,7 +142,7 @@ static int msm_vpe_cfg_update(void *pinfo)
 	rot_flag = msm_camera_io_r(vpe_ctrl->vpebase +
 						VPE_OP_MODE_OFFSET) & 0xE00;
 	if (pinfo != NULL) {
-		D("%s: Crop info in2_w = %d, in2_h = %d "\
+		D("%s: Crop info in2_w = %d, in2_h = %d "
 			"out2_w = %d out2_h = %d\n",
 			__func__, pcrop->src_w, pcrop->src_h,
 			pcrop->dst_w, pcrop->dst_h);
@@ -505,7 +505,7 @@ DECLARE_TASKLET(vpe_tasklet, vpe_do_tasklet, 0);
 
 static irqreturn_t vpe_parse_irq(int irq_num, void *data)
 {
-	if (!vpe_ctrl || !vpe_ctrl->vpebase)
+	if(!vpe_ctrl || !vpe_ctrl->vpebase)
 		return IRQ_HANDLED;
 	vpe_ctrl->irq_status = msm_camera_io_r_mb(vpe_ctrl->vpebase +
 							VPE_INTR_STATUS_OFFSET);
@@ -899,7 +899,7 @@ static long msm_vpe_subdev_ioctl(struct v4l2_subdev *sd,
 	mctl = v4l2_get_subdev_hostdata(sd);
 	switch (cmd) {
 	case VIDIOC_MSM_VPE_INIT: {
-		msm_vpe_subdev_init(sd);
+		rc = msm_vpe_subdev_init(sd);
 		break;
 		}
 
@@ -1020,6 +1020,7 @@ static int msm_vpe_subdev_close(struct v4l2_subdev *sd,
 		msm_mctl_unmap_user_frame(&frame_info->dest_frame,
 			frame_info->p_mctl->client, mctl->domain_num);
 	}
+	vpe_ctrl->pp_frame_info = NULL;
 	/* Drain the payload queue. */
 	msm_queue_drain(&vpe_ctrl->eventData_q, list_eventdata);
 	atomic_dec(&vpe_ctrl->active);

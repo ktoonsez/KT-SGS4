@@ -125,7 +125,7 @@ static irqreturn_t msm_csid_irq(int irq_num, void *data)
 {
 	uint32_t irq;
 	struct csid_device *csid_dev = data;
-	if (!csid_dev || !csid_dev->base) {
+	if (!csid_dev||!csid_dev->base) {
 		pr_err("%s:%d csid_dev NULL\n", __func__, __LINE__);
 		return IRQ_HANDLED;
 	}

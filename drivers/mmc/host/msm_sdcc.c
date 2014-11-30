@@ -496,6 +496,7 @@ static void msmsdcc_reset_dpsm(struct msmsdcc_host *host)
 					& MCI_TXACTIVE ? "TX" : "RX");
 				msmsdcc_dump_sdcc_state(host);
 				msmsdcc_reset_and_restore(host);
+				host->pending_dpsm_reset = false;
 				goto out;
 			}
 		}
@@ -1419,35 +1420,36 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 		u32 opcode = data->mrq->cmd->opcode;
 
 		if (!((!host->tuning_in_progress && opcode == MMC_BUS_TEST_W)
-			|| (opcode == MMC_BUS_TEST_R) ||
-			(host->tuning_in_progress &&
-			(opcode == MMC_SEND_TUNING_BLOCK_HS200 ||
-			 opcode == MMC_SEND_TUNING_BLOCK)))) {
+		    || (opcode == MMC_BUS_TEST_R) ||
+		    (host->tuning_in_progress &&
+		    (opcode == MMC_SEND_TUNING_BLOCK_HS200 ||
+		     opcode == MMC_SEND_TUNING_BLOCK)))) {
 			/* Execute full tuning in case of CRC/timeout errors */
 			host->saved_tuning_phase = INVALID_TUNING_PHASE;
 
 			if (status & MCI_DATACRCFAIL) {
 				pr_err("%s: Data CRC error\n",
-					mmc_hostname(host->mmc));
+				       mmc_hostname(host->mmc));
 				pr_err("%s: opcode 0x%.8x\n", __func__, opcode);
 				pr_err("%s: blksz %d, blocks %d\n", __func__,
-					data->blksz, data->blocks);
+				       data->blksz, data->blocks);
 			} else {
-				pr_err("%s: CMD %d: Data timeout. DAT0 => %d\n",
-					mmc_hostname(host->mmc), opcode,
-					(readl_relaxed(host->base
-					+ MCI_TEST_INPUT) & 0x2) ? 1 : 0);
+				pr_err("%s: CMD%d: Data timeout. DAT0 => %d\n",
+					 mmc_hostname(host->mmc), opcode,
+					 (readl_relaxed(host->base
+					 + MCI_TEST_INPUT) & 0x2) ? 1 : 0);
 				msmsdcc_dump_sdcc_state(host);
 			}
 		}
 
-		/* CRC is optional for the bus test commands, not all
+		/*
+		 * CRC is optional for the bus test commands, not all
 		 * cards respond back with CRC. However controller
 		 * waits for the CRC and times out. Hence ignore the
 		 * data timeouts during the Bustest.
 		 */
 		if (!((!host->tuning_in_progress && opcode == MMC_BUS_TEST_W)
-			|| (opcode == MMC_BUS_TEST_R))) {
+		    || (opcode == MMC_BUS_TEST_R))) {
 			if (status & MCI_DATACRCFAIL)
 				data->error = -EILSEQ;
 			else
@@ -1667,6 +1669,13 @@ static void msmsdcc_sg_stop(struct msmsdcc_host *host)
 	sg_miter_stop(&host->pio.sg_miter);
 }
 
+static inline void msmsdcc_clear_pio_irq_mask(struct msmsdcc_host *host)
+{
+	writel_relaxed(readl_relaxed(host->base + MMCIMASK0) & ~MCI_IRQ_PIO,
+		host->base + MMCIMASK0);
+	mb();
+}
+
 static irqreturn_t
 msmsdcc_pio_irq(int irq, void *dev_id)
 {
@@ -1678,6 +1687,11 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 	char *buffer;
 
 	spin_lock(&host->lock);
+
+	if (!atomic_read(&host->clks_on) || !host->curr.data) {
+		spin_unlock(&host->lock);
+		return IRQ_NONE;
+	}
 
 	status = readl_relaxed(base + MMCISTATUS);
 
@@ -1725,25 +1739,19 @@ msmsdcc_pio_irq(int irq, void *dev_id)
 	msmsdcc_sg_stop(host);
 	local_irq_restore(flags);
 
+	if (!host->curr.xfer_remain) {
+		msmsdcc_clear_pio_irq_mask(host);
+		goto out_unlock;
+	}
+
 	if (status & MCI_RXACTIVE && host->curr.xfer_remain < MCI_FIFOSIZE) {
 		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | MCI_RXDATAAVLBLMASK,
+				~MCI_IRQ_PIO) | MCI_RXDATAAVLBLMASK,
 				host->base + MMCIMASK0);
-		if (!host->curr.xfer_remain) {
-			/*
-			 * back to back write to MASK0 register don't need
-			 * synchronization delay.
-			 */
-			writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | 0, host->base + MMCIMASK0);
-		}
-		mb();
-	} else if (!host->curr.xfer_remain) {
-		writel_relaxed((readl_relaxed(host->base + MMCIMASK0) &
-				(~(MCI_IRQ_PIO))) | 0, host->base + MMCIMASK0);
 		mb();
 	}
 
+out_unlock:
 	spin_unlock(&host->lock);
 
 	return IRQ_HANDLED;
@@ -1844,6 +1852,7 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 			msmsdcc_sps_exit_curr_xfer(host);
 		}
 		else if (host->curr.data) { /* Non DMA */
+			msmsdcc_clear_pio_irq_mask(host);
 			msmsdcc_reset_and_restore(host);
 			msmsdcc_stop_data(host);
 			msmsdcc_request_end(host, cmd->mrq);
@@ -1877,7 +1886,6 @@ static irqreturn_t
 msmsdcc_irq(int irq, void *dev_id)
 {
 	struct msmsdcc_host	*host = dev_id;
-	struct mmc_host		*mmc = host->mmc;
 	u32			status;
 	int			ret = 0;
 	int			timer = 0;
@@ -1919,12 +1927,6 @@ msmsdcc_irq(int irq, void *dev_id)
 				 */
 				wake_lock(&host->sdio_wlock);
 			} else {
-				if (!mmc->card || !mmc_card_sdio(mmc->card)) {
-					WARN(1, "%s: SDCC core interrupt received for non-SDIO cards when SDCC clocks are off\n",
-					     mmc_hostname(mmc));
-					ret = 1;
-					break;
-				}
 				spin_unlock(&host->lock);
 				mmc_signal_sdio_irq(host->mmc);
 				spin_lock(&host->lock);
@@ -1953,12 +1955,6 @@ msmsdcc_irq(int irq, void *dev_id)
 #endif
 
 		if (status & MCI_SDIOINTROPE) {
-			if (!mmc->card || mmc_card_sdio(mmc->card)) {
-				WARN(1, "%s: SDIO interrupt received for non-SDIO card\n",
-					mmc_hostname(mmc));
-				ret = 1;
-				break;
-			}
 			if (host->sdcc_suspending)
 				wake_lock(&host->sdio_suspend_wlock);
 			spin_unlock(&host->lock);
@@ -2012,6 +2008,7 @@ msmsdcc_irq(int irq, void *dev_id)
 					/* Stop current SPS transfer */
 					msmsdcc_sps_exit_curr_xfer(host);
 				} else {
+					msmsdcc_clear_pio_irq_mask(host);
 					msmsdcc_reset_and_restore(host);
 					if (host->curr.data)
 						msmsdcc_stop_data(host);
@@ -2221,6 +2218,7 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct msmsdcc_host *host = mmc_priv(mmc);
 	unsigned long		flags;
+	unsigned int error = 0;
 	int retries = 5;
 
 	/*
@@ -2230,6 +2228,18 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (host->plat->is_sdio_al_client)
 		msmsdcc_sdio_al_lpm(mmc, false);
 
+	/*
+	 * Don't start the request if SDCC is not in proper state to handle it
+	 * BAM state is checked below if applicable
+	 */
+	if (!host->pwr || !atomic_read(&host->clks_on) ||
+			host->sdcc_irq_disabled) {
+		WARN(1, "%s: %s: SDCC is in bad state. don't process new request (CMD%d)\n",
+			mmc_hostname(host->mmc), __func__, mrq->cmd->opcode);
+		error = EIO;
+		goto bad_state;
+	}
+
 	/* check if sps bam needs to be reset */
 	if (is_sps_mode(host) && host->sps.reset_bam) {
 		while (retries) {
@@ -2237,6 +2247,14 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				break;
 			pr_err("%s: msmsdcc_bam_dml_reset_and_restore returned error. %d attempts left.\n",
 					mmc_hostname(host->mmc), --retries);
+		}
+
+		/* check if BAM reset succeeded or not */
+		if (host->sps.reset_bam) {
+			pr_err("%s: bam reset failed. Not processing the new request (CMD%d)\n",
+				mmc_hostname(host->mmc), mrq->cmd->opcode);
+			error = EAGAIN;
+			goto bad_state;
 		}
 	}
 
@@ -2255,45 +2273,17 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			msmsdcc_execute_tuning(mmc, MMC_SEND_TUNING_BLOCK_HS200);
 	}
 
-	spin_lock_irqsave(&host->lock, flags);
-
 	if (host->eject) {
-		if (mrq->data && !(mrq->data->flags & MMC_DATA_READ)) {
-			mrq->cmd->error = 0;
-			mrq->data->bytes_xfered = mrq->data->blksz *
-						  mrq->data->blocks;
-		} else
-			mrq->cmd->error = -ENOMEDIUM;
-
-		spin_unlock_irqrestore(&host->lock, flags);
-		mmc_request_done(mmc, mrq);
-		return;
-	}
-
-	/*
-	 * Don't start the request if SDCC is not in proper state to handle it
-	 */
-	if (!host->pwr || !atomic_read(&host->clks_on) ||
-			host->sdcc_irq_disabled ||
-			host->sps.reset_bam) {
-		WARN(1, "%s: %s: SDCC is in bad state. don't process"
-		     " new request (CMD%d)\n", mmc_hostname(host->mmc),
-		     __func__, mrq->cmd->opcode);
-		msmsdcc_dump_sdcc_state(host);
-		mrq->cmd->error = -EIO;
-		if (mrq->data) {
-			mrq->data->error = -EIO;
-			mrq->data->bytes_xfered = 0;
-		}
-		spin_unlock_irqrestore(&host->lock, flags);
-		mmc_request_done(mmc, mrq);
-		return;
+		error = ENOMEDIUM;
+		goto card_ejected;
 	}
 
 	WARN(host->curr.mrq, "%s: %s: New request (CMD%d) received while"
 	     " other request (CMD%d) is in progress\n",
 	     mmc_hostname(host->mmc), __func__,
 	     mrq->cmd->opcode, host->curr.mrq->cmd->opcode);
+
+	spin_lock_irqsave(&host->lock, flags);
 
 	/*
 	 * Set timeout value to 10 secs (or more in case of buggy cards)
@@ -2333,6 +2323,17 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	msmsdcc_request_start(host, mrq);
 
 	spin_unlock_irqrestore(&host->lock, flags);
+	return;
+
+bad_state:
+	msmsdcc_dump_sdcc_state(host);
+card_ejected:
+	mrq->cmd->error = -error;
+	if (mrq->data) {
+		mrq->data->error = -error;
+		mrq->data->bytes_xfered = 0;
+	}
+	mmc_request_done(mmc, mrq);
 }
 
 static inline int msmsdcc_vreg_set_voltage(struct msm_mmc_reg_data *vreg,
@@ -2563,6 +2564,7 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		goto out;
 	}
 
+#if !defined(CONFIG_MACH_JFVE_EUR)
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
 	if (!enable) {
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
@@ -2592,6 +2594,7 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		}
 	}
 #endif
+#endif
 
 	vreg_table[0] = curr_slot->vdd_data;
 	vreg_table[1] = curr_slot->vdd_io_data;
@@ -2608,6 +2611,7 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 		}
 	}
 
+#if !defined(CONFIG_MACH_JFVE_EUR)
 #ifdef CONFIG_MMC_MSM_SDC4_SUPPORT
 	if (enable) {
 		mdelay(1);
@@ -2647,7 +2651,8 @@ static int msmsdcc_setup_vreg(struct msmsdcc_host *host, bool enable,
 				gpio_set_value(60, 0); /* TFLASH_LS_EN */
 			mdelay(1);
 		}
-	}	
+	}
+#endif
 #endif
 
 out:
@@ -3060,14 +3065,6 @@ static u32 msmsdcc_setup_pwr(struct msmsdcc_host *host, struct mmc_ios *ios)
 		msmsdcc_set_vdd_io_vol(host, VDD_IO_LOW, 0);
 		msmsdcc_update_io_pad_pwr_switch(host);
 		msmsdcc_setup_pins(host, false);
-		/*
-		 * Reset the mask to prevent hitting any pending interrupts
-		 * after powering up the card again.
-		 */
-		if (atomic_read(&host->clks_on)) {
-			writel_relaxed(0, host->base + MMCIMASK0);
-			mb();
-		}
 		break;
 	case MMC_POWER_UP:
 		/* writing PWR_UP bit is redundant */
@@ -3417,35 +3414,9 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		/*
 		 * For DDR50 mode, controller needs clock rate to be
 		 * double than what is required on the SD card CLK pin.
-		 *
-		 * Setting DDR timing mode in controller before setting the
-		 * clock rate will make sure that card don't see the double
-		 * clock rate even for very small duration. Some eMMC
-		 * cards seems to lock up if they see clock frequency > 52MHz.
 		 */
 		if (ios->timing == MMC_TIMING_UHS_DDR50) {
-			u32 clk;
-
-			clk = readl_relaxed(host->base + MMCICLOCK);
-			clk &= ~(0x7 << 14); /* clear SELECT_IN field */
-			clk |= (3 << 14); /* set DDR timing mode */
-			writel_relaxed(clk, host->base + MMCICLOCK);
-			msmsdcc_sync_reg_wr(host);
-
-			/*
-			 * Make sure that we don't double the clock if
-			 * doubled clock rate is already set
-			 */
-			if (!host->ddr_doubled_clk_rate ||
-				(host->ddr_doubled_clk_rate &&
-				(host->ddr_doubled_clk_rate != ios->clock))) {
-				host->ddr_doubled_clk_rate =
-					msmsdcc_get_sup_clk_rate(
-						host, (ios->clock * 2));
-				clock = host->ddr_doubled_clk_rate;
-			}
-		} else {
-			host->ddr_doubled_clk_rate = 0;
+			clock = msmsdcc_get_sup_clk_rate(host, ios->clock * 2);
 		}
 
 		if (clock != host->clk_rate) {
@@ -4360,51 +4331,6 @@ exit:
 	return rc;
 }
 
-/*
- * Work around of the unavailability of a power_reset functionality in SD cards
- * by turning the OFF & back ON the regulators supplying the SD card.
- */
-void msmsdcc_hw_reset(struct mmc_host *mmc)
-{
-	struct mmc_card *card = mmc->card;
-	struct msmsdcc_host *host = mmc_priv(mmc);
-	int rc;
-
-	/* Write-protection bits would be lost on a hardware reset in emmc */
-	if (!card || !mmc_card_sd(card))
-		return;
-
-	/*
-	 * Continuing on failing to disable regulator would lead to a panic
-	 * anyway, since the commands would fail and console would be flooded
-	 * with prints, eventually leading to a watchdog bark
-	 */
-	rc = msmsdcc_setup_vreg(host, false, false);
-	if (rc) {
-		pr_err("%s: %s disable regulator: failed: %d\n",
-		       mmc_hostname(mmc), __func__, rc);
-		BUG_ON(rc);
-	}
-
-	/* 10ms delay for the supply to reach the desired voltage level */
-	usleep_range(10000, 12000);
-
-	/*
-	 * Continuing on failing to enable regulator would lead to a panic
-	 * anyway, since the commands would fail and console would be flooded
-	 * with prints, eventually leading to a watchdog bark
-	 */
-	rc = msmsdcc_setup_vreg(host, true, false);
-	if (rc) {
-		pr_err("%s: %s enable regulator: failed: %d\n",
-		       mmc_hostname(mmc), __func__, rc);
-		BUG_ON(rc);
-	}
-
-	/* 10ms delay for the supply to reach the desired voltage level */
-	usleep_range(10000, 12000);
-}
-
 static int msmsdcc_notify_load(struct mmc_host *mmc, enum mmc_load state)
 {
 	int err = 0;
@@ -4449,7 +4375,6 @@ static const struct mmc_host_ops msmsdcc_ops = {
 	.enable_sdio_irq = msmsdcc_enable_sdio_irq,
 	.start_signal_voltage_switch = msmsdcc_switch_io_voltage,
 	.execute_tuning = msmsdcc_execute_tuning,
-	.hw_reset = msmsdcc_hw_reset,
 	.notify_load = msmsdcc_notify_load,
 };
 
@@ -5274,9 +5199,9 @@ static void msmsdcc_dump_sdcc_state(struct msmsdcc_host *host)
 	if (atomic_read(&host->clks_on)) {
 		msmsdcc_print_regs("SDCC-CORE", host->base,
 				host->core_memres->start, 28);
-		msmsdcc_print_regs("SDCC-DML", host->dml_base, 
+		msmsdcc_print_regs("SDCC-DML", host->dml_base,
 				host->dml_memres->start, 20);
-		msmsdcc_print_regs("SDCC-BAM", host->bam_base, 
+		msmsdcc_print_regs("SDCC-BAM", host->bam_base,
 				host->bam_memres->start, 20);
 		pr_err("%s: MCI_TEST_INPUT = 0x%.8x\n",
 			mmc_hostname(host->mmc),
@@ -5333,7 +5258,7 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 	mrq = host->curr.mrq;
 
 	if (mrq && mrq->cmd) {
-		if (!mrq->cmd->bkops_busy) {
+		if (!mrq->cmd->ignore_timeout) {
 			pr_info("%s: CMD%d: Request timeout\n",
 				mmc_hostname(host->mmc), mrq->cmd->opcode);
 			msmsdcc_dump_sdcc_state(host);
@@ -5352,6 +5277,7 @@ static void msmsdcc_req_tout_timer_hdlr(unsigned long data)
 				/* Stop current SPS transfer */
 				msmsdcc_sps_exit_curr_xfer(host);
 			} else {
+				msmsdcc_clear_pio_irq_mask(host);
 				msmsdcc_reset_and_restore(host);
 				msmsdcc_stop_data(host);
 				if (mrq->data && mrq->data->stop)
@@ -6146,7 +6072,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps |= plat->mmc_bus_width;
 	mmc->caps |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED;
 	mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE;
-	mmc->caps |= MMC_CAP_HW_RESET;
 	/*
 	 * If we send the CMD23 before multi block write/read command
 	 * then we need not to send CMD12 at the end of the transfer.
@@ -6178,7 +6103,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	 * mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	 */
 	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
-	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -6296,11 +6220,11 @@ msmsdcc_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_MACH_JF_ATT) || defined(CONFIG_MACH_JF_TMO) || defined(CONFIG_MACH_JF_EUR) || \
 	defined(CONFIG_MACH_JACTIVE_ATT) || defined(CONFIG_MACH_JACTIVE_EUR)
-	if (t_flash_detect_dev == NULL && 
+	if (t_flash_detect_dev == NULL &&
 		(((host->pdev_id == 4) && (system_rev < BOARD_REV08)) ||
 		((host->pdev_id == 2) && (system_rev >= BOARD_REV08)))) {
 #else /* VZW/SPT/USCC */
-	if (t_flash_detect_dev == NULL && 
+	if (t_flash_detect_dev == NULL &&
 		(((host->pdev_id == 4) && (system_rev < BOARD_REV09)) ||
 		((host->pdev_id == 2) && (system_rev >= BOARD_REV09)))) {
 #endif
@@ -6913,7 +6837,7 @@ static int msmsdcc_runtime_idle(struct device *dev)
 		return 0;
 
 	/* Idle timeout is not configurable for now */
-	/* Disable Runtime PM becasue of potential issues 
+	/* Disable Runtime PM becasue of potential issues
 	 *pm_schedule_suspend(dev, host->idle_tout);
 	 */
 
@@ -6948,8 +6872,6 @@ static int msmsdcc_pm_suspend(struct device *dev)
 		rc = msmsdcc_runtime_suspend(dev);
  out:
 	msmsdcc_print_pm_stats(host, start, __func__);
-	/* This flag must not be set if system is entering into suspend */
-	host->pending_resume = false;
 	return rc;
 }
 

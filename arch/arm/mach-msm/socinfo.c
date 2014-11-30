@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,6 +35,7 @@ enum {
 	HW_PLATFORM_LIQUID  = 9,
 	/* Dragonboard platform id is assigned as 10 in CDT */
 	HW_PLATFORM_DRAGON	= 10,
+	HW_PLATFORM_QRD	= 11,
 	HW_PLATFORM_INVALID
 };
 
@@ -47,7 +48,8 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_SVLTE_SURF] = "SLVTE_SURF",
 	[HW_PLATFORM_MTP] = "MTP",
 	[HW_PLATFORM_LIQUID] = "Liquid",
-	[HW_PLATFORM_DRAGON] = "Dragon"
+	[HW_PLATFORM_DRAGON] = "Dragon",
+	[HW_PLATFORM_QRD] = "QRD",
 };
 
 enum {
@@ -234,6 +236,7 @@ static enum msm_cpu cpu_of_id[] = {
 	[117] = MSM_CPU_8930,
 	[118] = MSM_CPU_8930,
 	[119] = MSM_CPU_8930,
+	[179] = MSM_CPU_8930,
 
 	/* 8627 IDs */
 	[120] = MSM_CPU_8627,
@@ -279,6 +282,7 @@ static enum msm_cpu cpu_of_id[] = {
 	[143] = MSM_CPU_8930AA,
 	[144] = MSM_CPU_8930AA,
 	[160] = MSM_CPU_8930AA,
+	[180] = MSM_CPU_8930AA,
 
 	/* 8226 IDs */
 	[145] = MSM_CPU_8226,
@@ -294,6 +298,7 @@ static enum msm_cpu cpu_of_id[] = {
 	[155] = MSM_CPU_8930AB,
 	[156] = MSM_CPU_8930AB,
 	[157] = MSM_CPU_8930AB,
+	[181] = MSM_CPU_8930AB,
 
 	/* 8064AA IDs */
 	[172] = MSM_CPU_8064AA,
@@ -325,7 +330,52 @@ char *socinfo_get_build_id(void)
 {
 	return (socinfo) ? socinfo->v1.build_id : NULL;
 }
+#ifdef CONFIG_SEC_FACTORY
+uint32_t socinfo_get_iddq(void)
+{
+	void __iomem *pte_efuse;
+	uint32_t pte_efuse_val;
+	uint32_t qfprom_iddq;
 
+	pte_efuse = ioremap(0x007000C4, 4);
+	if (!pte_efuse) {
+		pr_err("%s : Unable to map QFPROM base\n", __func__);
+		return 0;
+	}
+
+	pte_efuse_val = readl_relaxed(pte_efuse);
+	iounmap(pte_efuse);
+
+	qfprom_iddq = pte_efuse_val & 0xFFFFFFFF;
+
+	return qfprom_iddq;
+}
+
+uint32_t socinfo_get_pvs(void)
+{
+	void __iomem *pte_efuse;
+	uint32_t pte_efuse_val;
+	uint32_t pvs_bin;
+
+	pte_efuse = ioremap(0x007000C0, 4);
+	if (!pte_efuse) {
+		pr_err("%s : Unable to map QFPROM base\n", __func__);
+		return 0;
+	}
+
+	pte_efuse_val = readl_relaxed(pte_efuse);
+	iounmap(pte_efuse);
+
+	pvs_bin = (pte_efuse_val >> 10) & 0x7;
+	if (pvs_bin == 0x7)
+		pvs_bin = (pte_efuse_val >> 13) & 0x7;
+
+	if (pvs_bin == 0x7)
+		pvs_bin = 0;
+
+	return pvs_bin;
+}
+#endif
 uint32_t socinfo_get_raw_id(void)
 {
 	return socinfo ?
@@ -435,7 +485,33 @@ socinfo_show_build_id(struct sys_device *dev,
 
 	return snprintf(buf, PAGE_SIZE, "%-.32s\n", socinfo_get_build_id());
 }
+#ifdef CONFIG_SEC_FACTORY
+static ssize_t
+socinfo_show_soc_iddq(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	if (!socinfo) {
+		pr_err("%s: No socinfo found!\n", __func__);
+		return 0;
+	}
 
+	return snprintf(buf, PAGE_SIZE, "%x\n", socinfo_get_iddq());
+}
+
+static ssize_t
+socinfo_show_soc_pvs(struct sys_device *dev,
+		      struct sysdev_attribute *attr,
+		      char *buf)
+{
+	if (!socinfo) {
+		pr_err("%s: No socinfo found!\n", __func__);
+		return 0;
+	}
+
+	return snprintf(buf, PAGE_SIZE, "%x\n", socinfo_get_pvs());
+}
+#endif
 static ssize_t
 socinfo_show_raw_id(struct sys_device *dev,
 		    struct sysdev_attribute *attr,
@@ -598,6 +674,10 @@ static struct sysdev_attribute socinfo_v1_files[] = {
 	_SYSDEV_ATTR(id, 0444, socinfo_show_id, NULL),
 	_SYSDEV_ATTR(version, 0444, socinfo_show_version, NULL),
 	_SYSDEV_ATTR(build_id, 0444, socinfo_show_build_id, NULL),
+#ifdef CONFIG_SEC_FACTORY
+	_SYSDEV_ATTR(soc_iddq, 0444, socinfo_show_soc_iddq, NULL),
+	_SYSDEV_ATTR(soc_pvs, 0444, socinfo_show_soc_pvs, NULL),
+#endif
 };
 
 static struct sysdev_attribute socinfo_v2_files[] = {

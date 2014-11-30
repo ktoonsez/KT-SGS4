@@ -220,7 +220,6 @@ u32 vcd_init_device_context(struct vcd_drv_ctxt *drv_ctxt,
 						   VCD_DEVICE_STATE_INITING,
 						   ev_code);
 	}
-
 	return rc;
 }
 

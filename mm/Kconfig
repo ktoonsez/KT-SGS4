@@ -380,6 +380,16 @@ config CLEANCACHE
 
 	  If unsure, say Y to enable cleancache
 
+config MEMORY_HOLE_CARVEOUT
+        bool
+        help
+          MEMORY_HOLE_CARVEOUT is needed to include the msm_mem_hole driver
+          which is needed to enable/disable memblock-remove features for
+          device tree nodes that set compatible="qcom,msm-mem-hole". The
+          corresponding device tree node provides the address and size of
+          the memory corresponding to the hole to be removed using memblock-
+          remove.
+
 config USE_USER_ACCESSIBLE_TIMERS
 	bool "Enables timers accessible from userspace"
 	depends on MMU
@@ -391,19 +401,3 @@ config USE_USER_ACCESSIBLE_TIMERS
 	  architecture-specific code that will need to be enabled
 	  separately.
 
-config FRONTSWAP
-	bool "Enable frontswap to cache swap pages if tmem is present"
-	depends on SWAP
-	default n
-	help
-	  Frontswap is so named because it can be thought of as the opposite
-	  of a "backing" store for a swap device.  The data is stored into
-	  "transcendent memory", memory that is not directly accessible or
-	  addressable by the kernel and is of unknown and possibly
-	  time-varying size.  When space in transcendent memory is available,
-	  a significant swap I/O reduction may be achieved.  When none is
-	  available, all frontswap calls are reduced to a single pointer-
-	  compare-against-NULL resulting in a negligible performance hit
-	  and swap data is stored as normal on the matching swap device.
-
-	  If unsure, say Y to enable frontswap.

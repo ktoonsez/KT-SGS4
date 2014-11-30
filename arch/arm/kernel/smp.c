@@ -74,9 +74,30 @@ void __init smp_set_ops(struct smp_operations *ops)
 		smp_ops = *ops;
 };
 
-int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *idle)
+int __cpuinit __cpu_up(unsigned int cpu)
 {
+	struct cpuinfo_arm *ci = &per_cpu(cpu_data, cpu);
+	struct task_struct *idle = ci->idle;
 	int ret;
+
+	/*
+	 * Spawn a new process manually, if not already done.
+	 * Grab a pointer to its task struct so we can mess with it
+	 */
+	if (!idle) {
+		idle = fork_idle(cpu);
+		if (IS_ERR(idle)) {
+			printk(KERN_ERR "CPU%u: fork() failed\n", cpu);
+			return PTR_ERR(idle);
+		}
+		ci->idle = idle;
+	} else {
+		/*
+		 * Since this idle thread is being re-used, call
+		 * init_idle() to reinitialize the thread structure.
+		 */
+		init_idle(idle, cpu);
+	}
 
 	/*
 	 * We need to tell the secondary core where to find
@@ -201,8 +222,11 @@ int __cpu_disable(void)
 	/*
 	 * Flush user cache and TLB mappings, and then remove this CPU
 	 * from the vm mask set of all processes.
+	 *
+	 * Caches are flushed to the Level of Unification Inner Shareable
+	 * to write-back dirty lines to unified caches shared by all CPUs.
 	 */
-	flush_cache_all();
+	flush_cache_louis();
 	local_flush_tlb_all();
 
 	read_lock(&tasklist_lock);
@@ -367,6 +391,9 @@ void __init smp_cpus_done(unsigned int max_cpus)
 
 void __init smp_prepare_boot_cpu(void)
 {
+	unsigned int cpu = smp_processor_id();
+
+	per_cpu(cpu_data, cpu).idle = current;
 }
 
 void __init smp_prepare_cpus(unsigned int max_cpus)
@@ -540,7 +567,7 @@ static void percpu_timer_stop(void)
 
 static DEFINE_RAW_SPINLOCK(stop_lock);
 
-static struct pt_regs __percpu regs_before_stop;
+DEFINE_PER_CPU(struct pt_regs, regs_before_stop);
 /*
  * ipi_cpu_stop - handle IPI from smp_send_stop()
  */

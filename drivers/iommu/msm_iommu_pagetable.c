@@ -286,14 +286,14 @@ size_t msm_iommu_pagetable_unmap(struct iommu_pt *pt, unsigned long va,
 	return len;
 }
 
-static phys_addr_t get_phys_addr(struct scatterlist *sg)
+static unsigned int get_phys_addr(struct scatterlist *sg)
 {
 	/*
 	 * Try sg_dma_address first so that we can
 	 * map carveout regions that do not have a
 	 * struct page associated with them.
 	 */
-	phys_addr_t pa = sg_dma_address(sg);
+	unsigned int pa = sg_dma_address(sg);
 	if (pa == 0)
 		pa = sg_phys(sg);
 	return pa;
@@ -358,7 +358,7 @@ static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 int msm_iommu_pagetable_map_range(struct iommu_pt *pt, unsigned int va,
 		       struct scatterlist *sg, unsigned int len, int prot)
 {
-	phys_addr_t pa;
+	unsigned int pa;
 	unsigned int start_va = va;
 	unsigned int offset = 0;
 	unsigned long *fl_pte;

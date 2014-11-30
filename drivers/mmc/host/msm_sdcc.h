@@ -370,7 +370,6 @@ struct msmsdcc_host {
 
 	unsigned int		clk_rate;	/* Current clock rate */
 	unsigned int		pclk_rate;
-	unsigned int		ddr_doubled_clk_rate;
 
 	u32			pwr;
 	struct mmc_platform_data *plat;
@@ -423,6 +422,7 @@ struct msmsdcc_host {
 	struct mutex clk_mutex;
 	bool pending_resume;
 	unsigned int idle_tout;			/* Timeout in msecs */
+	bool pending_dpsm_reset;
 	bool enforce_pio_mode;
 	bool print_pm_stats;
 	struct msmsdcc_msm_bus_vote msm_bus_vote;

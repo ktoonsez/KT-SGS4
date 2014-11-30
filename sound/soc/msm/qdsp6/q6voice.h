@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -152,6 +152,9 @@ struct vss_unmap_memory_cmd {
 /* Detach a vocproc from the MVM. The MVM will symmetrically disconnect this
  * vocproc from all the streams to which it is currently attached.
 */
+
+#define VSS_IMVM_CMD_PAUSE_VOICE			0x0001137D
+/* No payload. Wait for APRV2_IBASIC_RSP_RESULT response. */
 
 #define VSS_IMVM_CMD_START_VOICE			0x00011190
 /*
@@ -1047,7 +1050,13 @@ uint8_t voc_get_route_flag(uint16_t session_id, uint8_t path_dir);
 #define VOICE_SESSION_NAME "Voice session"
 #define VOIP_SESSION_NAME "VoIP session"
 #define VOLTE_SESSION_NAME "VoLTE session"
-#define SGLTE_SESSION_NAME "SGLTE session"
+#define VOICE2_SESSION_NAME "Voice2 session"
+
+#define VOC_PATH_PASSIVE 0
+#define VOC_PATH_FULL 1
+#define VOC_PATH_VOLTE_PASSIVE 2
+#define VOC_PATH_VOICE2_PASSIVE 3
+
 uint16_t voc_get_session_id(char *name);
 
 int voc_start_playback(uint32_t set);

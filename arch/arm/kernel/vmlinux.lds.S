@@ -151,6 +151,23 @@ SECTIONS
 #endif
 	__init_begin = .;
 #endif
+	/*
+	 * The vectors and stubs are relocatable code, and the
+	 * only thing that matters is their relative offsets
+	 */
+	__vectors_start = .;
+	.vectors 0 : AT(__vectors_start) {
+		*(.vectors)
+	}
+	. = __vectors_start + SIZEOF(.vectors);
+	__vectors_end = .;
+
+	__stubs_start = .;
+	.stubs 0x1000 : AT(__stubs_start) {
+		*(.stubs)
+	}
+	. = __stubs_start + SIZEOF(.stubs);
+	__stubs_end = .;
 
 	INIT_TEXT_SECTION(8)
 	.exit.text : {
@@ -241,7 +258,7 @@ SECTIONS
 		/*
 		 * The exception fixup table (might need resorting at runtime)
 		 */
-		. = ALIGN(L1_CACHE_BYTES);
+		. = ALIGN(4);
 		__start___ex_table = .;
 #ifdef CONFIG_MMU
 		*(__ex_table)

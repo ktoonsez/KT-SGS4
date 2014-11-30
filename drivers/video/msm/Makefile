@@ -12,7 +12,7 @@ ifeq ($(CONFIG_FB_MSM_MDP_HW),y)
 # MDP
 obj-y += mdp.o
 
-obj-$(CONFIG_DEBUG_FS) += mdp_debugfs.o
+obj-$(CONFIG_DEBUG_FS) += mdp_debugfs.o xlog.o
 
 obj-$(CONFIG_MDNIE_LITE_TUNING) += mdnie_lite_tuning.o
 
@@ -84,9 +84,11 @@ obj-$(CONFIG_FB_MSM_MIPI_DSI_TOSHIBA) += mipi_toshiba.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NOVATEK) += mipi_novatek.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_ORISE) += mipi_orise.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_RENESAS) += mipi_renesas.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_NOVATEK_NT35596) += mipi_novatek_NT35596.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TRULY) += mipi_truly.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35510) += mipi_NT35510.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35516) += mipi_truly_tft540960_1_e.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35590) += mipi_NT35590.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SIMULATOR) += mipi_simulator.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SAMSUNG_OLED) += mipi_samsung_oled.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_RENESAS_TFT) += mipi_samsung_tft.o
@@ -125,6 +127,8 @@ obj-$(CONFIG_FB_MSM_MDDI_ORISE) += mddi_orise.o
 obj-$(CONFIG_FB_MSM_MDDI_QUICKVX) += mddi_quickvx.o
 endif
 
+# ESD Recovery
+obj-$(CONFIG_MIPI_SAMSUNG_ESD_REFRESH) += mipi_samsung_esd_refresh.o
 ifeq ($(CONFIG_FB_MSM_MIPI_PANEL_DETECT),y)
 obj-y += mipi_toshiba_video_wvga_pt.o mipi_toshiba_video_wsvga_pt.o mipi_toshiba_video_wuxga.o
 obj-y += mipi_novatek_video_qhd_pt.o mipi_novatek_cmd_qhd_pt.o
@@ -132,9 +136,11 @@ obj-y += mipi_orise_video_720p_pt.o mipi_orise_cmd_720p_pt.o
 obj-y += mipi_renesas_video_fwvga_pt.o mipi_renesas_cmd_fwvga_pt.o
 obj-y += mipi_NT35510_video_wvga_pt.o mipi_NT35510_cmd_wvga_pt.o
 obj-y += mipi_truly_tft540960_1_e_video_qhd_pt.o mipi_truly_tft540960_1_e_cmd_qhd_pt.o
+obj-y += mipi_NT35590_cmd_720p_pt.o mipi_NT35590_video_720p_pt.o
 obj-y += mipi_chimei_wxga_pt.o
 obj-y += mipi_chimei_wuxga.o
 obj-y += mipi_truly_video_wvga_pt.o
+obj-y += mipi_novatek_tft_video_hd_pt.o
 else
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT) += mipi_toshiba_video_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT) += mipi_toshiba_video_wsvga_pt.o
@@ -151,9 +157,13 @@ obj-$(CONFIG_FB_MSM_MIPI_NT35510_CMD_WVGA_PT) += mipi_NT35510_cmd_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NT35510_VIDEO_WVGA_PT) += mipi_NT35510_video_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NT35516_CMD_QHD_PT) += mipi_truly_tft540960_1_e_cmd_qhd_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NT35516_VIDEO_QHD_PT) += mipi_truly_tft540960_1_e_video_qhd_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_NT35590_CMD_720P_PT) += mipi_NT35590_cmd_720p_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_NT35590_VIDEO_720P_PT) += mipi_NT35590_video_720p_pt.o
+obj-$(CONFIG_SAMSUNG_CMC624) += samsung_cmc624.o cmc624_sysfs.o
 obj-$(CONFIG_FB_MSM_MIPI_SIMULATOR_VIDEO) += mipi_simulator_video.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WXGA) += mipi_chimei_wxga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WUXGA) += mipi_chimei_wuxga.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_NOVATEK_NT35596) += mipi_novatek_tft_video_hd_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT) += mipi_samsung_oled_video_hd_pt.o smart_mtp_s6e8aa0x01.o
 obj-$(CONFIG_FB_MSM_MIPI_RENESAS_TFT_VIDEO_FULL_HD_PT_PANEL) += mipi_renesas_tft_video_full_hd_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_SAMSUNG_OCTA_VIDEO_FULL_HD_PT_PANEL) += mipi_samsung_octa_video_full_hd_pt.o mipi_magna_octa_video_full_hd_pt.o smart_mtp_se6e8fa.o

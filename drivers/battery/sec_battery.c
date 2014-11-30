@@ -99,6 +99,11 @@ static enum power_supply_property sec_power_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
 
+static enum power_supply_property sec_ps_props[] = {
+	POWER_SUPPLY_PROP_STATUS,
+	POWER_SUPPLY_PROP_ONLINE,
+};
+
 static char *supply_list[] = {
 	"battery",
 };
@@ -394,15 +399,16 @@ static bool sec_bat_check(struct sec_battery_info *battery)
 		ret = sec_bat_check_vf_adc(battery);
 		break;
 	case SEC_BATTERY_CHECK_CALLBACK:
-		ret = battery->pdata->check_battery_callback();
+	case SEC_BATTERY_CHECK_INT:
+		if(battery->cable_type == POWER_SUPPLY_TYPE_BATTERY)
+			ret = battery->present;
+		else
+			ret = battery->pdata->check_battery_callback();
 		break;
 	case SEC_BATTERY_CHECK_PMIC:
 	case SEC_BATTERY_CHECK_FUELGAUGE:
 	case SEC_BATTERY_CHECK_CHARGER:
 		ret = sec_bat_check_by_psy(battery);
-		break;
-	case SEC_BATTERY_CHECK_INT:
-		ret = battery->present;
 		break;
 	case SEC_BATTERY_CHECK_NONE:
 		dev_dbg(battery->dev, "%s: No Check\n", __func__);
@@ -812,12 +818,12 @@ static bool sec_bat_temperature(
 			battery->pdata->temp_low_threshold_normal;
 	}
 
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s: HT(%d), HR(%d), LT(%d), LR(%d)\n",
 		__func__, battery->temp_high_threshold,
 		battery->temp_high_recovery,
 		battery->temp_low_threshold,
-		battery->temp_low_recovery);*/
+		battery->temp_low_recovery);
 	return ret;
 }
 
@@ -1635,7 +1641,7 @@ static void sec_bat_get_battery_info(
 		break;
 	}
 
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s:Vnow(%dmV),Inow(%dmA),SOC(%d%%),Tbat(%d)\n", __func__,
 		battery->voltage_now, battery->current_now,
 		battery->capacity, battery->temperature);
@@ -1644,7 +1650,7 @@ static void sec_bat_get_battery_info(
 		battery->present ? "Connected" : "Disconnected",
 		battery->voltage_avg, battery->voltage_ocv,
 		battery->temper_amb,
-		battery->current_avg, battery->current_adc);*/
+		battery->current_avg, battery->current_adc);
 };
 
 static void sec_bat_polling_work(struct work_struct *work)
@@ -1707,7 +1713,7 @@ static unsigned int sec_bat_get_polling_time(
 			battery->polling_short = false;
 		break;
 	case POWER_SUPPLY_STATUS_DISCHARGING:
-		if (battery->polling_in_sleep)
+		if (battery->polling_in_sleep && (battery->ps_enable != true))
 			battery->polling_time =
 				battery->pdata->polling_time[
 				SEC_BATTERY_POLLING_TIME_SLEEP];
@@ -1718,10 +1724,10 @@ static unsigned int sec_bat_get_polling_time(
 		battery->polling_short = false;
 		break;
 	case POWER_SUPPLY_STATUS_FULL:
-		if ((battery->pdata->full_condition_type &
-			SEC_BATTERY_FULL_CONDITION_SLEEPINFULL) &&
-			battery->polling_in_sleep) {
-			if (battery->charging_mode ==
+		if (battery->polling_in_sleep) {
+			if (!(battery->pdata->full_condition_type &
+				SEC_BATTERY_FULL_CONDITION_NOSLEEPINFULL) &&
+				battery->charging_mode ==
 				SEC_BATTERY_CHARGING_NONE)
 				battery->polling_time =
 					battery->pdata->polling_time[
@@ -1841,12 +1847,27 @@ static void sec_bat_monitor_work(
 	struct sec_battery_info *battery =
 		container_of(work, struct sec_battery_info,
 		monitor_work);
+	static struct timespec old_ts;
+	struct timespec c_ts;
 
 	dev_dbg(battery->dev, "%s: Start\n", __func__);
 
+	c_ts = ktime_to_timespec(alarm_get_elapsed_realtime());
+
 	/* monitor once after wakeup */
-	if (battery->polling_in_sleep)
+	if (battery->polling_in_sleep) {
 		battery->polling_in_sleep = false;
+		if ((battery->status == POWER_SUPPLY_STATUS_DISCHARGING) &&
+				(battery->ps_enable != true)) {
+			if ((unsigned long)(c_ts.tv_sec - old_ts.tv_sec) < 10 * 60) {
+				pr_info("Skip monitor_work(%ld)\n",
+						c_ts.tv_sec - old_ts.tv_sec);
+				goto skip_monitor;
+			}
+		}
+	}
+	/* update last monitor time */
+	old_ts = c_ts;
 
 	sec_bat_get_battery_info(battery);
 
@@ -1883,20 +1904,28 @@ static void sec_bat_monitor_work(
 	sec_bat_fullcharged_check(battery);
 
 continue_monitor:
-	/*dev_info(battery->dev,
+	dev_info(battery->dev,
 		"%s: Status(%s), mode(%s), Health(%s), Cable(%d), siop_level(%d)\n",
 		__func__,
 		sec_bat_status_str[battery->status],
 		sec_bat_charging_mode_str[battery->charging_mode],
 		sec_bat_health_str[battery->health],
-		battery->cable_type, battery->siop_level);*/
+		battery->cable_type, battery->siop_level);
 
+#if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
+	dev_info(battery->dev,
+			"%s: battery->stability_test(%d), battery->eng_not_full_status(%d)\n",
+			__func__, battery->stability_test, battery->eng_not_full_status);
+#endif
 	power_supply_changed(&battery->psy_bat);
 
+skip_monitor:
 	sec_bat_set_polling(battery);
 
 	/* check muic cable status */
+#if defined(CONFIG_MACH_JF)
 	max77693_muic_monitor_status();
+#endif
 
 	wake_unlock(&battery->monitor_wake_lock);
 
@@ -2489,6 +2518,7 @@ ssize_t sec_bat_store_attrs(
 				battery->pdata->charging_current[
 					POWER_SUPPLY_TYPE_USB].fast_charging_current = x;
 				if (x > 500) {
+					battery->eng_not_full_status = true;
 					battery->pdata->temp_check_type =
 						SEC_BATTERY_TEMP_CHECK_NONE;
 					battery->pdata->charging_total_time =
@@ -2510,6 +2540,7 @@ ssize_t sec_bat_store_attrs(
 				"%s: BATT_STABILITY_TEST(%d)\n", __func__, x);
 			if (x) {
 				battery->stability_test = true;
+				battery->eng_not_full_status = true;
 				value.intval = POWER_SUPPLY_TYPE_WIRELESS;
 				psy_do_property("sec-charger", set,
 					POWER_SUPPLY_PROP_CHARGE_TYPE, value);
@@ -2628,6 +2659,7 @@ static int sec_bat_set_property(struct power_supply *psy,
 			break;
 		}
 #endif
+
 		/* if another cable is connected,
 		  * ignore wireless charing event
 		  */
@@ -2692,19 +2724,26 @@ static int sec_bat_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		if (battery->pdata->cable_check_type &
-			SEC_BATTERY_CABLE_CHECK_NOUSBCHARGE) {
-			switch (battery->cable_type) {
-			case POWER_SUPPLY_TYPE_USB:
-			case POWER_SUPPLY_TYPE_USB_DCP:
-			case POWER_SUPPLY_TYPE_USB_CDP:
-			case POWER_SUPPLY_TYPE_USB_ACA:
-				val->intval =
-					POWER_SUPPLY_STATUS_DISCHARGING;
-				return 0;
+		if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+				(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+			val->intval =
+				POWER_SUPPLY_STATUS_DISCHARGING;
+		} else {
+			if ((battery->pdata->cable_check_type &
+					SEC_BATTERY_CABLE_CHECK_NOUSBCHARGE) &&
+					!battery->pdata->is_lpm()) {
+				switch (battery->cable_type) {
+				case POWER_SUPPLY_TYPE_USB:
+				case POWER_SUPPLY_TYPE_USB_DCP:
+				case POWER_SUPPLY_TYPE_USB_CDP:
+				case POWER_SUPPLY_TYPE_USB_ACA:
+					val->intval =
+						POWER_SUPPLY_STATUS_DISCHARGING;
+					return 0;
+				}
 			}
+			val->intval = battery->status;
 		}
-		val->intval = battery->status;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		psy_do_property("sec-charger", get,
@@ -2722,14 +2761,13 @@ static int sec_bat_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = battery->present;
+#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
+		dev_info(battery->dev,
+			"%s: battery present: %d\n", __func__, val->intval);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = battery->cable_type;
-		if ((val->intval == POWER_SUPPLY_TYPE_BATTERY) &&
-				(battery->pdata->is_lpm())) {
-			/* Userspace expects 0 for no-supply */
-			val->intval = 0;
-			}
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = battery->pdata->technology;
@@ -2753,11 +2791,22 @@ static int sec_bat_get_property(struct power_supply *psy,
 		val->intval = battery->charging_mode;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
+#if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
+		if (battery->status == POWER_SUPPLY_STATUS_FULL) {
+			if(battery->eng_not_full_status == true)
+				val->intval = battery->capacity;
+			else
+				val->intval = 100;
+		} else {
+			val->intval = battery->capacity;
+		}
+#else
 		/* In full-charged status, SOC is always 100% */
 		if (battery->status == POWER_SUPPLY_STATUS_FULL)
 			val->intval = 100;
 		else
 			val->intval = battery->capacity;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = battery->temperature;
@@ -2781,6 +2830,11 @@ static int sec_usb_get_property(struct power_supply *psy,
 	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
 
+	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+		val->intval = 0;
+		return 0;
+	}
 	/* Set enable=1 only if the USB charger is connected */
 	switch (battery->cable_type) {
 	case POWER_SUPPLY_TYPE_USB:
@@ -2807,6 +2861,11 @@ static int sec_ac_get_property(struct power_supply *psy,
 	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
 
+	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
+			(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
+		val->intval = 0;
+		return 0;
+	}
 	/* Set enable=1 only if the AC charger is connected */
 	switch (battery->cable_type) {
 	case POWER_SUPPLY_TYPE_MAINS:
@@ -2820,6 +2879,108 @@ static int sec_ac_get_property(struct power_supply *psy,
 	default:
 		val->intval = 0;
 		break;
+	}
+
+	return 0;
+}
+
+static int sec_ps_set_property(struct power_supply *psy,
+		enum power_supply_property psp,
+		const union power_supply_propval *val)
+{
+	struct sec_battery_info *battery =
+		container_of(psy, struct sec_battery_info, psy_ps);
+	union power_supply_propval value;
+
+	switch (psp) {
+	case POWER_SUPPLY_PROP_STATUS:
+		if (val->intval == 0) {
+			if (battery->ps_enable == true) {
+				battery->ps_enable = val->intval;
+				dev_info(battery->dev,
+						"%s: power sharing cable set (%d)\n", __func__, battery->ps_enable);
+				value.intval = POWER_SUPPLY_TYPE_POWER_SHARING;
+				psy_do_property("sec-charger", set,
+						POWER_SUPPLY_PROP_ONLINE, value);
+			}
+		} else if ((val->intval ==1) && (battery->ps_status == true)) {
+			battery->ps_enable = val->intval;
+			dev_info(battery->dev,
+					"%s: power sharing cable set (%d)\n", __func__, battery->ps_enable);
+			value.intval = POWER_SUPPLY_TYPE_POWER_SHARING;
+			psy_do_property("sec-charger", set,
+					POWER_SUPPLY_PROP_ONLINE, value);
+		} else {
+			dev_err(battery->dev,
+					"%s: invalid setting (%d) ps_status (%d)\n",
+					__func__, val->intval, battery->ps_status);
+		}
+		break;
+	case POWER_SUPPLY_PROP_ONLINE:
+		if (val->intval == POWER_SUPPLY_TYPE_POWER_SHARING) {
+			battery->ps_status = true;
+			battery->ps_enable = true;
+			battery->ps_changed = true;
+			dev_info(battery->dev,
+					"%s: power sharing cable plugin (%d)\n", __func__, battery->ps_status);
+			wake_lock(&battery->monitor_wake_lock);
+			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+		} else {
+			battery->ps_status = false;
+			dev_info(battery->dev,
+					"%s: power sharing cable plugout (%d)\n", __func__, battery->ps_status);
+			wake_lock(&battery->monitor_wake_lock);
+			queue_work(battery->monitor_wqueue, &battery->monitor_work);
+		}
+			break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int sec_ps_get_property(struct power_supply *psy,
+		enum power_supply_property psp,
+		union power_supply_propval *val)
+{
+	struct sec_battery_info *battery =
+		container_of(psy, struct sec_battery_info, psy_ps);
+	union power_supply_propval value;
+
+	switch (psp) {
+		case POWER_SUPPLY_PROP_STATUS:
+			if (battery->ps_enable)
+				val->intval = 1;
+			else
+				val->intval = 0;
+			break;
+		case POWER_SUPPLY_PROP_ONLINE:
+			if (battery->ps_status) {
+				if ((battery->ps_enable == true) && (battery->ps_changed == true)) {
+					battery->ps_changed = false;
+
+					value.intval = POWER_SUPPLY_TYPE_POWER_SHARING;
+					psy_do_property("sec-charger", set,
+							POWER_SUPPLY_PROP_ONLINE, value);
+				}
+				val->intval = 1;
+			} else {
+				if (battery->ps_enable == true) {
+					battery->ps_enable = false;
+					dev_info(battery->dev,
+							"%s: power sharing cable disconnected! ps disable (%d)\n",
+							__func__, battery->ps_enable);
+
+					value.intval = POWER_SUPPLY_TYPE_POWER_SHARING;
+					psy_do_property(battery->pdata->charger_name, set,
+							POWER_SUPPLY_PROP_ONLINE, value);
+				}
+				val->intval = 0;
+			}
+			break;
+		default:
+			return -EINVAL;
 	}
 
 	return 0;
@@ -2909,9 +3070,13 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	battery->charging_fullcharged_time = 0;
 	battery->siop_level = 100;
 	battery->wc_enable = 1;
+	battery->ps_status = 0;
+	battery->ps_changed = 0;
 #if defined(CONFIG_SAMSUNG_BATTERY_ENG_TEST)
 	battery->stability_test = 0;
+	battery->eng_not_full_status = 0;
 #endif
+	battery->ps_enable= 0;
 
 	alarm_init(&battery->event_termination_alarm,
 			ANDROID_ALARM_ELAPSED_REALTIME_WAKEUP,
@@ -2953,6 +3118,14 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	battery->psy_ac.properties = sec_power_props,
 	battery->psy_ac.num_properties = ARRAY_SIZE(sec_power_props),
 	battery->psy_ac.get_property = sec_ac_get_property;
+	battery->psy_ps.name = "ps",
+	battery->psy_ps.type = POWER_SUPPLY_TYPE_POWER_SHARING,
+	battery->psy_ps.supplied_to = supply_list,
+	battery->psy_ps.num_supplicants = ARRAY_SIZE(supply_list),
+	battery->psy_ps.properties = sec_ps_props,
+	battery->psy_ps.num_properties = ARRAY_SIZE(sec_ps_props),
+	battery->psy_ps.get_property = sec_ps_get_property;
+	battery->psy_ps.set_property = sec_ps_set_property;
 
 	/* create work queue */
 	battery->monitor_wqueue =
@@ -2982,11 +3155,18 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	}
 
 	/* init power supplier framework */
+	ret = power_supply_register(&pdev->dev, &battery->psy_ps);
+	if (ret) {
+		dev_err(battery->dev,
+				"%s: Failed to Register psy_ps\n", __func__);
+		goto err_workqueue;
+	}
+
 	ret = power_supply_register(&pdev->dev, &battery->psy_usb);
 	if (ret) {
 		dev_err(battery->dev,
 			"%s: Failed to Register psy_usb\n", __func__);
-		goto err_supply_unreg_bat;
+		goto err_supply_unreg_ps;
 	}
 
 	ret = power_supply_register(&pdev->dev, &battery->psy_ac);
@@ -3000,13 +3180,12 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(battery->dev,
 			"%s: Failed to Register psy_bat\n", __func__);
-		goto err_workqueue;
+		goto err_supply_unreg_ac;
 	}
 
 	if (!battery->pdata->bat_gpio_init()) {
 		dev_err(battery->dev,
 			"%s: Failed to Initialize GPIO\n", __func__);
-		goto err_supply_unreg_ac;
 	}
 
 	if (battery->pdata->bat_irq) {
@@ -3017,7 +3196,7 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(battery->dev,
 				"%s: Failed to Request IRQ\n", __func__);
-			goto err_supply_unreg_ac;
+			goto err_supply_unreg_bat;
 		}
 
 		ret = enable_irq_wake(battery->pdata->bat_irq);
@@ -3038,7 +3217,24 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 	queue_work(battery->monitor_wqueue, &battery->monitor_work);
 
 	pdata->initial_check();
+	battery->pdata->check_cable_result_callback(POWER_SUPPLY_TYPE_MAINS);
+#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
+	/*enable vf ldo to check battery */
+	battery->pdata->check_cable_result_callback(battery->cable_type);
+
+#endif
 	battery->present = battery->pdata->check_battery_callback();
+	battery->pdata->check_cable_result_callback(battery->cable_type);
+
+#ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
+	/* do not sleep in lpm mode & factory mode */
+	if (battery->pdata->is_lpm()) {
+		wake_lock_init(&battery->lpm_wake_lock, WAKE_LOCK_SUSPEND,
+				"sec-lpm-monitor");
+		wake_lock(&battery->lpm_wake_lock);
+	}
+#endif
+
 
 	dev_dbg(battery->dev,
 		"%s: SEC Battery Driver Loaded\n", __func__);
@@ -3047,12 +3243,14 @@ static int __devinit sec_battery_probe(struct platform_device *pdev)
 err_req_irq:
 	if (battery->pdata->bat_irq)
 		free_irq(battery->pdata->bat_irq, battery);
+err_supply_unreg_bat:
+	power_supply_unregister(&battery->psy_bat);
 err_supply_unreg_ac:
 	power_supply_unregister(&battery->psy_ac);
 err_supply_unreg_usb:
 	power_supply_unregister(&battery->psy_usb);
-err_supply_unreg_bat:
-	power_supply_unregister(&battery->psy_bat);
+err_supply_unreg_ps:
+	power_supply_unregister(&battery->psy_ps);
 err_workqueue:
 	destroy_workqueue(battery->monitor_wqueue);
 err_wake_lock:
@@ -3094,6 +3292,7 @@ static int __devexit sec_battery_remove(struct platform_device *pdev)
 	for (i = 0; i < SEC_BAT_ADC_CHANNEL_FULL_CHECK; i++)
 		adc_exit(battery->pdata, i);
 
+	power_supply_unregister(&battery->psy_ps);
 	power_supply_unregister(&battery->psy_ac);
 	power_supply_unregister(&battery->psy_usb);
 	power_supply_unregister(&battery->psy_bat);

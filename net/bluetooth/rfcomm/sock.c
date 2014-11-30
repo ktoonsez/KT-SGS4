@@ -1,5 +1,6 @@
 /*
    RFCOMM implementation for Linux Bluetooth stack (BlueZ).
+   Copyright (c) 2013 The Linux Foundation.  All rights reserved.
    Copyright (C) 2002 Maxim Krasnyansky <maxk@qualcomm.com>
    Copyright (C) 2002 Marcel Holtmann <marcel@holtmann.org>
 
@@ -483,7 +484,7 @@ static int rfcomm_sock_accept(struct socket *sock, struct socket *newsock, int f
 	long timeo;
 	int err = 0;
 
-	lock_sock_nested(sk, SINGLE_DEPTH_NESTING);
+	lock_sock(sk);
 
 	if (sk->sk_state != BT_LISTEN) {
 		err = -EBADFD;
@@ -544,7 +545,6 @@ static int rfcomm_sock_getname(struct socket *sock, struct sockaddr *addr, int *
 
 	BT_DBG("sock %p, sk %p", sock, sk);
 
-	memset(sa, 0, sizeof(*sa));
 	sa->rc_family  = AF_BLUETOOTH;
 	sa->rc_channel = rfcomm_pi(sk)->channel;
 	if (peer)
@@ -708,12 +708,13 @@ static int rfcomm_sock_setsockopt(struct socket *sock, int level, int optname, c
 			break;
 		}
 
-		if (sec.level > BT_SECURITY_HIGH) {
+		if (sec.level > BT_SECURITY_VERY_HIGH) {
 			err = -EINVAL;
 			break;
 		}
 
 		rfcomm_pi(sk)->sec_level = sec.level;
+		BT_DBG("set to %d", sec.level);
 		break;
 
 	case BT_DEFER_SETUP:
@@ -764,6 +765,7 @@ static int rfcomm_sock_getsockopt_old(struct socket *sock, int optname, char __u
 			opt = RFCOMM_LM_AUTH | RFCOMM_LM_ENCRYPT;
 			break;
 		case BT_SECURITY_HIGH:
+		case BT_SECURITY_VERY_HIGH:
 			opt = RFCOMM_LM_AUTH | RFCOMM_LM_ENCRYPT |
 							RFCOMM_LM_SECURE;
 			break;
@@ -833,7 +835,6 @@ static int rfcomm_sock_getsockopt(struct socket *sock, int level, int optname, c
 		}
 
 		sec.level = rfcomm_pi(sk)->sec_level;
-		sec.key_size = 0;
 
 		len = min_t(unsigned int, len, sizeof(sec));
 		if (copy_to_user(optval, (char *) &sec, len))

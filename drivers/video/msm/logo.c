@@ -134,12 +134,12 @@ int load_565rle_image(char *filename, bool bf_supported)
 				bits += n << 1;
 				bits += pad;
 			} else {
-			memset16(bits, ptr[1], n << 1);
-			bits += n;
+				memset16(bits, ptr[1], n << 1);
+				bits += n;
+				max -= n;
+				ptr += 2;
+				count -= 4;
 			}
-			max -= n;
-			ptr += 2;
-			count -= 4;
 		}
 	}
 #ifndef CONFIG_FRAMEBUFFER_CONSOLE

@@ -78,11 +78,12 @@
 
 #define MIN_SLEEP_TIME_US 50
 #define MAX_SLEEP_TIME_US 100
+#define STATUS_POLLING_PERIOD_US 3000
 
 #if defined(CONFIG_MACH_JACTIVE_EUR) || defined(CONFIG_MACH_JACTIVE_ATT)
 #define FW_SUPPORT_HSYNC03(x)	 (strncmp(x->product_id, "SY 03", 5) == 0)
-#define FW_SUPPORT_HSYNC04(x)	 (strncmp(x->product_id, "SY 04", 5) == 0)
-#define FW_NOT_SUPPORT_HSYNC(x)	 ((strncmp(x->product_id, "SY 01", 5) == 0) || (strncmp(x->product_id, "S5000B", 6) == 0) || (strncmp(x->product_id, "SY 02", 5) == 0))
+#define FW_SUPPORT_HSYNC04(x)	 ((strncmp(x->product_id, "SY 04", 5) == 0)|| (strncmp(x->product_id, "S5000B", 6) == 0))
+#define FW_NOT_SUPPORT_HSYNC(x)	 ((strncmp(x->product_id, "SY 01", 5) == 0) || (strncmp(x->product_id, "SY 02", 5) == 0))
 #endif
 
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
@@ -210,6 +211,7 @@ struct synaptics_rmi4_fwu_handle {
 	char product_id[SYNAPTICS_RMI4_PRODUCT_ID_SIZE + 1];
 	const unsigned char *firmware_data;
 	const unsigned char *config_data;
+	struct mutex status_mutex;
 	struct f34_flash_status flash_status;
 	struct synaptics_rmi4_fn_desc f01_fd;
 	struct synaptics_rmi4_fn_desc f34_fd;
@@ -403,6 +405,8 @@ static int fwu_read_f34_flash_status(void)
 	unsigned char status;
 	unsigned char command;
 
+	mutex_lock(&(fwu->status_mutex));
+
 	retval = fwu->fn_ptr->read(fwu->rmi4_data,
 			fwu->f34_fd.data_base_addr + FLASH_STATUS_OFFSET,
 			&status,
@@ -411,7 +415,7 @@ static int fwu_read_f34_flash_status(void)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
 				"%s: Failed to read flash status\n",
 				__func__);
-		return retval;
+		goto exit;
 	}
 
 	/* Program enabled bit not available - force bit to be set */
@@ -426,12 +430,17 @@ static int fwu_read_f34_flash_status(void)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
 				"%s: Failed to read flash command\n",
 				__func__);
-		return retval;
+		goto exit;
 	}
 
 	fwu->command = command & MASK_4BIT;
 
-	return 0;
+	retval = 0;
+
+exit:
+	mutex_unlock(&(fwu->status_mutex));
+
+	return retval;
 }
 
 static int fwu_write_f34_command(unsigned char cmd)
@@ -458,14 +467,24 @@ static int fwu_write_f34_command(unsigned char cmd)
 static int fwu_wait_for_idle(int timeout_ms)
 {
 	int count = 0;
+	int polling_period = STATUS_POLLING_PERIOD_US / MAX_SLEEP_TIME_US;
 	int timeout_count = ((timeout_ms * 1000) / MAX_SLEEP_TIME_US) + 1;
 
 	do {
 		usleep_range(MIN_SLEEP_TIME_US, MAX_SLEEP_TIME_US);
 
 		count++;
-		if (count == timeout_count)
+		if ((timeout_ms == WRITE_WAIT_MS) &&
+				(count >= polling_period) &&
+				((count % polling_period) == 0)) {
 			fwu_read_f34_flash_status();
+		} else if (count == timeout_count) {
+			dev_err(&fwu->rmi4_data->i2c_client->dev,
+					"%s: wait usleep, in writing block [%d]\n",
+					__func__, count);
+
+			fwu_read_f34_flash_status();
+		}
 
 		if ((fwu->command == 0x00) &&
 				(fwu->flash_status.status == 0x00))
@@ -1658,6 +1677,7 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 	if (retval < 0)
 		goto exit_free_mem;
 
+	mutex_init(&(fwu->status_mutex));
 	fwu->initialized = true;
 
 	retval = sysfs_create_bin_file(&rmi4_data->input_dev->dev.kobj,

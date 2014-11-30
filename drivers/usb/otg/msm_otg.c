@@ -1200,7 +1200,6 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 
 	if (motg->cur_power == mA)
 		return;
-
 	dev_info(motg->phy.dev, "Avail curr from USB = %u\n", mA);
 
 	/*

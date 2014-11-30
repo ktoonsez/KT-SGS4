@@ -38,6 +38,7 @@
 #include <linux/filter.h>
 #include <linux/reciprocal_div.h>
 #include <linux/ratelimit.h>
+#include <linux/seccomp.h>
 
 /* No hurry in this branch
  *
@@ -115,9 +116,9 @@ unsigned int sk_run_filter(const struct sk_buff *skb,
 			   const struct sock_filter *fentry)
 {
 	void *ptr;
-	u32 A = 0;			/* Accumulator */
-	u32 X = 0;			/* Index Register */
-	u32 mem[BPF_MEMWORDS];		/* Scratch Memory Store */
+	u32 A = 0;				/* Accumulator */
+	u32 X = 0;				/* Index Register */
+	u32 mem[BPF_MEMWORDS] = {0};		/* Scratch Memory Store */
 	u32 tmp;
 	int k;
 
@@ -356,6 +357,11 @@ load_b:
 				A = 0;
 			continue;
 		}
+#ifdef CONFIG_SECCOMP_FILTER
+		case BPF_S_ANC_SECCOMP_LD_W:
+			A = seccomp_bpf_load(fentry->k);
+			continue;
+#endif
 		default:
 			WARN_RATELIMIT(1, "Unknown code:%u jt:%u tf:%u k:%u\n",
 				       fentry->code, fentry->jt,

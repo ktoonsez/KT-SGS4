@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -166,7 +166,8 @@ static irqreturn_t bam_isr(int irq, void *ctxt)
 
 	list_for_each_entry(pipe, &dev->pipes_q, list) {
 		/* Check this pipe's bit in the source mask */
-		if ((source & pipe->pipe_index_mask)) {
+		if (BAM_PIPE_IS_ASSIGNED(pipe)
+				&& (source & pipe->pipe_index_mask)) {
 			/* This pipe has an interrupt pending */
 			pipe_handler(dev, pipe);
 			source &= ~pipe->pipe_index_mask;
@@ -427,10 +428,6 @@ int sps_bam_disable(struct sps_bam *dev)
 	if ((dev->props.manage & SPS_BAM_MGR_DEVICE_REMOTE)) {
 		/* No, so just mark it disabled */
 		dev->state &= ~BAM_STATE_ENABLED;
-		if ((dev->state & BAM_STATE_IRQ) && (dev->props.irq > 0)) {
-			free_irq(dev->props.irq, dev);
-			dev->state &= ~BAM_STATE_IRQ;
-		}
 		return 0;
 	}
 
@@ -1054,6 +1051,13 @@ int sps_bam_pipe_set_params(struct sps_bam *dev, u32 pipe_index, u32 options)
 		else {
 			pipe->sys.desc_cache =
 				vmalloc(pipe->desc_size + size);
+
+			if (pipe->sys.desc_cache == NULL) {
+				SPS_ERR("sps:No memory for pipe %d of BAM 0x%x",
+					pipe_index, BAM_ID(dev));
+				return -ENOMEM;
+			}
+
 			memset(pipe->sys.desc_cache, 0, pipe->desc_size + size);
 		}
 

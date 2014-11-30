@@ -184,6 +184,36 @@ static int vmap_page_range(unsigned long start, unsigned long end,
 	return ret;
 }
 
+#ifdef ENABLE_VMALLOC_SAVING
+int is_vmalloc_addr(const void *x)
+{
+	struct rb_node *n;
+	struct vmap_area *va;
+	int ret = 0;
+
+	spin_lock(&vmap_area_lock);
+
+	for (n = rb_first(vmap_area_root); n; rb_next(n)) {
+		va = rb_entry(n, struct vmap_area, rb_node);
+		if (x >= va->va_start && x < va->va_end) {
+			ret = 1;
+			break;
+		}
+	}
+
+	spin_unlock(&vmap_area_lock);
+	return ret;
+}
+#else
+int is_vmalloc_addr(const void *x)
+{
+	unsigned long addr = (unsigned long)x;
+
+	return addr >= VMALLOC_START && addr < VMALLOC_END;
+}
+#endif
+EXPORT_SYMBOL(is_vmalloc_addr);
+
 int is_vmalloc_or_module_addr(const void *x)
 {
 	/*
@@ -348,6 +378,12 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 			gfp_mask & GFP_RECLAIM_MASK, node);
 	if (unlikely(!va))
 		return ERR_PTR(-ENOMEM);
+
+	/*
+	 * Only scan the relevant parts containing pointers to other objects
+	 * to avoid false negatives.
+	 */
+	kmemleak_scan_area(&va->rb_node, SIZE_MAX, gfp_mask & GFP_RECLAIM_MASK);
 
 retry:
 	spin_lock(&vmap_area_lock);
@@ -1717,11 +1753,11 @@ void *__vmalloc_node_range(unsigned long size, unsigned long align,
 	insert_vmalloc_vmlist(area);
 
 	/*
-	 * A ref_count = 3 is needed because the vm_struct and vmap_area
-	 * structures allocated in the __get_vm_area_node() function contain
-	 * references to the virtual address of the vmalloc'ed block.
+	 * A ref_count = 2 is needed because vm_struct allocated in
+	 * __get_vm_area_node() contains a reference to the virtual address of
+	 * the vmalloc'ed block.
 	 */
-	kmemleak_alloc(addr, real_size, 3, gfp_mask);
+	kmemleak_alloc(addr, real_size, 2, gfp_mask);
 
 	return addr;
 
@@ -2642,6 +2678,9 @@ static int s_show(struct seq_file *m, void *p)
 
 	if (v->flags & VM_VPAGES)
 		seq_printf(m, " vpages");
+
+	if (v->flags & VM_LOWMEM)
+		seq_printf(m, " lowmem");
 
 	show_numa_info(m, v);
 	seq_putc(m, '\n');

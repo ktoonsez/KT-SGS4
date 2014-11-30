@@ -1146,7 +1146,7 @@ static void mmc_sd_detect(struct mmc_host *host)
 {
 	int err = 0;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
-        int retries = 5;
+        int retries = 2;
 #endif
 
 	BUG_ON(!host);
@@ -1227,7 +1227,7 @@ static int mmc_sd_resume(struct mmc_host *host)
 
 	mmc_claim_host(host);
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
-	retries = 5;
+	retries = 2;
 	while (retries) {
 		err = mmc_sd_init_card(host, host->ocr, host->card);
 
@@ -1380,7 +1380,7 @@ int mmc_attach_sd(struct mmc_host *host)
 	 * Detect and init the card.
 	 */
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
-	retries = 5;
+	retries = 2;
 	while (retries) {
 		err = mmc_sd_init_card(host, host->ocr, NULL);
 		if (err) {

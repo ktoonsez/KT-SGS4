@@ -24,8 +24,8 @@
 #include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/freezer.h>
-#include <linux/random.h>
 #include <linux/usb/otg.h>
+#include <linux/random.h>
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
@@ -56,6 +56,9 @@ int HostTest;
 EXPORT_SYMBOL(HostTest);
 #endif
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include "sec-dock.h"
+#endif
 
 /* if we are in debug mode, always announce new devices */
 #ifdef DEBUG
@@ -1810,6 +1813,9 @@ void usb_disconnect(struct usb_device **pdev)
 		udev->bus->hnp_support = 0;
 	}
 #endif
+#ifdef CONFIG_USB_HOST_NOTIFY
+	call_battery_notify(udev, 0);
+#endif
 
 	usb_lock_device(udev);
 
@@ -2125,6 +2131,12 @@ int usb_new_device(struct usb_device *udev)
 
 	/* Tell the world! */
 	announce_device(udev);
+#ifdef CONFIG_USB_HOST_NOTIFY
+#if defined(CONFIG_MUIC_MAX77693_SUPPORT_OTG_AUDIO_DOCK)
+	call_audiodock_notify(udev);
+#endif
+	call_battery_notify(udev, 1);
+#endif
 
 	if (udev->serial)
 		add_device_randomness(udev->serial, strlen(udev->serial));
@@ -2861,7 +2873,7 @@ int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 	struct usb_hub	*hub = hdev_to_hub(udev->parent);
 	int		port1 = udev->portnum;
 	int		status;
-	u16		portchange = 0, portstatus = 0;
+	u16		portchange, portstatus;
 
 	/* Skip the initial Clear-Suspend step for a remote wakeup */
 	status = hub_port_status(hub, port1, &portstatus, &portchange);

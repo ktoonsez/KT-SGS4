@@ -45,6 +45,7 @@
 #ifdef CONFIG_MSM_DSPS
 #include <mach/msm_dsps.h>
 #endif
+#include <linux/android_pmem.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
 #include <mach/mdm.h>
@@ -347,6 +348,7 @@ static struct msm_serial_hslite_platform_data uart_gsbi9_pdata = {
 	.uart_tx_gpio	= 67,
 	.uart_rx_gpio	= 66,
 	.line		= 1,
+	.set_uart_clk_zero = true,
 };
 
 static struct resource msm_uart_gsbi9_resources[] = {
@@ -3137,3 +3139,9 @@ struct platform_device msm8660_iommu_domain_device = {
 		.platform_data = &msm8660_iommu_domain_pdata,
 	}
 };
+
+struct platform_device msm8660_pm_8x60 = {
+	.name		= "pm-8x60",
+	.id		= -1,
+};
+

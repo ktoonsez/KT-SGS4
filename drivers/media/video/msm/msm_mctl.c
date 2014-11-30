@@ -540,15 +540,21 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 			rc = v4l2_subdev_call(p_mctl->axi_sdev, core, ioctl,
 				VIDIOC_MSM_AXI_LOW_POWER_MODE,
 				(void __user *)arg);
-		} else
-		rc = 0;
+		} else {
+			rc = 0;
+		}
 		break;
 
 	default:
-		/* ISP config*/
-		D("%s:%d: go to default. Calling msm_isp_config\n",
-			__func__, __LINE__);
-		rc = p_mctl->isp_config(p_mctl, cmd, arg);
+		if(p_mctl && p_mctl->isp_config) {
+			/* ISP config*/
+			D("%s:%d: go to default. Calling msm_isp_config\n",
+				__func__, __LINE__);
+			rc = p_mctl->isp_config(p_mctl, cmd, arg);
+		} else {
+			rc = -EINVAL;
+			pr_err("%s: media controller is null\n", __func__);
+		}
 		break;
 	}
 	D("%s: !!! cmd = %d, rc = %d\n",
@@ -560,17 +566,18 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				 const char *const apps_id)
 {
 	int rc = 0;
-	struct msm_sensor_ctrl_t *s_ctrl = get_sctrl(p_mctl->sensor_sdev);
-	struct msm_camera_sensor_info *sinfo =
-		(struct msm_camera_sensor_info *) s_ctrl->sensordata;
-	struct msm_camera_device_platform_data *camdev = sinfo->pdata;
+	struct msm_sensor_ctrl_t *s_ctrl;
+	struct msm_camera_sensor_info *sinfo;
+	struct msm_camera_device_platform_data *camdev;
 	uint8_t csid_core;
 	D("%s\n", __func__);
 	if (!p_mctl) {
 		pr_err("%s: param is NULL", __func__);
 		return -EINVAL;
 	}
-
+	s_ctrl = get_sctrl(p_mctl->sensor_sdev);
+	sinfo = (struct msm_camera_sensor_info *) s_ctrl->sensordata;
+	camdev = sinfo->pdata;
 	mutex_lock(&p_mctl->lock);
 	/* open sub devices - once only*/
 	if (!p_mctl->opencnt) {
@@ -681,7 +688,7 @@ static void msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 		v4l2_subdev_call(p_mctl->sensor_sdev, core, s_power, 0);
 
 		v4l2_subdev_call(p_mctl->ispif_sdev,
-				core, ioctl, VIDIOC_MSM_ISPIF_RELEASE, NULL);
+				core, ioctl, VIDIOC_MSM_ISPIF_REL, NULL);
 
 		pm_qos_update_request(&p_mctl->pm_qos_req_list,
 					PM_QOS_DEFAULT_VALUE);
@@ -797,10 +804,10 @@ int msm_mctl_init(struct msm_cam_v4l2_device *pcam)
 	v4l2_set_subdev_hostdata(pcam->sensor_sdev, pmctl);
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	pmctl->client = msm_ion_client_create(-1, "camera");
-	if(pmctl->client == NULL) 
-		return -EINVAL;
-	kref_init(&pmctl->refcount);
+	if (!pmctl->client) {
+		pmctl->client = msm_ion_client_create(-1, "camera");
+		kref_init(&pmctl->refcount);
+	}
 #endif
 
 	return 0;
@@ -978,9 +985,7 @@ static int msm_mctl_dev_close(struct file *f)
 	    iounmap(pcam_inst->p_avtimer_lsw);
 	    iounmap(pcam_inst->p_avtimer_msw);
 	    //Turn OFF DSP/Enable power collapse
-#ifdef CONFIG_MSM_AVTIMER
 	    avcs_core_disable_power_collapse(0);
-#endif
 	    pcam_inst->avtimerOn = 0;
 	}
 
@@ -997,12 +1002,10 @@ static int msm_mctl_dev_close(struct file *f)
 
 	kfree(pcam_inst);
 	f->private_data = NULL;
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	if (NULL != pmctl) {
 		D("%s : release ion client", __func__);
 		kref_put(&pmctl->refcount, msm_release_ion_client);
 	}
-#endif
 	mutex_unlock(&pcam->mctl_node.dev_lock);
 	D("%s : use_count %d X ", __func__, pcam->mctl_node.use_count);
 	return rc;
@@ -1099,12 +1102,10 @@ static int msm_mctl_v4l2_s_ctrl(struct file *f, void *pctx,
 		pcam_inst->avtimerOn = ctrl->value;
 		D("%s: mmap_inst=(0x%p, %d) AVTimer=%d\n",
 			 __func__, pcam_inst, pcam_inst->my_index, ctrl->value);
-#ifdef CONFIG_MSM_AVTIMER
 		/*Kernel drivers to access AVTimer*/
 		avcs_core_open();
 		/*Turn ON DSP/Disable power collapse*/
 		avcs_core_disable_power_collapse(1);
-#endif
 		pcam_inst->p_avtimer_lsw = ioremap(AVTIMER_LSW_PHY_ADDR, 4);
 		pcam_inst->p_avtimer_msw = ioremap(AVTIMER_MSW_PHY_ADDR, 4);
 	} else
@@ -1241,7 +1242,7 @@ static int msm_mctl_v4l2_qbuf(struct file *f, void *pctx,
 			return -EINVAL;
 		}
 		for (i = 0; i < pcam_inst->plane_info.num_planes; i++) {
-			D("%s stored offsets for plane %d as" \
+			D("%s stored offsets for plane %d as"
 				"addr offset %d, data offset %d",
 				__func__, i, pb->m.planes[i].reserved[0],
 				pb->m.planes[i].data_offset);

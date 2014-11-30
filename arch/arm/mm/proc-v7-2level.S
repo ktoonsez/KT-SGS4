@@ -149,7 +149,7 @@ ENTRY(cpu_v7_set_pte_ext)
 	ldr     r0, =0x3f807221
         smc     #1
 	pop	{r0}
-        /** Cache invalidate again to ensure no 
+        /** Cache invalidate again to ensure no
 	 *  values re-cached by speculative fetching
          */
 	mcr     p15, 0, r0, c7, c6,  1

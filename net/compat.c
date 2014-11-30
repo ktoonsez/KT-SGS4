@@ -85,7 +85,7 @@ int verify_compat_iovec(struct msghdr *kern_msg, struct iovec *kern_iov,
 {
 	int tot_len;
 
-	if (kern_msg->msg_namelen) {
+	if (kern_msg->msg_name && kern_msg->msg_namelen) {
 		if (mode == VERIFY_READ) {
 			int err = move_addr_to_kernel(kern_msg->msg_name,
 						      kern_msg->msg_namelen,
@@ -93,10 +93,11 @@ int verify_compat_iovec(struct msghdr *kern_msg, struct iovec *kern_iov,
 			if (err < 0)
 				return err;
 		}
-		if (kern_msg->msg_name)
-			kern_msg->msg_name = kern_address;
-	} else
+		kern_msg->msg_name = kern_address;
+	} else {
 		kern_msg->msg_name = NULL;
+		kern_msg->msg_namelen = 0;
+	}
 
 	tot_len = iov_from_user_compat_to_kern(kern_iov,
 					  (struct compat_iovec __user *)kern_msg->msg_iov,
@@ -330,14 +331,6 @@ void scm_detach_fds_compat(struct msghdr *kmsg, struct scm_cookie *scm)
 	 */
 	__scm_destroy(scm);
 }
-
-/*
- * A struct sock_filter is architecture independent.
- */
-struct compat_sock_fprog {
-	u16		len;
-	compat_uptr_t	filter;		/* struct sock_filter * */
-};
 
 static int do_set_attach_filter(struct socket *sock, int level, int optname,
 				char __user *optval, unsigned int optlen)
