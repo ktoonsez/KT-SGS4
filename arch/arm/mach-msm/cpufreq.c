@@ -21,6 +21,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
+#include <linux/cpufreq_kt.h>
 #include <linux/workqueue.h>
 #include <linux/completion.h>
 #include <linux/cpu.h>
@@ -82,11 +83,6 @@ struct cpu_freq {
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
 #ifdef CONFIG_SEC_DVFS
-#ifdef CONFIG_SEC_DVFS_BOOSTER
-static unsigned int upper_limit_freq = 1566000;
-#else
-static unsigned int upper_limit_freq = 1890000;
-#endif
 static unsigned int lower_limit_freq;
 static unsigned int cpuinfo_max_freq;
 static unsigned int cpuinfo_min_freq;
@@ -98,7 +94,7 @@ unsigned int get_min_lock(void)
 
 unsigned int get_max_lock(void)
 {
-	return upper_limit_freq;
+	return shared_max_mhz;
 }
 
 void set_min_lock(int freq)
@@ -114,11 +110,11 @@ void set_min_lock(int freq)
 void set_max_lock(int freq)
 {
 	if (freq < MIN_FREQ_LIMIT)
-		upper_limit_freq = 0;
+		shared_max_mhz = 0;
 	else if (freq >= MAX_FREQ_LIMIT)
-		upper_limit_freq = 0;
+		shared_max_mhz = 0;
 	else
-		upper_limit_freq = freq;
+		shared_max_mhz = freq;
 }
 
 int get_max_freq(void)
@@ -186,14 +182,14 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	}
 
 #ifdef CONFIG_SEC_DVFS
-	if (lower_limit_freq || upper_limit_freq) {
+	if (lower_limit_freq || shared_max_mhz) {
 		unsigned int t_freq = new_freq;
 
 		if (lower_limit_freq && new_freq < lower_limit_freq)
 			t_freq = lower_limit_freq;
 
-		if (upper_limit_freq && new_freq > upper_limit_freq)
-			t_freq = upper_limit_freq;
+		if (shared_max_mhz && new_freq > shared_max_mhz)
+			t_freq = shared_max_mhz;
 
 		new_freq = t_freq;
 
