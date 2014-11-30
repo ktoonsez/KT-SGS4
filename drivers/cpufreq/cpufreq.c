@@ -67,6 +67,7 @@ static unsigned int Lcharging_min_mhz = 0;
 static unsigned int Lcharging_min_mhz_orig = 378000;
 static unsigned int Lcharging_max_mhz = 0;
 static unsigned int Lcharging_max_mhz_orig = 1890000;
+unsigned int shared_max_mhz = 1890000;
 static bool Lcharging_mhz_active;
 static bool Lcharging_mhz_active_block_min;
 static bool Lcharging_mhz_active_block_max;
@@ -666,6 +667,7 @@ static ssize_t __ref store_scaling_max_freq(struct cpufreq_policy *policy, const
 		
 		Lscreen_off_scaling_mhz_orig = value;
 		Lcharging_max_mhz_orig = value;
+		shared_max_mhz = value;
 	}
 	return count;
 }
