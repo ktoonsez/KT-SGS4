@@ -23,6 +23,7 @@ struct sensor_value {
 		u8 step_det;
 		u32 step_diff;
 	};
+	u64 timestamp;
 };
 
 /* SSP_INSTRUCTION_CMD */
@@ -67,6 +68,11 @@ struct hw_offset_data {
 	char z;
 };
 
+struct ssp_time_diff {
+	u64 time_diff;
+	u64 irq_diff;
+};
+
 struct ssp_data {
 	struct input_dev *acc_input_dev;
 	struct input_dev *gyro_input_dev;
@@ -79,6 +85,7 @@ struct ssp_data {
 	struct input_dev *sig_motion_input_dev;
 	struct input_dev *step_det_input_dev;
 	struct input_dev *step_cnt_input_dev;
+	struct input_dev *meta_input_dev;
 	struct i2c_client *client;
 	struct wake_lock ssp_wake_lock;
 	struct miscdevice akmd_device;
@@ -142,6 +149,8 @@ struct ssp_data {
 	u64 step_count_total;
 	atomic_t aSensorEnable;
 	int64_t adDelayBuf[SENSOR_MAX];
+	u64 lastTimestamp[SENSOR_MAX];
+	u64 timestamp;
 
 	int (*wakeup_mcu)(void);
 	int (*check_mcu_ready)(void);

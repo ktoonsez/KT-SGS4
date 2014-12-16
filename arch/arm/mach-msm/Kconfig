@@ -2999,10 +2999,19 @@ config FORCE_FAST_CHARGE
 	  A simple sysfs interface to force adapters that
           are detected as USB to charge as AC.
  
+config GED_BUILD
+	bool "Use Google Experience Device"
+	default n
+	help
+	Use Google Experience Device.
 
 config SEC_FACTORY
 	bool "Enable FACTORY Features"
 	default n
 	help
 	  Enable Features only For FACTORY BINARY.
+
+config SAMSUNG_PRODUCT_SHIP
+	bool "set up for product shipping"
+	default n
 endif

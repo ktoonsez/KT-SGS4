@@ -35,6 +35,7 @@
 #include <linux/firmware.h>
 #include <linux/timer.h>
 #include "ssp_defs.h"
+#include <linux/android_alarm.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #undef CONFIG_HAS_EARLYSUSPEND
@@ -94,7 +95,7 @@ enum {
 enum {
 	SENSOR_NS_DELAY_FASTEST = 10000000,	/* 10msec */
 	SENSOR_NS_DELAY_GAME = 20000000,	/* 20msec */
-	SENSOR_NS_DELAY_UI = 66700000,		/* 66.7msec */
+	SENSOR_NS_DELAY_UI = 66667000,		/* 66.667msec */
 	SENSOR_NS_DELAY_NORMAL = 200000000,	/* 200msec */
 };
 
@@ -212,6 +213,12 @@ enum {
 
 #define MAX_GYRO	32767
 #define MIN_GYRO	-32768
+
+/* report timestamp from kernel (for Android L) */
+#define TIME_LO_MASK 0x00000000FFFFFFFF
+#define TIME_HI_MASK 0xFFFFFFFF00000000
+#define TIME_HI_SHIFT 32
+#define META_DATA_FLUSH_COMPLETE 1
 
 #define SSP_BYPASS_SENSORS_EN_ALL (1 << ACCELEROMETER_SENSOR |\
 	1 << GYROSCOPE_SENSOR | 1 << GEOMAGNETIC_SENSOR | 1 << PRESSURE_SENSOR |\
