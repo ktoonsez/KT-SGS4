@@ -76,6 +76,10 @@ firmware/tsp_melfas/PUBL.fw
 firmware/tsp_melfas/PUBL.fw.gen.S
 firmware/tsp_synaptics/*.fw
 firmware/tsp_synaptics/*.gen.S
+firmware/tsp_atmel/*.fw
+firmware/tsp_atmel/*.gen.S
+firmware/*.fw
+firmware/*.gen.S
 
 scripts/bin2c
 scripts/genksyms/*
