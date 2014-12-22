@@ -74,9 +74,17 @@ firmware/tsp_melfas/PRIV.fw
 firmware/tsp_melfas/PRIV.fw.gen.S
 firmware/tsp_melfas/PUBL.fw
 firmware/tsp_melfas/PUBL.fw.gen.S
+firmware/tsp_synaptics/*.fw
+firmware/tsp_synaptics/*.gen.S
+
 scripts/bin2c
 scripts/genksyms/*
 scripts/kconfig/*
+scripts/selinux/genheaders/genheaders
+scripts/selinux/mdp/mdp
+security/selinux/av_permissions.h
+security/selinux/flask.h
+
 
 #
 # Top-level generic files
