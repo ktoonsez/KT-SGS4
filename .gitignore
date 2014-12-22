@@ -65,7 +65,6 @@ kernel/config_data.h
 scripts/recordmcount
 kernel/usr/*
 Package/*
-firmware/*
 arch/arm/include/generated*
 
 arch/arm/boot/compressed/lib1funcs.S
@@ -78,8 +77,6 @@ firmware/tsp_melfas/PUBL.fw.gen.S
 scripts/bin2c
 scripts/genksyms/*
 scripts/kconfig/*
-scripts/selinux/*
-security/selinux/*
 
 #
 # Top-level generic files
