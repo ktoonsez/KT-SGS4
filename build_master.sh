@@ -1,6 +1,6 @@
 #!/bin/sh
 export PLATFORM="AOSP"
-export MREV="LP5.0"
+export MREV="LP5.1"
 export CURDATE=`date "+%m.%d.%Y"`
 export MUXEDNAMELONG="KT-SGS4-$MREV-$PLATFORM-$CARRIER-$CURDATE"
 export MUXEDNAMESHRT="KT-SGS4-$MREV-$PLATFORM-$CARRIER*"
@@ -8,7 +8,7 @@ export KTVER="--$MUXEDNAMELONG--"
 export KERNELDIR=`readlink -f .`
 export PARENT_DIR=`readlink -f ..`
 export INITRAMFS_DEST=$KERNELDIR/kernel/usr/initramfs
-export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/$PLATFORM"_"$CARRIER"5.0"
+export INITRAMFS_SOURCE=`readlink -f ..`/Ramdisks/$PLATFORM"_"$CARRIER"5.1"
 export CONFIG_$PLATFORM_BUILD=y
 export PACKAGEDIR=$PARENT_DIR/Packages/$PLATFORM
 #Enable FIPS mode
